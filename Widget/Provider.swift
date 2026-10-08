@@ -57,7 +57,7 @@ struct Provider: AppIntentTimelineProvider {
         let leg = JourneySelector.leg(for: journey, at: now, location: location)
         let state: BoardState
         do {
-            state = .from(try await SNCFClient(token: SharedSettings.token).departures(from: leg.from, to: leg.to, at: now))
+            state = .from(try await SNCFClient(token: SharedSettings.token).departures(from: leg.from, to: leg.to, at: now), now: now)
         } catch {
             state = .unavailable(error)
         }

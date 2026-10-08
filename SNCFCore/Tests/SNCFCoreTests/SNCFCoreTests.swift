@@ -118,12 +118,12 @@ func fixture(_ name: String) throws -> Data {
 
     @Test func unavailableService() throws {
         let trains = try NavitiaParser.departures(from: fixture("journeys_all_cancelled"), origin: grenoble, destination: voiron)
-        #expect(BoardState.from(trains) == .noService)
+        #expect(BoardState.from(trains, now: at(17, 40), calendar: paris) == .noService)
     }
 
     @Test func noSolutionMeansNoTrains() throws {
         let trains = try NavitiaParser.departures(from: fixture("no_solution"), origin: grenoble, destination: voiron)
-        #expect(BoardState.from(trains) == .noTrains)
+        #expect(BoardState.from(trains, now: at(17, 40), calendar: paris) == .noTrains)
     }
 
     @Test func malformed() {
@@ -143,6 +143,38 @@ func fixture(_ name: String) throws -> Data {
 
     @Test func stationIdentifierRoundTrip() {
         #expect(Station(entityIdentifier: grenoble.entityIdentifier) == grenoble)
+    }
+}
+
+@Suite struct ServiceDay {
+    func train(_ date: Date, cancelled: Bool = false) -> TrainDeparture {
+        TrainDeparture(scheduledDeparture: date, scheduledArrival: date.addingTimeInterval(1500), delayMinutes: 0, isCancelled: cancelled, trainNumber: nil)
+    }
+    func tomorrow(_ hour: Int, _ minute: Int) -> Date { at(hour, minute).addingTimeInterval(86400) }
+
+    @Test func tomorrowsTrainsAreNotListedToday() {
+        let state = BoardState.from([train(at(22, 12)), train(tomorrow(5, 58))], now: at(21, 0), calendar: paris)
+        #expect(state == .departures([train(at(22, 12))]))
+    }
+
+    @Test func endOfServiceGivesTheFirstRunningTrain() {
+        let trains = [train(tomorrow(5, 28), cancelled: true), train(tomorrow(5, 58)), train(tomorrow(6, 28))]
+        #expect(BoardState.from(trains, now: at(23, 30), calendar: paris) == .endOfService(firstTrain: tomorrow(5, 58)))
+    }
+
+    @Test func trainAfterMidnightStillBelongsToTonight() {
+        let state = BoardState.from([train(tomorrow(0, 15)), train(tomorrow(5, 58))], now: at(23, 30), calendar: paris)
+        #expect(state == .departures([train(tomorrow(0, 15))]))
+    }
+
+    @Test func rightAfterMidnightTheEveningServiceContinues() {
+        let state = BoardState.from([train(tomorrow(0, 45)), train(tomorrow(5, 58))], now: tomorrow(0, 10), calendar: paris)
+        #expect(state == .departures([train(tomorrow(0, 45))]))
+    }
+
+    @Test func remainingTrainsAllCancelledIsNoServiceNotEndOfService() {
+        let trains = [train(at(22, 12), cancelled: true), train(at(22, 42), cancelled: true), train(tomorrow(5, 58))]
+        #expect(BoardState.from(trains, now: at(21, 0), calendar: paris) == .noService)
     }
 }
 

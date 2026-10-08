@@ -19,7 +19,7 @@ public enum RefreshPlanner {
 
     public static func nextRefresh(fetchedAt: Date, state: BoardState) -> Date {
         switch state {
-        case .noTrains, .noService: fetchedAt.addingTimeInterval(idleRefreshInterval)
+        case .noTrains, .noService, .endOfService: fetchedAt.addingTimeInterval(idleRefreshInterval)
         case .departures, .unavailable: fetchedAt.addingTimeInterval(refreshInterval)
         }
     }

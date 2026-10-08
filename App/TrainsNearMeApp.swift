@@ -42,8 +42,12 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        // The widget cannot show a permission prompt itself; without this it silently uses the configured order.
-        .onAppear { if location.status == .notDetermined { location.request() } }
+        .onAppear {
+            // The widget cannot show a permission prompt itself; without this it silently uses the configured order.
+            if location.status == .notDetermined { location.request() }
+            // macOS only hands the widget a location fix while the app is active, so refresh it now.
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     private func save() async {

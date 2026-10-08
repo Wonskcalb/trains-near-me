@@ -4,7 +4,9 @@ This guide is for everyone, including people who have never written code. Plan a
 
 **Trains near me** is a macOS widget showing the next direct trains for one journey, such as Grenoble → Voiron, with real-time delays and cancellations.
 
-![Preview](Design/preview.png)
+![Small and medium widgets](Design/widget-light.png)
+
+![Large widget, NO SERVICE and end of service](Design/widget-states.png)
 
 ## Why do I have to build it myself?
 
@@ -80,7 +82,7 @@ You can then close the window. The widget works without the app running.
    |---|---|
    | Small | 3 trains |
    | **Medium** (recommended) | 3 trains and the last-update time |
-   | Large | 7 trains |
+   | Large | 8 trains |
 
 4. Drag it onto the desktop or into Notification Center.
 
@@ -125,11 +127,12 @@ Your location is only used on your Mac to compare the distance to the two statio
 
 | What you see | Meaning |
 |---|---|
-| **NO SERVICE** on black | All upcoming trains are cancelled |
-| **No trains** | No direct train right now, at night for example |
+| **NO SERVICE** on orange-and-black stripes | Something is wrong: every remaining train of the day is cancelled |
+| **End of service** on a night-blue background | Nothing is wrong, the last train of the day has left. Shows when the first train runs, usually tomorrow morning. |
+| **No trains** | SNCF found no direct train at all between the two stations |
 | **SNCF data unavailable** | No internet, invalid token, quota reached, or the SNCF API is down. The reason is shown below the title. |
 | **Data out of date** | The data is more than 30 min old. The widget never shows old times as if they were current. |
-| Orange **Location…** line | Nearest-station mode is on but your location is unavailable. The configured direction is used instead. |
+| Orange **Location…** / **No location…** line | Nearest-station mode is on but your location is unavailable. The configured direction is used; click the widget to refresh. |
 
 ### How fresh is the data?
 
@@ -177,8 +180,8 @@ Open the app once. If that's not enough, log out of macOS and back in.
 **Orange "Location not allowed" line**
 Open **System Settings › Privacy & Security › Location Services** and turn on **Trains near me**. If the app isn't listed, open it once: it asks for permission at launch.
 
-**Orange "Location unavailable" line**
-The Mac couldn't find its position within 5 seconds, which often happens without Wi-Fi. The configured direction is used, and the widget tries again on the next refresh.
+**Orange "No location: click to refresh" line**
+macOS gives widgets a location fix reliably only while the app is active. Click the widget: it opens the app, which refreshes the widget with your position. The configured direction is used until then.
 
 **The journey runs the wrong way**
 Check **Direction** and **Switch time** in the widget settings. With **Depart from nearest station** on, your location decides.

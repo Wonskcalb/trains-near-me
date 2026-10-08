@@ -62,14 +62,28 @@ public struct TrainDeparture: Hashable, Sendable {
 
 public enum BoardState: Equatable, Sendable {
     case departures([TrainDeparture])
+    /// Today's service is over; SNCF already returned the next service day's trains.
+    case endOfService(firstTrain: Date)
     case noTrains
     case noService
     case unavailable(TrainServiceError)
 
-    public static func from(_ departures: [TrainDeparture]) -> BoardState {
+    /// Only trains of the current service day are listed; later ones mean the day is over.
+    public static func from(_ departures: [TrainDeparture], now: Date, calendar: Calendar = .current) -> BoardState {
         if departures.isEmpty { return .noTrains }
-        if departures.allSatisfy(\.isCancelled) { return .noService }
-        return .departures(departures)
+        let today = serviceDay(of: now, calendar: calendar)
+        let todays = departures.filter { serviceDay(of: $0.scheduledDeparture, calendar: calendar) == today }
+        if todays.isEmpty {
+            guard let first = departures.first(where: { !$0.isCancelled }) else { return .noService }
+            return .endOfService(firstTrain: first.scheduledDeparture)
+        }
+        if todays.allSatisfy(\.isCancelled) { return .noService }
+        return .departures(todays)
+    }
+
+    /// Night trains up to 03:00 still belong to the previous evening's service.
+    static func serviceDay(of date: Date, calendar: Calendar) -> Date {
+        calendar.startOfDay(for: date.addingTimeInterval(-3 * 3600))
     }
 }
 
