@@ -1,0 +1,78 @@
+name: TrainsNearMe
+options:
+  deploymentTarget:
+    macOS: "15.0"
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    # The App Intents runtime looks the configuration intent up in the main executable; with Xcode's
+    # debug dylib it lives elsewhere and the widget loses its "Edit" configuration (ActionNotFound).
+    ENABLE_DEBUG_DYLIB: NO
+packages:
+  SNCFCore:
+    path: SNCFCore
+targets:
+  TrainsNearMe:
+    type: application
+    platform: macOS
+    sources: [App]
+    dependencies:
+      - package: SNCFCore
+      - target: TrainsNearMeWidget
+    settings:
+      base:
+        PRODUCT_NAME: Trains near me
+        PRODUCT_MODULE_NAME: TrainsNearMe
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Trains near me
+        LSApplicationCategoryType: public.app-category.travel
+        NSLocationUsageDescription: Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.
+        NSLocationWhenInUseUsageDescription: Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.
+        SNCFAppGroup: $(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)
+    entitlements:
+      path: App/TrainsNearMe.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.location: true
+        com.apple.security.application-groups: [$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)]
+  TrainsNearMeWidget:
+    type: app-extension
+    platform: macOS
+    sources: [Widget]
+    dependencies:
+      - package: SNCFCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac.widget
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Trains near me
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSWidgetWantsLocation: true
+        NSLocationUsageDescription: Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.
+        NSLocationWhenInUseUsageDescription: Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.
+        SNCFAppGroup: $(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)
+    entitlements:
+      path: Widget/TrainsNearMeWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.location: true
+        com.apple.security.application-groups: [$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)]

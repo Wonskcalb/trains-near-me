@@ -1,0 +1,202 @@
+{
+ "journeys": [
+  {
+   "status": "NO_SERVICE",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T191200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17607",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T191200",
+     "base_departure_date_time": "20261008T191200",
+     "arrival_date_time": "20261008T193700",
+     "base_arrival_date_time": "20261008T193700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17607",
+      "trip_short_name": "17607",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-cancel"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "status": "NO_SERVICE",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T201200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17611",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T201200",
+     "base_departure_date_time": "20261008T201200",
+     "arrival_date_time": "20261008T203700",
+     "base_arrival_date_time": "20261008T203700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17611",
+      "trip_short_name": "17611",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-cancel"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disruptions": [
+  {
+   "id": "d-cancel",
+   "disruption_id": "d-cancel",
+   "status": "active",
+   "severity": {
+    "name": "no_service",
+    "effect": "NO_SERVICE",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": []
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,1074 @@
+{
+ "journeys": [
+  {
+   "status": "",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "",
+   "sections": [
+    {
+     "type": "crow_fly",
+     "id": "cf",
+     "duration": 0,
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_area",
+      "stop_area": {
+       "id": "stop_area:SNCF:87747006",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "mode": "walking"
+    },
+    {
+     "type": "public_transport",
+     "id": "section_17601",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T174200",
+     "base_departure_date_time": "20261008T174200",
+     "arrival_date_time": "20261008T180700",
+     "base_arrival_date_time": "20261008T180700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17601",
+      "trip_short_name": "17601",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": []
+     }
+    },
+    {
+     "type": "crow_fly",
+     "id": "cf",
+     "duration": 0,
+     "from": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_area",
+      "stop_area": {
+       "id": "stop_area:SNCF:87747337",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "mode": "walking"
+    }
+   ]
+  },
+  {
+   "status": "SIGNIFICANT_DELAYS",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T181200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17603",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T181200",
+     "base_departure_date_time": "20261008T181200",
+     "arrival_date_time": "20261008T183600",
+     "base_arrival_date_time": "20261008T183600",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17603",
+      "trip_short_name": "17603",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-delay"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "status": "SIGNIFICANT_DELAYS",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T184200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17605",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T184200",
+     "base_departure_date_time": "20261008T184200",
+     "arrival_date_time": "20261008T190800",
+     "base_arrival_date_time": "20261008T190800",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17605",
+      "trip_short_name": "17605",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-severe"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "status": "NO_SERVICE",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T191200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17607",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T191200",
+     "base_departure_date_time": "20261008T191200",
+     "arrival_date_time": "20261008T193700",
+     "base_arrival_date_time": "20261008T193700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17607",
+      "trip_short_name": "17607",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-cancel"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "status": "SIGNIFICANT_DELAYS",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T194200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17609",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T194200",
+     "base_departure_date_time": "20261008T194200",
+     "arrival_date_time": "20261008T200700",
+     "base_arrival_date_time": "20261008T200700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17609",
+      "trip_short_name": "17609",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": [
+       {
+        "type": "disruption",
+        "rel": "disruptions",
+        "internal": true,
+        "templated": false,
+        "id": "d-norealtime"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "nb_transfers": 1,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T175000",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_88001",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747014",
+      "name": "Saint-Égrève - Saint-Robert",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747014:Train",
+       "name": "Saint-Égrève - Saint-Robert",
+       "coord": {
+        "lat": "45.233",
+        "lon": "5.680"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747014",
+        "name": "Saint-Égrève - Saint-Robert",
+        "label": "Saint-Égrève - Saint-Robert",
+        "coord": {
+         "lat": "45.233",
+         "lon": "5.680"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T175000",
+     "base_departure_date_time": "20261008T175000",
+     "arrival_date_time": "20261008T175700",
+     "base_arrival_date_time": "20261008T175700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "88001",
+      "trip_short_name": "88001",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": []
+     }
+    },
+    {
+     "type": "transfer",
+     "duration": 120
+    },
+    {
+     "type": "public_transport",
+     "id": "section_88002",
+     "from": {
+      "id": "stop_area:SNCF:87747014",
+      "name": "Saint-Égrève - Saint-Robert",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747014:Train",
+       "name": "Saint-Égrève - Saint-Robert",
+       "coord": {
+        "lat": "45.233",
+        "lon": "5.680"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747014",
+        "name": "Saint-Égrève - Saint-Robert",
+        "label": "Saint-Égrève - Saint-Robert",
+        "coord": {
+         "lat": "45.233",
+         "lon": "5.680"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T180500",
+     "base_departure_date_time": "20261008T180500",
+     "arrival_date_time": "20261008T182000",
+     "base_arrival_date_time": "20261008T182000",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "88002",
+      "trip_short_name": "88002",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "",
+   "sections": [
+    {
+     "type": "crow_fly",
+     "id": "cf",
+     "duration": 0,
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_area",
+      "stop_area": {
+       "id": "stop_area:SNCF:87747006",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747014",
+      "name": "Saint-Égrève - Saint-Robert",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747014:Train",
+       "name": "Saint-Égrève - Saint-Robert",
+       "coord": {
+        "lat": "45.233",
+        "lon": "5.680"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747014",
+        "name": "Saint-Égrève - Saint-Robert",
+        "label": "Saint-Égrève - Saint-Robert",
+        "coord": {
+         "lat": "45.233",
+         "lon": "5.680"
+        }
+       }
+      }
+     },
+     "mode": "walking"
+    },
+    {
+     "type": "public_transport",
+     "id": "section_88003",
+     "from": {
+      "id": "stop_area:SNCF:87747014",
+      "name": "Saint-Égrève - Saint-Robert",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747014:Train",
+       "name": "Saint-Égrève - Saint-Robert",
+       "coord": {
+        "lat": "45.233",
+        "lon": "5.680"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747014",
+        "name": "Saint-Égrève - Saint-Robert",
+        "label": "Saint-Égrève - Saint-Robert",
+        "coord": {
+         "lat": "45.233",
+         "lon": "5.680"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T175500",
+     "base_departure_date_time": "20261008T175500",
+     "arrival_date_time": "20261008T181000",
+     "base_arrival_date_time": "20261008T181000",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "88003",
+      "trip_short_name": "88003",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "nb_transfers": 0,
+   "type": "best",
+   "duration": 1500,
+   "departure_date_time": "20261008T174200",
+   "sections": [
+    {
+     "type": "public_transport",
+     "id": "section_17601",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "coord": {
+        "lat": "45.191463",
+        "lon": "5.714466"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble",
+        "label": "Grenoble",
+        "coord": {
+         "lat": "45.191463",
+         "lon": "5.714466"
+        }
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "coord": {
+        "lat": "45.364105",
+        "lon": "5.590006"
+       },
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron",
+        "label": "Voiron",
+        "coord": {
+         "lat": "45.364105",
+         "lon": "5.590006"
+        }
+       }
+      }
+     },
+     "departure_date_time": "20261008T174200",
+     "base_departure_date_time": "20261008T174200",
+     "arrival_date_time": "20261008T180700",
+     "base_arrival_date_time": "20261008T180700",
+     "data_freshness": "base_schedule",
+     "duration": 1500,
+     "display_informations": {
+      "commercial_mode": "TER",
+      "network": "TER Auvergne-Rhône-Alpes",
+      "physical_mode": "TER / Intercités",
+      "direction": "Lyon Part-Dieu (Lyon)",
+      "headsign": "17601",
+      "trip_short_name": "17601",
+      "label": "C1",
+      "name": "Grenoble - Lyon",
+      "links": []
+     }
+    }
+   ]
+  }
+ ],
+ "disruptions": [
+  {
+   "id": "d-delay",
+   "disruption_id": "d-delay",
+   "status": "active",
+   "severity": {
+    "name": "significant_delays",
+    "effect": "SIGNIFICANT_DELAYS",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747006:Train",
+        "name": "Grenoble"
+       },
+       "base_departure_time": "181200",
+       "amended_departure_time": "182400",
+       "base_arrival_time": "181200",
+       "amended_arrival_time": "182400",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      },
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747337:Train",
+        "name": "Voiron"
+       },
+       "base_departure_time": "183600",
+       "amended_departure_time": "184800",
+       "base_arrival_time": "183600",
+       "amended_arrival_time": "184800",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "d-severe",
+   "disruption_id": "d-severe",
+   "status": "active",
+   "severity": {
+    "name": "significant_delays",
+    "effect": "SIGNIFICANT_DELAYS",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747006:Train",
+        "name": "Grenoble"
+       },
+       "base_departure_time": "184200",
+       "amended_departure_time": "190500",
+       "base_arrival_time": "184200",
+       "amended_arrival_time": "190500",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      },
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747337:Train",
+        "name": "Voiron"
+       },
+       "base_departure_time": "190800",
+       "amended_departure_time": "193100",
+       "base_arrival_time": "190800",
+       "amended_arrival_time": "193100",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "d-cancel",
+   "disruption_id": "d-cancel",
+   "status": "active",
+   "severity": {
+    "name": "no_service",
+    "effect": "NO_SERVICE",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": []
+    }
+   ]
+  },
+  {
+   "id": "d-norealtime",
+   "disruption_id": "d-norealtime",
+   "status": "active",
+   "severity": {
+    "name": "significant_delays",
+    "effect": "SIGNIFICANT_DELAYS",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87723197:Train",
+        "name": "Lyon Part Dieu"
+       },
+       "base_departure_time": "210000",
+       "amended_departure_time": "211500",
+       "base_arrival_time": "210000",
+       "amended_arrival_time": "211500",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "d-unrelated",
+   "disruption_id": "d-unrelated",
+   "status": "active",
+   "severity": {
+    "name": "significant_delays",
+    "effect": "SIGNIFICANT_DELAYS",
+    "priority": 42,
+    "color": "#000000"
+   },
+   "messages": [
+    {
+     "text": "Delayed"
+    }
+   ],
+   "application_periods": [
+    {
+     "begin": "20261008T000000",
+     "end": "20261008T235959"
+    }
+   ],
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "embedded_type": "trip",
+      "id": "OCE:X",
+      "name": "OCE:X"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747006:Train",
+        "name": "Grenoble"
+       },
+       "base_departure_time": "174200",
+       "amended_departure_time": "180000",
+       "base_arrival_time": "174200",
+       "amended_arrival_time": "180000",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed",
+       "cause": "Equipment failure"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [],
+ "context": {
+  "timezone": "Europe/Paris"
+ }
+}

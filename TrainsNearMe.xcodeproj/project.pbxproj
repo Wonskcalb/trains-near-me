@@ -1,0 +1,552 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */; };
+		1AFB944E672A5436A5501754 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFF2E10643CEC9A8ED29159F /* Assets.xcassets */; };
+		6D8A2B2469753A72D5446915 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */; };
+		7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */; };
+		9DC5898F32BB15E8CFDB1C77 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */; };
+		A1B489C0B95333D17618759B /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED794790151F219377530F5 /* Provider.swift */; };
+		A846415F7CFEE6861EB06783 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = F7D332FDF3CDEF189AE5BB46 /* SNCFCore */; };
+		B2118B81EF4ECD2D93E46292 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */; };
+		B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */; };
+		BA94592906FDBECE0E26B092 /* TrainsNearMeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0841E4888C3F59FD6494FD2 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A265E336545C59C7F21A33A /* SNCFCore */; };
+		E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072468D7CF61AC0275D3A463 /* JourneyIntent.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5DE1D9BA36578C98F9BEDD22 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0ABA22D6598CE743C211FB6E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9D5F15E42525DB459912CB72;
+			remoteInfo = TrainsNearMeWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F81AE224BA66D99ED9217F16 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BA94592906FDBECE0E26B092 /* TrainsNearMeWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		072468D7CF61AC0275D3A463 /* JourneyIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntent.swift; sourceTree = "<group>"; };
+		2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrainsNearMeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F3DEB15EE7B3CF12AEC21D2 /* SNCFCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SNCFCore; path = SNCFCore; sourceTree = SOURCE_ROOT; };
+		4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		7493B2EAAED743D0DB07E6B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainsNearMeApp.swift; sourceTree = "<group>"; };
+		97F2EB8890AACB58A1EAB3CF /* TrainsNearMe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrainsNearMe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AEC7157EEB5104942A376232 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C0750732F4C5EBA9F20C580C /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrainsNearMe.entitlements; sourceTree = "<group>"; };
+		DFF2E10643CEC9A8ED29159F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EED794790151F219377530F5 /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
+		F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeparturesWidget.swift; sourceTree = "<group>"; };
+		F441009ACDA644D0BA5605EA /* TrainsNearMeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrainsNearMeWidget.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		263C26468CB1CBE152692C8C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0841E4888C3F59FD6494FD2 /* SNCFCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F00F329513F2EC3A76A4B12 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A846415F7CFEE6861EB06783 /* SNCFCore in Frameworks */,
+				9DC5898F32BB15E8CFDB1C77 /* WidgetKit.framework in Frameworks */,
+				0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0837EB66181F5DB5DD5A9815 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0750732F4C5EBA9F20C580C /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		0FE04C9E5717C51AFC5DBB96 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */,
+				AEC7157EEB5104942A376232 /* Info.plist */,
+				072468D7CF61AC0275D3A463 /* JourneyIntent.swift */,
+				74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */,
+				EED794790151F219377530F5 /* Provider.swift */,
+				F441009ACDA644D0BA5605EA /* TrainsNearMeWidget.entitlements */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		23E80DDCC49A283A4ACC7C94 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */,
+				4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		2FEC4415C0EC28F6B36B08F1 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				DFF2E10643CEC9A8ED29159F /* Assets.xcassets */,
+				7493B2EAAED743D0DB07E6B8 /* Info.plist */,
+				C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */,
+				DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */,
+				90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A63698CC21F197829DD9FE65 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				97F2EB8890AACB58A1EAB3CF /* TrainsNearMe.app */,
+				2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C075C65897AE7B362F12B9E7 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				2F3DEB15EE7B3CF12AEC21D2 /* SNCFCore */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		E4407F7AF2A09B477FA923E5 = {
+			isa = PBXGroup;
+			children = (
+				2FEC4415C0EC28F6B36B08F1 /* App */,
+				0837EB66181F5DB5DD5A9815 /* Config */,
+				C075C65897AE7B362F12B9E7 /* Packages */,
+				0FE04C9E5717C51AFC5DBB96 /* Widget */,
+				23E80DDCC49A283A4ACC7C94 /* Frameworks */,
+				A63698CC21F197829DD9FE65 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3BF6A0D64825088BF91D66A6 /* TrainsNearMe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09255221C6A1520A1CC5B7A1 /* Build configuration list for PBXNativeTarget "TrainsNearMe" */;
+			buildPhases = (
+				63F1F7A693C6B9BA9FB955AB /* Sources */,
+				287F78D474652F8088E6DAFB /* Resources */,
+				263C26468CB1CBE152692C8C /* Frameworks */,
+				F81AE224BA66D99ED9217F16 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C84FC8CEA5D6468F8CAC94EB /* PBXTargetDependency */,
+			);
+			name = TrainsNearMe;
+			packageProductDependencies = (
+				9A265E336545C59C7F21A33A /* SNCFCore */,
+			);
+			productName = TrainsNearMe;
+			productReference = 97F2EB8890AACB58A1EAB3CF /* TrainsNearMe.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9D5F15E42525DB459912CB72 /* TrainsNearMeWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3F5A9B06C395F6DD1B66218 /* Build configuration list for PBXNativeTarget "TrainsNearMeWidget" */;
+			buildPhases = (
+				D08A8E7A943C99B3CF03D86D /* Sources */,
+				472FE10AD7AD4E5CAE126B03 /* Resources */,
+				9F00F329513F2EC3A76A4B12 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TrainsNearMeWidget;
+			packageProductDependencies = (
+				F7D332FDF3CDEF189AE5BB46 /* SNCFCore */,
+			);
+			productName = TrainsNearMeWidget;
+			productReference = 2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0ABA22D6598CE743C211FB6E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3BF6A0D64825088BF91D66A6 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					9D5F15E42525DB459912CB72 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A41CB99C37DA3AC2A61DFCD5 /* Build configuration list for PBXProject "TrainsNearMe" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E4407F7AF2A09B477FA923E5;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5267528A11A2D8C29A50CE17 /* XCLocalSwiftPackageReference "SNCFCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A63698CC21F197829DD9FE65 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3BF6A0D64825088BF91D66A6 /* TrainsNearMe */,
+				9D5F15E42525DB459912CB72 /* TrainsNearMeWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		287F78D474652F8088E6DAFB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1AFB944E672A5436A5501754 /* Assets.xcassets in Resources */,
+				B2118B81EF4ECD2D93E46292 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		472FE10AD7AD4E5CAE126B03 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6D8A2B2469753A72D5446915 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		63F1F7A693C6B9BA9FB955AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D08A8E7A943C99B3CF03D86D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */,
+				E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */,
+				A1B489C0B95333D17618759B /* Provider.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C84FC8CEA5D6468F8CAC94EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9D5F15E42525DB459912CB72 /* TrainsNearMeWidget */;
+			targetProxy = 5DE1D9BA36578C98F9BEDD22 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		000FD55BB6FDCCC5462C00FB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0750732F4C5EBA9F20C580C /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		02F9C15200667BB258A13172 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/TrainsNearMeWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).mac.widget";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		10B39270D7329AC0DF2510F5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/TrainsNearMe.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).mac";
+				PRODUCT_MODULE_NAME = TrainsNearMe;
+				PRODUCT_NAME = "Trains near me";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		478BD86A4D782942C29B51B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0750732F4C5EBA9F20C580C /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		853DE1D64D19EA34770A7C78 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/TrainsNearMe.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).mac";
+				PRODUCT_MODULE_NAME = TrainsNearMe;
+				PRODUCT_NAME = "Trains near me";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AF9DB9604E57DF8CB77132B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/TrainsNearMeWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).mac.widget";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		09255221C6A1520A1CC5B7A1 /* Build configuration list for PBXNativeTarget "TrainsNearMe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				853DE1D64D19EA34770A7C78 /* Debug */,
+				10B39270D7329AC0DF2510F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A3F5A9B06C395F6DD1B66218 /* Build configuration list for PBXNativeTarget "TrainsNearMeWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AF9DB9604E57DF8CB77132B3 /* Debug */,
+				02F9C15200667BB258A13172 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A41CB99C37DA3AC2A61DFCD5 /* Build configuration list for PBXProject "TrainsNearMe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000FD55BB6FDCCC5462C00FB /* Debug */,
+				478BD86A4D782942C29B51B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5267528A11A2D8C29A50CE17 /* XCLocalSwiftPackageReference "SNCFCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SNCFCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9A265E336545C59C7F21A33A /* SNCFCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SNCFCore;
+		};
+		F7D332FDF3CDEF189AE5BB46 /* SNCFCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SNCFCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0ABA22D6598CE743C211FB6E /* Project object */;
+}

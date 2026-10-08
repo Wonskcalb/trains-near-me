@@ -1,0 +1,5 @@
+// Overridden by Config/Local.xcconfig (git-ignored): copy Local.xcconfig.example and set your team.
+DEVELOPMENT_TEAM =
+BUNDLE_ID_PREFIX = local.trainsnearme
+
+#include? "Local.xcconfig"
