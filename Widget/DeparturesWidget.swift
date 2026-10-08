@@ -101,7 +101,7 @@ struct DeparturesView: View {
                 Text("All upcoming trains are cancelled").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                 Spacer()
             case .unavailable(let error):
-                message("SNCF data unavailable", detail: error.explanation)
+                message("SNCF data unavailable", detail: error.localizedDescription)
             }
         }
     }
@@ -161,19 +161,6 @@ struct DepartureRow: View {
         case .onTime: .clear
         case .delayed, .unknown: .orange
         case .severelyDelayed, .cancelled: .red
-        }
-    }
-}
-
-extension TrainServiceError {
-    var explanation: String {
-        switch self {
-        case .missingToken: "Add your SNCF API token in the Trains near me app."
-        case .unauthorized: "The SNCF API token was rejected."
-        case .quotaExceeded: "SNCF API daily quota reached."
-        case .offline: "No internet connection."
-        case .serverUnavailable: "The SNCF API is not responding."
-        case .malformedResponse: "Unexpected response from the SNCF API."
         }
     }
 }

@@ -82,6 +82,19 @@ public enum TrainServiceError: Error, Equatable, Sendable {
     case malformedResponse
 }
 
+extension TrainServiceError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .missingToken: "Add your SNCF API token in the Trains near me app."
+        case .unauthorized: "The SNCF API token was rejected."
+        case .quotaExceeded: "SNCF API daily quota reached."
+        case .offline: "No internet connection."
+        case .serverUnavailable: "The SNCF API is not responding."
+        case .malformedResponse: "Unexpected response from the SNCF API."
+        }
+    }
+}
+
 public protocol TrainService: Sendable {
     func departures(from: Station, to: Station, at: Date) async throws(TrainServiceError) -> [TrainDeparture]
 }

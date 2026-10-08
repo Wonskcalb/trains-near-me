@@ -136,6 +136,11 @@ func fixture(_ name: String) throws -> Data {
         #expect(try NavitiaParser.stations(from: fixture("places")) == [grenoble])
     }
 
+    /// Regression: station search used to surface "SNCFCore.TrainServiceError error 0".
+    @Test func errorsAreReadable() {
+        #expect(TrainServiceError.missingToken.localizedDescription == "Add your SNCF API token in the Trains near me app.")
+    }
+
     @Test func stationIdentifierRoundTrip() {
         #expect(Station(entityIdentifier: grenoble.entityIdentifier) == grenoble)
     }

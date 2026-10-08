@@ -10,6 +10,12 @@ A native macOS widget showing the next **direct** trains for one journey (e.g. G
   - **Direction:** fixed, reversed, or automatic. Automatic flips the journey at a switch time, 13:00 by default.
   - **Nearest station:** optionally, the configured station closest to you becomes the departure.
 
+**Just want to use it?** Follow the step-by-step guide: [GUIDE.md](GUIDE.md). You'll need Xcode and a free Apple account, and one script does the build and install:
+
+```bash
+sh scripts/install.sh
+```
+
 > Not affiliated with SNCF. Train data © SNCF, via the [SNCF open data API](https://numerique.sncf.com/startup/api/).
 
 ## Setup
@@ -103,7 +109,7 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 cd SNCFCore && swift test
 ```
 
-The 25 tests make no live API calls. They cover:
+The 26 tests make no live API calls. They cover:
 - **Direction:** fixed, reversed, automatic around 13:00, custom switch time.
 - **Nearest station:** nearer to A, nearer to B, a tie, no location, and location overriding the configured order.
 - **Delay bands:** 0, 5, 10, 11, 19, 20 and 21 min, cancellation, unknown delay.
