@@ -1,5 +1,10 @@
 # Trains near me
 
+[![CI](https://github.com/Wonskcalb/trains-near-me/actions/workflows/ci.yml/badge.svg)](https://github.com/Wonskcalb/trains-near-me/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Wonskcalb/trains-near-me)](https://github.com/Wonskcalb/trains-near-me/releases/latest)
+![macOS 15+](https://img.shields.io/badge/macOS-15%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A native macOS widget showing the next **direct** trains for one journey (e.g. Grenoble → Voiron), with real-time delays and cancellations from the official SNCF API.
 
 <picture>
@@ -53,7 +58,8 @@ SNCFCore/   Swift package: domain model, SNCF client + parser, direction/positio
 Widget/     Widget extension: App Intent configuration, timeline provider, SwiftUI views
 App/        Host app: stores the API token, requests location permission (one window)
 Config/     Shared build settings; Local.xcconfig (git-ignored) holds your team id
-Design/     Icon renderer and previews
+Design/     App icon renderer, widget screenshot renderer and the rendered images
+scripts/    install.sh (build + install), render-screenshots.sh
 ```
 
 ## Display
@@ -130,6 +136,18 @@ The 31 tests make no live API calls. They cover:
 | Station search fails with error `0` (token missing) | The app and the widget were signed with different teams, so they use different App Groups | Set `DEVELOPMENT_TEAM` in `Config/Local.xcconfig` only, so both targets get the same team |
 | The location prompt never appears; the app stays at "Not requested" | macOS remembers an earlier signing identity for that bundle id | Change `BUNDLE_ID_PREFIX` |
 | The widget has no **Edit** option | Xcode's debug dylib hides the App Intent from the system | Keep `ENABLE_DEBUG_DYLIB: NO` in `project.yml` |
+
+## Screenshots
+
+The images in `Design/` are rendered from the real widget views, so they never drift from the code:
+
+```bash
+sh scripts/render-screenshots.sh
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

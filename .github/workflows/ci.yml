@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        run: swift test --package-path SNCFCore
+
+      # No Apple account on CI: build unsigned to catch compile errors in the app and widget.
+      - name: Build app and widget
+        run: >
+          xcodebuild -project TrainsNearMe.xcodeproj -scheme TrainsNearMe
+          -configuration Release -destination "generic/platform=macOS"
+          DEVELOPMENT_TEAM= CODE_SIGNING_ALLOWED=NO build

@@ -5,3 +5,4 @@ DerivedData/
 .swiftpm/
 Config/Local.xcconfig
 build/
+Design/Screenshots/Sources/Screenshots/Widget/

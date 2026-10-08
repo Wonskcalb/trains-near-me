@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in the widget or the app doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Never paste your SNCF API token here.**
+        The [troubleshooting section](https://github.com/Wonskcalb/trains-near-me/blob/main/GUIDE.md#troubleshooting) covers the most common problems.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what you saw instead. A screenshot of the widget helps a lot.
+    validations:
+      required: true
+  - type: input
+    id: journey
+    attributes:
+      label: Journey
+      placeholder: Grenoble → Voiron
+  - type: dropdown
+    id: size
+    attributes:
+      label: Widget size
+      options: [Small, Medium, Large, Not widget-related]
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.4"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Trains near me version or commit
+      placeholder: v1.0.0
