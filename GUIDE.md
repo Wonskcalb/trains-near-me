@@ -2,7 +2,12 @@
 
 This guide is for everyone, including people who have never written code. Plan about 30 minutes, most of it spent downloading Xcode.
 
-**Trains near me** is a macOS widget showing the next direct trains for one journey, such as Grenoble → Voiron, with real-time delays and cancellations.
+**Trains near me** gives you two widgets, on Mac and on iPhone:
+
+- **Trip**: the next direct trains for one journey, such as Grenoble → Voiron.
+- **Radar**: the next departures from the station closest to you, in every direction. Nothing to set up.
+
+Both show real-time delays and cancellations.
 
 ![Small and medium widgets](Design/widget-light.png)
 
@@ -76,7 +81,7 @@ You can then close the window. The widget works without the app running.
 
 1. Right-click the desktop › **Edit Widgets…**
 2. Search for **Trains near me**.
-3. Pick a size:
+3. Pick **Trip** or **Radar**, then a size:
 
    | Size | Content |
    |---|---|
@@ -86,9 +91,9 @@ You can then close the window. The widget works without the app running.
 
 4. Drag it onto the desktop or into Notification Center.
 
-The widget first shows "Choose stations". That's expected.
+A Trip widget first shows "Choose stations". That's expected. A Radar widget looks for a station around you straight away.
 
-## 7. Choose your journey
+## 7. Choose your journey (Trip widget)
 
 Right-click the widget › **Edit "Trains near me"**.
 
@@ -103,6 +108,31 @@ Right-click the widget › **Edit "Trains near me"**.
 Only **direct trains** between the two stations are shown, never connections.
 
 Your location is only used on your Mac to compare the distance to the two stations. It never leaves your Mac.
+
+## 8. Radar, the trains around you
+
+The Radar widget has no settings. It asks for your position, finds the closest station and lists everything leaving it, with the direction of each train instead of the journey duration.
+
+To find that station, it sends your position **rounded to about 100 m** to the SNCF API — that is the one case where your position leaves your device. Everything else stays local.
+
+If location is off, the widget says so: allow it in **System Settings › Privacy & Security › Location Services**.
+
+## 9. On iPhone or iPad
+
+You need Xcode on a Mac to install it, as above, plus two changes:
+
+1. Open `TrainsNearMe.xcodeproj`, pick your iPhone in the device menu at the top, then press ▶.
+2. Put your SNCF token in `Config/Local.xcconfig` before building:
+
+   ```
+   SNCF_TOKEN = 3b036afe-0110-4202-b9ed-99718476c2e0
+   ```
+
+   On iPhone a free Apple account cannot share the token between the app and the widget, so it has to be built into the app. The app tells you whether the build carries one.
+
+Then add the widget as usual: long-press the Home Screen › **+** › **Trains near me**. Both widgets also exist in the Lock Screen sizes (long-press the Lock Screen › **Customise**).
+
+Note that apps installed with a free Apple account stop working after 7 days on iPhone; rebuild from Xcode to renew them.
 
 ## Reading the widget
 
@@ -194,9 +224,10 @@ Open an issue at <https://github.com/Wonskcalb/trains-near-me/issues> describing
 
 ## Privacy
 
-- No intermediate server: your Mac talks directly to `api.sncf.com`.
-- Your location, if you allow it, is only used on your Mac.
+- No intermediate server: your device talks directly to `api.sncf.com`.
+- In the Trip widget, your location is only used on the device, to compare the distance to your two stations.
+- In the Radar widget, a position rounded to about 100 m is sent to the SNCF API, only to find the station closest to you.
 - No analytics and no tracking.
-- Your token is stored only on your Mac.
+- Your token is stored only on your device.
 
 *Independent project, not affiliated with SNCF. Data © SNCF.*

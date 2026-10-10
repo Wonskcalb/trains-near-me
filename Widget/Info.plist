@@ -26,12 +26,14 @@
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
 	<key>NSLocationUsageDescription</key>
-	<string>Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.</string>
+	<string>Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Used only to pick the nearest of your two configured stations. Your location never leaves this Mac.</string>
+	<string>Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.</string>
 	<key>NSWidgetWantsLocation</key>
 	<true/>
 	<key>SNCFAppGroup</key>
 	<string>$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)</string>
+	<key>SNCFToken</key>
+	<string>$(SNCF_TOKEN)</string>
 </dict>
 </plist>

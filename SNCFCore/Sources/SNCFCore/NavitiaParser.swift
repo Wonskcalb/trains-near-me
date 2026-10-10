@@ -17,7 +17,7 @@ public enum NavitiaParser {
         }
         guard let journeys = response.journeys else { throw .malformedResponse }
 
-        let disruptions = Dictionary((response.disruptions ?? []).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let disruptions = byID(response.disruptions)
         var seen = Set<Date>()
         return journeys
             .compactMap { departure(for: $0, origin: origin, destination: destination, disruptions: disruptions) }
@@ -25,16 +25,45 @@ public enum NavitiaParser {
             .filter { seen.insert($0.scheduledDeparture).inserted }
     }
 
-    public static func stations(from data: Data) throws(TrainServiceError) -> [Station] {
-        guard let response = try? decoder.decode(PlacesResponse.self, from: data) else { throw .malformedResponse }
-        return (response.places ?? []).compactMap { place in
-            guard let area = place.stopArea, let coord = area.coord,
-                  let lat = Double(coord.lat), let lon = Double(coord.lon) else { return nil }
-            return Station(id: area.id, name: area.name ?? place.name ?? area.id, latitude: lat, longitude: lon)
+    /// Decodes a `/stop_areas/{id}/departures` response, requested with the same
+    /// `data_freshness=base_schedule` trick so cancelled trains stay in the board.
+    public static func stopDepartures(from data: Data) throws(TrainServiceError) -> [TrainDeparture] {
+        let response: StopDeparturesResponse
+        do {
+            response = try decoder.decode(StopDeparturesResponse.self, from: data)
+        } catch {
+            throw .malformedResponse
         }
+        if let error = response.error {
+            if noResultErrors.contains(error.id) { return [] }
+            throw .malformedResponse
+        }
+        guard let departures = response.departures else { throw .malformedResponse }
+
+        let disruptions = byID(response.disruptions)
+        return departures
+            .compactMap { departure(for: $0, disruptions: disruptions) }
+            .sorted { $0.scheduledDeparture < $1.scheduledDeparture }
     }
 
-    static let noResultErrors: Set<String> = ["no_solution", "date_out_of_bounds", "no_origin_nor_destination"]
+    public static func stations(from data: Data) throws(TrainServiceError) -> [Station] {
+        guard let response = try? decoder.decode(PlacesResponse.self, from: data) else { throw .malformedResponse }
+        return (response.places ?? []).compactMap(station(from:))
+    }
+
+    /// `/coord/{lon};{lat}/places_nearby` answers in distance order, nearest first.
+    public static func nearbyStations(from data: Data) throws(TrainServiceError) -> [Station] {
+        guard let response = try? decoder.decode(PlacesNearbyResponse.self, from: data) else { throw .malformedResponse }
+        return (response.placesNearby ?? []).compactMap(station(from:))
+    }
+
+    static func station(from place: PlaceResult) -> Station? {
+        guard let area = place.stopArea, let coord = area.coord,
+              let lat = Double(coord.lat), let lon = Double(coord.lon) else { return nil }
+        return Station(id: area.id, name: area.name ?? place.name ?? area.id, latitude: lat, longitude: lon)
+    }
+
+    static let noResultErrors: Set<String> = ["no_solution", "date_out_of_bounds", "no_origin_nor_destination", "no_departure"]
 
     /// Only a single direct train from origin to destination counts as serving the journey.
     static func departure(for journey: Journey, origin: Station, destination: Station, disruptions: [String: Disruption]) -> TrainDeparture? {
@@ -45,38 +74,70 @@ public enum NavitiaParser {
               let arrival = parseDate(section.baseArrivalDateTime ?? section.arrivalDateTime)
         else { return nil }
 
-        let linked = (section.displayInformations?.links ?? [])
-            .filter { $0.type == "disruption" || $0.rel == "disruptions" }
-            .compactMap { $0.id.flatMap { disruptions[$0] } }
-        let impactedStops = linked.flatMap { $0.impactedObjects ?? [] }.flatMap { $0.impactedStops ?? [] }
-        let originStop = impactedStops.first { $0.stopPoint?.id == section.from?.stopPoint?.id }
-        let destinationStop = impactedStops.first { $0.stopPoint?.id == section.to?.stopPoint?.id }
+        let linked = linkedDisruptions(section.displayInformations, disruptions)
+        let stops = impactedStops(linked)
+        let originStop = stops.first { $0.stopPoint?.id == section.from?.stopPoint?.id }
+        let destinationStop = stops.first { $0.stopPoint?.id == section.to?.stopPoint?.id }
 
         let cancelled = journey.status == "NO_SERVICE"
-            || linked.contains { $0.severity?.effect == "NO_SERVICE" }
-            || originStop?.departureStatus == "deleted"
+            || isCancelled(linked, at: originStop)
             || destinationStop?.arrivalStatus == "deleted"
-
-        let delay: Int?
-        if let base = originStop?.baseDepartureTime.flatMap(secondsOfDay),
-           let amended = originStop?.amendedDepartureTime.flatMap(secondsOfDay) {
-            var diff = amended - base
-            if diff < -12 * 3600 { diff += 24 * 3600 }
-            delay = max(0, diff / 60)
-        } else if journey.status == "SIGNIFICANT_DELAYS" {
-            delay = nil
-        } else {
-            delay = 0
-        }
 
         let info = section.displayInformations
         return TrainDeparture(
             scheduledDeparture: departure,
             scheduledArrival: arrival,
-            delayMinutes: delay,
+            delayMinutes: delay(at: originStop, significantDelays: journey.status == "SIGNIFICANT_DELAYS"),
             isCancelled: cancelled,
             trainNumber: info?.tripShortName ?? info?.headsign
         )
+    }
+
+    /// One row of a station board: no arrival time, but a direction to show instead.
+    static func departure(for board: BoardDeparture, disruptions: [String: Disruption]) -> TrainDeparture? {
+        let times = board.stopDateTime
+        guard let departure = parseDate(times?.baseDepartureDateTime ?? times?.departureDateTime) else { return nil }
+
+        let linked = linkedDisruptions(board.displayInformations, disruptions)
+        let stop = impactedStops(linked).first { $0.stopPoint?.id == board.stopPoint?.id }
+        let info = board.displayInformations
+
+        return TrainDeparture(
+            scheduledDeparture: departure,
+            direction: info?.direction,
+            delayMinutes: delay(at: stop, significantDelays: linked.contains { $0.severity?.effect == "SIGNIFICANT_DELAYS" }),
+            isCancelled: isCancelled(linked, at: stop),
+            trainNumber: info?.tripShortName ?? info?.headsign
+        )
+    }
+
+    static func byID(_ disruptions: [Disruption]?) -> [String: Disruption] {
+        Dictionary((disruptions ?? []).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    static func linkedDisruptions(_ info: DisplayInformations?, _ disruptions: [String: Disruption]) -> [Disruption] {
+        (info?.links ?? [])
+            .filter { $0.type == "disruption" || $0.rel == "disruptions" }
+            .compactMap { $0.id.flatMap { disruptions[$0] } }
+    }
+
+    static func impactedStops(_ linked: [Disruption]) -> [ImpactedStop] {
+        linked.flatMap { $0.impactedObjects ?? [] }.flatMap { $0.impactedStops ?? [] }
+    }
+
+    static func isCancelled(_ linked: [Disruption], at stop: ImpactedStop?) -> Bool {
+        linked.contains { $0.severity?.effect == "NO_SERVICE" } || stop?.departureStatus == "deleted"
+    }
+
+    /// nil means "delayed by an unknown amount": SNCF announced the delay without an amended time.
+    static func delay(at stop: ImpactedStop?, significantDelays: Bool) -> Int? {
+        guard let base = stop?.baseDepartureTime.flatMap(secondsOfDay),
+              let amended = stop?.amendedDepartureTime.flatMap(secondsOfDay) else {
+            return significantDelays ? nil : 0
+        }
+        var diff = amended - base
+        if diff < -12 * 3600 { diff += 24 * 3600 }
+        return max(0, diff / 60)
     }
 
     static func parseDate(_ string: String?) -> Date? {
@@ -156,6 +217,7 @@ struct Coord: Decodable {
 }
 
 struct DisplayInformations: Decodable {
+    let direction: String?
     let headsign: String?
     let tripShortName: String?
     let links: [Link]?
@@ -189,8 +251,29 @@ struct ImpactedStop: Decodable {
     let arrivalStatus: String?
 }
 
+struct StopDeparturesResponse: Decodable {
+    let departures: [BoardDeparture]?
+    let disruptions: [Disruption]?
+    let error: APIError?
+}
+
+struct BoardDeparture: Decodable {
+    let stopDateTime: StopDateTime?
+    let displayInformations: DisplayInformations?
+    let stopPoint: StopPoint?
+}
+
+struct StopDateTime: Decodable {
+    let departureDateTime: String?
+    let baseDepartureDateTime: String?
+}
+
 struct PlacesResponse: Decodable {
     let places: [PlaceResult]?
+}
+
+struct PlacesNearbyResponse: Decodable {
+    let placesNearby: [PlaceResult]?
 }
 
 struct PlaceResult: Decodable {

@@ -37,15 +37,19 @@ public enum DepartureStatus: Equatable, Sendable {
 
 public struct TrainDeparture: Hashable, Sendable {
     public let scheduledDeparture: Date
-    public let scheduledArrival: Date
+    /// nil on a station board: the departures endpoint only says when the train leaves.
+    public let scheduledArrival: Date?
+    /// Headsign of the train's final stop; nil for a journey, where the arrival is known instead.
+    public let direction: String?
     /// nil when SNCF signals a disruption without an amended time.
     public let delayMinutes: Int?
     public let isCancelled: Bool
     public let trainNumber: String?
 
-    public init(scheduledDeparture: Date, scheduledArrival: Date, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?) {
+    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?) {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
+        self.direction = direction
         self.delayMinutes = delayMinutes
         self.isCancelled = isCancelled
         self.trainNumber = trainNumber
@@ -55,7 +59,7 @@ public struct TrainDeparture: Hashable, Sendable {
         scheduledDeparture.addingTimeInterval(TimeInterval((delayMinutes ?? 0) * 60))
     }
 
-    public var duration: TimeInterval { scheduledArrival.timeIntervalSince(scheduledDeparture) }
+    public var duration: TimeInterval? { scheduledArrival?.timeIntervalSince(scheduledDeparture) }
 
     public var status: DepartureStatus { .from(delayMinutes: delayMinutes, cancelled: isCancelled) }
 }
@@ -94,6 +98,9 @@ public enum TrainServiceError: Error, Equatable, Sendable {
     case offline
     case serverUnavailable
     case malformedResponse
+    /// Radar mode only: no usable location, or no station around it.
+    case noLocation
+    case noStationNearby
 }
 
 extension TrainServiceError: LocalizedError {
@@ -105,10 +112,8 @@ extension TrainServiceError: LocalizedError {
         case .offline: "No internet connection."
         case .serverUnavailable: "The SNCF API is not responding."
         case .malformedResponse: "Unexpected response from the SNCF API."
+        case .noLocation: "No location: allow it in Trains near me."
+        case .noStationNearby: "No station within \(SNCFClient.searchRadiusKilometres) km."
         }
     }
-}
-
-public protocol TrainService: Sendable {
-    func departures(from: Station, to: Station, at: Date) async throws(TrainServiceError) -> [TrainDeparture]
 }

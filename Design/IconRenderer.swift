@@ -60,14 +60,31 @@ struct BoardIcon: View {
         .frame(width: 600, alignment: .leading)
     }
 
+    static let background = LinearGradient(colors: [Color(white: 0.16), Color(white: 0.04)], startPoint: .top, endPoint: .bottom)
+
     var body: some View {
-        IconShell(background: AnyShapeStyle(LinearGradient(colors: [Color(white: 0.16), Color(white: 0.04)], startPoint: .top, endPoint: .bottom))) {
-            VStack(spacing: 58) {
-                row(amber, nil)
-                row(amber, amber.opacity(0.9))
-                row(amber.opacity(0.45), coral)
-            }
+        IconShell(background: AnyShapeStyle(Self.background)) {
+            rows
         }
+    }
+
+    var rows: some View {
+        VStack(spacing: 58) {
+            row(amber, nil)
+            row(amber, amber.opacity(0.9))
+            row(amber.opacity(0.45), coral)
+        }
+    }
+}
+
+/// iOS rounds and shadows the icon itself, so its artwork fills the whole canvas.
+struct FlatBoardIcon: View {
+    var body: some View {
+        ZStack {
+            BoardIcon.background
+            BoardIcon().rows.scaleEffect(1024.0 / 824.0)
+        }
+        .frame(width: 1024, height: 1024)
     }
 }
 
@@ -98,9 +115,11 @@ struct TrackIcon: View {
 }
 
 @MainActor
-func render(_ view: some View, to url: URL) throws {
+func render(_ view: some View, to url: URL, opaque: Bool = false) throws {
     let renderer = ImageRenderer(content: view)
     renderer.scale = 1
+    // iOS app icons may not carry an alpha channel; the macOS ones need it for their margin.
+    renderer.isOpaque = opaque
     guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
           let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else {
         throw CocoaError(.fileWriteUnknown)
@@ -113,4 +132,5 @@ try MainActor.assumeIsolated {
     try render(TrainIcon(), to: out.appendingPathComponent("icon-train.png"))
     try render(BoardIcon(), to: out.appendingPathComponent("icon-board.png"))
     try render(TrackIcon(), to: out.appendingPathComponent("icon-track.png"))
+    try render(FlatBoardIcon(), to: out.appendingPathComponent("icon-ios.png"), opaque: true)
 }

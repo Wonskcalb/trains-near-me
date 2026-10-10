@@ -3,14 +3,42 @@ import SwiftUI
 import WidgetKit
 
 @main
-struct DeparturesWidget: Widget {
+struct TrainsNearMeWidgets: WidgetBundle {
+    var body: some Widget {
+        TripWidget()
+        RadarWidget()
+    }
+}
+
+/// Desktop and Home Screen everywhere, plus the Lock Screen where there is one.
+let widgetFamilies: [WidgetFamily] = {
+    var families: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
+    #if os(iOS)
+    families += [.accessoryRectangular, .accessoryCircular]
+    #endif
+    return families
+}()
+
+struct TripWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "DeparturesWidget", intent: JourneyIntent.self, provider: Provider()) { entry in
+        // The kind is what macOS uses to find already-placed widgets, so it keeps its old name.
+        AppIntentConfiguration(kind: "DeparturesWidget", intent: JourneyIntent.self, provider: TripProvider()) { entry in
             DeparturesView(entry: entry)
         }
-        .configurationDisplayName("Trains near me")
-        .description("Next direct trains for one journey.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .configurationDisplayName("Trip")
+        .description("Next direct trains between two stations.")
+        .supportedFamilies(widgetFamilies)
+    }
+}
+
+struct RadarWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: "RadarWidget", intent: RadarIntent.self, provider: RadarProvider()) { entry in
+            DeparturesView(entry: entry)
+        }
+        .configurationDisplayName("Radar")
+        .description("Next departures from the station closest to you, in every direction.")
+        .supportedFamilies(widgetFamilies)
     }
 }
 
@@ -18,18 +46,18 @@ struct DeparturesView: View {
     let entry: DeparturesEntry
     @Environment(\.widgetFamily) private var family
 
+    private var compact: Bool { family == .systemSmall }
+
     private var rowLimit: Int {
         let rows = family == .systemLarge ? 8 : 3
         // The location warning takes the height of one row.
         return entry.locationIssue == nil ? rows : rows - 1
     }
 
-    private var isStale: Bool { RefreshPlanner.isStale(fetchedAt: entry.fetchedAt, at: entry.date) }
-
     private enum Backdrop { case standard, hazard, night }
 
     private var backdrop: Backdrop {
-        if isStale { return .standard }
+        if entry.isStale { return .standard }
         switch entry.state {
         case .noService: return .hazard
         case .endOfService: return .night
@@ -38,9 +66,20 @@ struct DeparturesView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 3 : 4) {
-            if let leg = entry.leg {
-                header(leg)
+        #if os(iOS)
+        switch family {
+        case .accessoryCircular, .accessoryRectangular: AccessoryBoard(entry: entry)
+        default: panel
+        }
+        #else
+        panel
+        #endif
+    }
+
+    private var panel: some View {
+        VStack(alignment: .leading, spacing: compact ? 3 : 4) {
+            if let board = entry.board {
+                header(board)
                 content
             } else {
                 message("Choose stations", detail: "Edit the widget to pick departure and arrival.")
@@ -49,7 +88,7 @@ struct DeparturesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
             switch backdrop {
-            case .standard: Color(nsColor: .windowBackgroundColor)
+            case .standard: Rectangle().fill(.background)
             case .hazard: HazardStripes()
             case .night: LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)], startPoint: .top, endPoint: .bottom)
             }
@@ -57,26 +96,20 @@ struct DeparturesView: View {
         .foregroundStyle(backdrop == .standard ? AnyShapeStyle(.primary) : AnyShapeStyle(Color.white))
     }
 
-    @ViewBuilder private func header(_ leg: Leg) -> some View {
-        let compact = family == .systemSmall
+    @ViewBuilder private func header(_ board: Board) -> some View {
         HStack(alignment: .top, spacing: 7) {
-            VStack(spacing: 0) {
-                Circle().strokeBorder(.secondary, lineWidth: 1.5).frame(width: 7, height: 7).padding(.top, 4)
-                Rectangle().fill(.secondary).frame(width: 1.5, height: compact ? 9 : 10)
-                Circle().fill(.primary).frame(width: 9, height: 9)
-            }
-            .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(leg.from.name)
-                    .font(.system(size: compact ? 11 : 12))
+            switch board {
+            case .trip(let leg):
+                JourneyPins(compact: compact)
+                titles(leg.from.name, leg.to.name, label: "\(leg.from.name) to \(leg.to.name)")
+            case .radar(let station):
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: compact ? 13 : 15))
                     .foregroundStyle(.secondary)
-                Text(leg.to.name)
-                    .font(.system(size: compact ? 16 : 18, weight: .bold))
+                    .padding(.top, 2)
+                    .accessibilityHidden(true)
+                titles("Nearest station", station?.name ?? "Looking around…", label: "Departures from \(station?.name ?? "the nearest station")")
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(leg.from.name) to \(leg.to.name)")
             Spacer(minLength: 4)
             if !compact {
                 Text(entry.fetchedAt, style: .time)
@@ -94,29 +127,43 @@ struct DeparturesView: View {
         }
     }
 
+    private func titles(_ top: String, _ bottom: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(top)
+                .font(.system(size: compact ? 11 : 12))
+                .foregroundStyle(.secondary)
+            Text(bottom)
+                .font(.system(size: compact ? 16 : 18, weight: .bold))
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(label)
+    }
+
     @ViewBuilder private var content: some View {
-        if isStale {
-            message("Data out of date", detail: "Waiting for macOS to refresh the widget.")
+        if entry.isStale {
+            message("Data out of date", detail: "Waiting for the system to refresh the widget.")
         } else {
             switch entry.state {
-            case .departures(let trains):
-                let upcoming = trains.filter { $0.expectedDeparture > entry.date }.prefix(rowLimit)
+            case .departures:
+                let upcoming = entry.upcoming.prefix(rowLimit)
                 if upcoming.isEmpty {
                     message("No more trains", detail: "Refreshing soon.")
                 } else {
-                    ForEach(Array(upcoming), id: \.self) { DepartureRow(train: $0, compact: family == .systemSmall) }
+                    ForEach(Array(upcoming), id: \.self) { DepartureRow(train: $0, compact: compact) }
                     Spacer(minLength: 0)
                 }
             case .noTrains:
-                message("No trains", detail: "No direct train found for now.")
+                message("No trains", detail: "No departure found for now.")
             case .endOfService(let firstTrain):
                 Spacer(minLength: 0)
-                EndOfService(firstTrain: firstTrain, now: entry.date, compact: family == .systemSmall)
+                EndOfService(firstTrain: firstTrain, now: entry.date, compact: compact)
                 Spacer(minLength: 0)
             case .noService:
                 Spacer(minLength: 0)
                 VStack(spacing: 2) {
-                    Text("NO SERVICE").font(.system(size: family == .systemSmall ? 16 : 20, weight: .heavy)).tracking(1)
+                    Text("NO SERVICE").font(.system(size: compact ? 16 : 20, weight: .heavy)).tracking(1)
                     Text("All trains cancelled").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 12)
@@ -139,6 +186,85 @@ struct DeparturesView: View {
         }
     }
 }
+
+struct JourneyPins: View {
+    let compact: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Circle().strokeBorder(.secondary, lineWidth: 1.5).frame(width: 7, height: 7).padding(.top, 4)
+            Rectangle().fill(.secondary).frame(width: 1.5, height: compact ? 9 : 10)
+            Circle().fill(.primary).frame(width: 9, height: 9)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+#if os(iOS)
+/// Lock Screen and StandBy: one line of title, then as many departures as fit.
+struct AccessoryBoard: View {
+    let entry: DeparturesEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var title: String {
+        switch entry.board {
+        case .trip(let leg): leg.to.name
+        case .radar(let station): station?.name ?? "Radar"
+        case nil: "Trains near me"
+        }
+    }
+
+    var body: some View {
+        if family == .accessoryCircular {
+            ZStack {
+                AccessoryWidgetBackground()
+                VStack(spacing: 0) {
+                    Image(systemName: "tram.fill").font(.system(size: 9))
+                    if let next = entry.upcoming.first {
+                        Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                    } else {
+                        Text("--:--")
+                    }
+                }
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            }
+            .accessibilityLabel(entry.upcoming.first.map { "Next train at \($0.expectedDeparture.formatted(date: .omitted, time: .shortened))" } ?? entry.shortStatus)
+        } else {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.caption).fontWeight(.semibold).lineLimit(1).widgetAccentable()
+                if entry.upcoming.isEmpty {
+                    Text(entry.shortStatus).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                } else {
+                    ForEach(Array(entry.upcoming.prefix(2)), id: \.self) { AccessoryRow(train: $0) }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+}
+
+struct AccessoryRow: View {
+    let train: TrainDeparture
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                .font(.caption.monospacedDigit())
+                .strikethrough(train.isCancelled)
+            switch train.status {
+            case .cancelled: Text("canc.").font(.caption2)
+            case .unknown: Text("+?").font(.caption2)
+            case .delayed, .severelyDelayed: Text("+\(train.delayMinutes ?? 0)").font(.caption2.monospacedDigit())
+            case .onTime: EmptyView()
+            }
+            if let direction = train.direction {
+                Text(direction).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+#endif
 
 struct HazardStripes: View {
     var body: some View {
@@ -194,9 +320,18 @@ struct DepartureRow: View {
                 .font(.system(size: compact ? 14 : 15, weight: .semibold).monospacedDigit())
                 .strikethrough(train.isCancelled)
             if !compact || !train.isCancelled {
-                Text("\(Int(train.duration / 60)) min")
-                    .font(.system(size: 12).monospacedDigit())
-                    .foregroundStyle(.secondary)
+                // A journey knows how long it takes; a station board knows where the train goes.
+                if let duration = train.duration {
+                    Text("\(Int(duration / 60)) min")
+                        .font(.system(size: 12).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                } else if let direction = train.direction {
+                    Text(direction)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
             Spacer(minLength: 2)
             badge

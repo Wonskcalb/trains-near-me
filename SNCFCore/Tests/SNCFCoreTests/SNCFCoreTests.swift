@@ -94,7 +94,7 @@ func fixture(_ name: String) throws -> Data {
     @Test func onTime() throws {
         let train = try mixed()[0]
         #expect(train.scheduledDeparture == at(17, 42))
-        #expect(train.duration == 25 * 60)
+        #expect(train.duration == TimeInterval(25 * 60))
         #expect(train.delayMinutes == 0)
         #expect(train.status == .onTime)
     }
@@ -130,6 +130,22 @@ func fixture(_ name: String) throws -> Data {
         #expect(throws: TrainServiceError.malformedResponse) {
             try NavitiaParser.departures(from: Data("{\"journeys\": 3}".utf8), origin: grenoble, destination: voiron)
         }
+    }
+
+    @Test func stationBoardListsEveryDirection() throws {
+        let board = try NavitiaParser.stopDepartures(from: fixture("stop_departures"))
+        #expect(board.map(\.direction) == ["Valence Ville (Valence)", "Lyon Part Dieu (Lyon)",
+                                           "Chambéry - Challes-les-Eaux (Chambéry)", "Annecy (Annecy)"])
+        #expect(board[0].scheduledDeparture == at(17, 42))
+        #expect(board[0].duration == nil)
+        #expect(board[0].status == .onTime)
+        #expect(board[1].delayMinutes == 12)
+        #expect(board[2].status == .cancelled)
+        #expect(board[3].status == .unknown)
+    }
+
+    @Test func nearbySearchKeepsStopAreasInDistanceOrder() throws {
+        #expect(try NavitiaParser.nearbyStations(from: fixture("places_nearby")) == [grenoble, voiron])
     }
 
     @Test func stationSearchKeepsStopAreasOnly() throws {

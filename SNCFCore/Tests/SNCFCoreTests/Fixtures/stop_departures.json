@@ -1,0 +1,269 @@
+{
+ "departures": [
+  {
+   "display_informations": {
+    "commercial_mode": "TER",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Valence Ville (Valence)",
+    "headsign": "17601",
+    "trip_short_name": "17601",
+    "label": "TER 17601",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T174200",
+    "base_departure_date_time": "20261008T174200",
+    "arrival_date_time": "20261008T174200",
+    "base_arrival_date_time": "20261008T174200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:17601",
+    "name": "Valence Ville (Valence)"
+   }
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "TER",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Lyon Part Dieu (Lyon)",
+    "headsign": "17603",
+    "trip_short_name": "17603",
+    "label": "TER 17603",
+    "links": [
+     {
+      "id": "delay1",
+      "type": "disruption",
+      "rel": "disruptions",
+      "internal": true
+     }
+    ]
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T181200",
+    "base_departure_date_time": "20261008T181200",
+    "arrival_date_time": "20261008T181200",
+    "base_arrival_date_time": "20261008T181200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:17603",
+    "name": "Lyon Part Dieu (Lyon)"
+   }
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "TER",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Chambéry - Challes-les-Eaux (Chambéry)",
+    "headsign": "17605",
+    "trip_short_name": "17605",
+    "label": "TER 17605",
+    "links": [
+     {
+      "id": "cancel1",
+      "type": "disruption",
+      "rel": "disruptions",
+      "internal": true
+     }
+    ]
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T184200",
+    "base_departure_date_time": "20261008T184200",
+    "arrival_date_time": "20261008T184200",
+    "base_arrival_date_time": "20261008T184200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:17605",
+    "name": "Chambéry - Challes-les-Eaux (Chambéry)"
+   }
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "TER",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Annecy (Annecy)",
+    "headsign": "17607",
+    "trip_short_name": "17607",
+    "label": "TER 17607",
+    "links": [
+     {
+      "id": "unknown1",
+      "type": "disruption",
+      "rel": "disruptions",
+      "internal": true
+     }
+    ]
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T191200",
+    "base_departure_date_time": "20261008T191200",
+    "arrival_date_time": "20261008T191200",
+    "base_arrival_date_time": "20261008T191200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:17607",
+    "name": "Annecy (Annecy)"
+   }
+  }
+ ],
+ "disruptions": [
+  {
+   "id": "delay1",
+   "disruption_id": "delay1",
+   "status": "active",
+   "severity": {
+    "name": "SIGNIFICANT_DELAYS",
+    "effect": "SIGNIFICANT_DELAYS"
+   },
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "id": "trip:delay1",
+      "embedded_type": "trip"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747006:Train",
+        "name": "Grenoble",
+        "stop_area": {
+         "id": "stop_area:SNCF:87747006",
+         "name": "Grenoble",
+         "coord": {
+          "lat": "45.191463",
+          "lon": "5.714466"
+         }
+        }
+       },
+       "base_departure_time": "181200",
+       "amended_departure_time": "182400",
+       "base_arrival_time": "181200",
+       "amended_arrival_time": "182400",
+       "departure_status": "delayed",
+       "arrival_status": "delayed",
+       "stop_time_effect": "delayed"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cancel1",
+   "disruption_id": "cancel1",
+   "status": "active",
+   "severity": {
+    "name": "NO_SERVICE",
+    "effect": "NO_SERVICE"
+   },
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "id": "trip:cancel1",
+      "embedded_type": "trip"
+     },
+     "impacted_stops": [
+      {
+       "stop_point": {
+        "id": "stop_point:SNCF:87747006:Train",
+        "name": "Grenoble",
+        "stop_area": {
+         "id": "stop_area:SNCF:87747006",
+         "name": "Grenoble",
+         "coord": {
+          "lat": "45.191463",
+          "lon": "5.714466"
+         }
+        }
+       },
+       "base_departure_time": "184200",
+       "amended_departure_time": "184200",
+       "base_arrival_time": "184200",
+       "amended_arrival_time": "184200",
+       "departure_status": "deleted",
+       "arrival_status": "deleted",
+       "stop_time_effect": "deleted"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "unknown1",
+   "disruption_id": "unknown1",
+   "status": "active",
+   "severity": {
+    "name": "SIGNIFICANT_DELAYS",
+    "effect": "SIGNIFICANT_DELAYS"
+   },
+   "impacted_objects": [
+    {
+     "pt_object": {
+      "id": "trip:unknown1",
+      "embedded_type": "trip"
+     },
+     "impacted_stops": []
+    }
+   ]
+  }
+ ],
+ "context": {
+  "timezone": "Europe/Paris",
+  "current_datetime": "20261008T174000"
+ }
+}

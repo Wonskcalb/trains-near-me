@@ -23,10 +23,20 @@ let trains = [
     train(17, 42, 25), train(18, 12, 24, delay: 12), train(18, 42, 26, cancelled: true),
     train(19, 12, 25, delay: 23), train(19, 42, 25), train(20, 12, 24), train(20, 42, 26), train(21, 12, 25),
 ]
-let normal = DeparturesEntry(date: now, fetchedAt: now, leg: Leg(from: grenoble, to: voiron), state: .departures(trains))
-let noService = DeparturesEntry(date: now, fetchedAt: now, leg: Leg(from: grenoble, to: voiron), state: .noService)
+let normal = DeparturesEntry(date: now, fetchedAt: now, board: .trip(Leg(from: grenoble, to: voiron)), state: .departures(trains))
+let noService = DeparturesEntry(date: now, fetchedAt: now, board: .trip(Leg(from: grenoble, to: voiron)), state: .noService)
 let lateNight = at(23, 40)
-let endOfService = DeparturesEntry(date: lateNight, fetchedAt: lateNight, leg: Leg(from: grenoble, to: voiron), state: .endOfService(firstTrain: at(5, 58).addingTimeInterval(86400)))
+let endOfService = DeparturesEntry(date: lateNight, fetchedAt: lateNight, board: .trip(Leg(from: grenoble, to: voiron)), state: .endOfService(firstTrain: at(5, 58).addingTimeInterval(86400)))
+
+func radarTrain(_ h: Int, _ m: Int, _ direction: String, delay: Int? = 0, cancelled: Bool = false) -> TrainDeparture {
+    TrainDeparture(scheduledDeparture: at(h, m), direction: direction, delayMinutes: delay, isCancelled: cancelled, trainNumber: nil)
+}
+
+let radar = DeparturesEntry(date: now, fetchedAt: now, board: .radar(grenoble), state: .departures([
+    radarTrain(17, 42, "Valence Ville"), radarTrain(17, 55, "Lyon Part-Dieu", delay: 12),
+    radarTrain(18, 10, "Chambéry", cancelled: true), radarTrain(18, 24, "Annecy"),
+    radarTrain(18, 40, "Gap"), radarTrain(19, 02, "Lyon Perrache", delay: 23),
+]))
 
 func size(_ family: WidgetFamily) -> CGSize {
     switch family {
@@ -66,6 +76,7 @@ struct Sheet: View {
         HStack(alignment: .top, spacing: 20) {
             Chrome(entry: normal, family: .systemSmall)
             Chrome(entry: normal, family: .systemMedium)
+            Chrome(entry: radar, family: .systemMedium)
         }
         .padding(28)
         .background(dark ? Color(red: 0.14, green: 0.16, blue: 0.22) : Color(red: 0.80, green: 0.86, blue: 0.93))

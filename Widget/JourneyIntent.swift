@@ -79,3 +79,10 @@ struct JourneyIntent: WidgetConfigurationIntent {
         return JourneyConfiguration(stationA: a, stationB: b, direction: direction.mode, switchMinute: switchMinute, nearestStationAsDeparture: nearestStation)
     }
 }
+
+/// The radar has nothing to configure: it follows you. It stays an App Intent anyway so its
+/// provider keeps WidgetKit's async API, which a StaticConfiguration does not offer.
+struct RadarIntent: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Radar"
+    static let description = IntentDescription("Next departures from the station closest to you.")
+}

@@ -11,8 +11,19 @@ public enum SharedSettings {
     }
 
     public static var token: String? {
-        get { defaults?.string(forKey: tokenKey)?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        get { stored ?? bundled }
         set { defaults?.set(newValue, forKey: tokenKey) }
+    }
+
+    /// Typed in the host app, shared through the App Group. Unavailable on iOS, where a free
+    /// Apple account cannot use App Groups; `SNCF_TOKEN` in Config/Local.xcconfig takes over.
+    static var stored: String? { trimmed(defaults?.string(forKey: tokenKey)) }
+
+    public static var bundled: String? { trimmed(Bundle.main.object(forInfoDictionaryKey: "SNCFToken") as? String) }
+
+    static func trimmed(_ value: String?) -> String? {
+        let token = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (token?.isEmpty ?? true) ? nil : token
     }
 }
 

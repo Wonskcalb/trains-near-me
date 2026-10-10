@@ -1,8 +1,10 @@
 import Foundation
 
 /// api.sncf.com (Navitia). Free tier: 5 000 requests/day, token sent as Basic-auth username.
-public struct SNCFClient: TrainService {
+public struct SNCFClient {
     public static let departuresPerRequest = 8
+    /// Radar mode: how far to look for a station around you.
+    public static let searchRadiusKilometres = 20
 
     let token: String?
     let session: URLSession
@@ -25,6 +27,34 @@ public struct SNCFClient: TrainService {
             "min_nb_journeys": String(Self.departuresPerRequest),
         ])
         return try NavitiaParser.departures(from: data, origin: from, destination: to)
+    }
+
+    /// Radar mode: every train leaving one station, whatever its destination.
+    public func departures(from station: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
+        let data = try await get("stop_areas/\(station.id)/departures", [
+            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+            "data_freshness": "base_schedule",
+            "count": String(Self.departuresPerRequest),
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.stopDepartures(from: data)
+    }
+
+    /// The station closest to a position. Coordinates are rounded to three decimals
+    /// (~100 m) before they reach SNCF, which is plenty to pick the right station.
+    public func nearestStation(latitude: Double, longitude: Double) async throws(TrainServiceError) -> Station? {
+        let coord = "\(rounded(longitude));\(rounded(latitude))"
+        let data = try await get("coord/\(coord)/places_nearby", [
+            "type[]": "stop_area",
+            "count": "5",
+            "distance": String(Self.searchRadiusKilometres * 1000),
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.nearbyStations(from: data).first
+    }
+
+    private func rounded(_ degrees: Double) -> String {
+        String(format: "%.3f", degrees)
     }
 
     public func searchStations(_ query: String) async throws(TrainServiceError) -> [Station] {

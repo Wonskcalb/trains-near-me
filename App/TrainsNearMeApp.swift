@@ -7,10 +7,14 @@ import WidgetKit
 @main
 struct TrainsNearMeApp: App {
     var body: some Scene {
+        #if os(macOS)
         Window("Trains near me", id: "settings") {
             SettingsView().frame(width: 420).fixedSize()
         }
         .windowResizability(.contentSize)
+        #else
+        WindowGroup { SettingsView() }
+        #endif
     }
 }
 
@@ -22,6 +26,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("SNCF API token") {
+                #if os(macOS)
                 SecureField("Token", text: $token)
                 HStack {
                     Button("Save and test") { Task { await save() } }
@@ -30,6 +35,14 @@ struct SettingsView: View {
                 }
                 Link("Get a free token", destination: URL(string: "https://numerique.sncf.com/startup/api/token-developpeur/")!)
                     .font(.caption)
+                #else
+                // A free Apple account cannot share an App Group on iOS, so the token is compiled in instead.
+                Text(SharedSettings.bundled == nil
+                     ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
+                     : "Token taken from the build settings (SNCF_TOKEN).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                #endif
             }
             Section("Location (optional, for “Depart from nearest station”)") {
                 HStack {
@@ -45,7 +58,7 @@ struct SettingsView: View {
         .onAppear {
             // The widget cannot show a permission prompt itself; without this it silently uses the configured order.
             if location.status == .notDetermined { location.request() }
-            // macOS only hands the widget a location fix while the app is active, so refresh it now.
+            // The system only hands the widget a location fix while the app is active, so refresh it now.
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -84,7 +97,10 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
     override var description: String {
         switch status {
         case .authorizedAlways: "Allowed"
-        case .denied, .restricted: "Denied — enable it in System Settings › Privacy › Location Services"
+        #if !os(macOS)
+        case .authorizedWhenInUse: "Allowed"
+        #endif
+        case .denied, .restricted: "Denied — enable Location Services for Trains near me in Settings"
         default: "Not requested"
         }
     }
