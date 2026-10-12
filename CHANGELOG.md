@@ -11,6 +11,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - `scripts/render-screenshots.sh` regenerates the README, guide and social images from the real widget views.
 - Issue and pull request templates, contributing guide.
 
+### Fixed
+- The widget never got a position. Reading `CLLocationManager().authorizationStatus` off a throwaway manager answers `.notDetermined` until locationd replies, so an authorized widget decided it had no permission and gave up without asking. There is now one long-lived location client per process, the status is kept by its delegate, and a fix is attempted whatever the status says — it only names the failure.
+- Asking for the permission is not asking for a position either, so the system often had nothing cached and the widget's attempt started from cold. The host app now takes a fix at launch and shows what it found, and the widget waits up to 12 s, falling back to an older fix rather than to nothing.
+- On the small widget a row with a delay badge wrapped onto two lines; the middle column now shrinks instead.
+
 ### Changed
 - A refresh button in each widget's header, which fetches immediately instead of waiting for the system's next reload.
 - Reloads are now asked for 5 min before the next train instead of every 15 min, bounded by a 20-minute floor and a 60-minute ceiling, with a single reload booked for the night. The daily WidgetKit budget is spent when a delay can actually appear.

@@ -131,31 +131,11 @@ func makeTimeline(_ entry: DeparturesEntry, now: Date, flip: Date?) -> Timeline<
     return Timeline(entries: entries, policy: .after(reload))
 }
 
-/// One coarse fix, used to pick a station; only a position rounded to ~100 m ever reaches SNCF.
+/// A fix is always attempted; the authorization only names the failure, because it is only
+/// trustworthy once locationd has answered this process.
 func currentLocation() async -> Result<CLLocation, LocationIssue> {
-    let manager = CLLocationManager()
-    // macOS only ever reports "always" for a widget; iOS only ever reports "when in use".
-    #if os(macOS)
-    let allowed: [CLAuthorizationStatus] = [.authorizedAlways]
-    #else
-    let allowed: [CLAuthorizationStatus] = [.authorizedAlways, .authorizedWhenInUse]
-    #endif
-    guard allowed.contains(manager.authorizationStatus) else { return .failure(.notAuthorized) }
-    if let cached = manager.location, cached.timestamp.timeIntervalSinceNow > -15 * 60 { return .success(cached) }
-    let fix = await withTaskGroup(of: CLLocation?.self) { group in
-        group.addTask {
-            let updates = CLLocationUpdate.liveUpdates()
-            return try? await updates.first { $0.location != nil }?.location
-        }
-        group.addTask {
-            try? await Task.sleep(for: .seconds(5))
-            return nil
-        }
-        let first = await group.next() ?? nil
-        group.cancelAll()
-        return first
-    }
-    return fix.map { .success($0) } ?? .failure(.unavailable)
+    if let fix = await LocationFix.shared.current() { return .success(fix) }
+    return .failure(await LocationFix.shared.isAuthorized ? .unavailable : .notAuthorized)
 }
 
 extension DeparturesEntry {

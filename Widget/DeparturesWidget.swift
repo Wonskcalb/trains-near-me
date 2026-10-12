@@ -339,28 +339,34 @@ struct DepartureRow: View {
     let compact: Bool
 
     var body: some View {
-        HStack(spacing: 6) {
+        // On the small widget a delay badge leaves little room, and "25 min" used to wrap
+        // onto a second line, so the middle column shrinks rather than wraps.
+        HStack(spacing: compact ? 4 : 6) {
             Text(train.scheduledDeparture, format: .dateTime.hour().minute())
                 .font(.system(size: compact ? 14 : 15, weight: .semibold).monospacedDigit())
                 .strikethrough(train.isCancelled)
+                .fixedSize()
             if !compact || !train.isCancelled {
                 // A journey knows how long it takes; a station board knows where the train goes.
                 if let duration = train.duration {
                     Text("\(Int(duration / 60)) min")
-                        .font(.system(size: 12).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else if let direction = train.direction {
-                    Text(direction)
-                        .font(.system(size: 12))
+                        .font(.system(size: compact ? 11 : 12).monospacedDigit())
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                } else if let direction = train.direction {
+                    Text(direction)
+                        .font(.system(size: compact ? 11 : 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                         .truncationMode(.tail)
                 }
             }
             Spacer(minLength: 2)
             badge
         }
-        .padding(.horizontal, 5)
+        .padding(.horizontal, compact ? 3 : 5)
         .padding(.vertical, compact ? 1 : 2)
         .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 5))
         .opacity(train.isCancelled ? 0.75 : 1)
@@ -380,7 +386,11 @@ struct DepartureRow: View {
     }
 
     private func label(_ text: String, _ color: Color) -> some View {
-        Text(text).font(.system(size: 12, weight: .bold).monospacedDigit()).foregroundStyle(color)
+        Text(text)
+            .font(.system(size: compact ? 11 : 12, weight: .bold).monospacedDigit())
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     private var tint: Color {

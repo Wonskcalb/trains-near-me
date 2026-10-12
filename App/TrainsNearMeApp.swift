@@ -21,7 +21,8 @@ struct TrainsNearMeApp: App {
 struct SettingsView: View {
     @State private var token = SharedSettings.token ?? ""
     @State private var tokenStatus = ""
-    @State private var location = LocationPermission()
+    @State private var location = LocationFix.shared
+    @State private var fix: String?
 
     var body: some View {
         Form {
@@ -44,23 +45,55 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 #endif
             }
-            Section("Location (optional, for “Depart from nearest station”)") {
+            Section("Location (needed by Radar, optional for Trip)") {
                 HStack {
-                    Text(location.description).foregroundStyle(.secondary)
+                    Text(summary).foregroundStyle(.secondary)
                     Spacer()
                     if location.status == .notDetermined {
-                        Button("Allow") { location.request() }
+                        Button("Allow") { location.requestAuthorization() }
+                    } else {
+                        Button("Find me") { Task { await probe() } }
                     }
+                }
+                if let fix {
+                    Text(fix).font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
         .formStyle(.grouped)
-        .onAppear {
+        .task {
             // The widget cannot show a permission prompt itself; without this it silently uses the configured order.
-            if location.status == .notDetermined { location.request() }
-            // The system only hands the widget a location fix while the app is active, so refresh it now.
+            if location.status == .notDetermined { location.requestAuthorization() }
+            // Taking a fix here is what makes the widget's own attempt cheap: the permission alone
+            // leaves the system with nothing cached, and a widget has no time to start from cold.
+            await probe()
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    private var summary: String {
+        switch location.status {
+        case .authorizedAlways: "Allowed"
+        #if !os(macOS)
+        case .authorizedWhenInUse: "Allowed"
+        #endif
+        case .denied, .restricted: "Denied — enable Location Services for Trains near me in Settings"
+        default: "Not requested"
+        }
+    }
+
+    /// Shows what the system really hands over, so a silent failure stays visible.
+    private func probe() async {
+        fix = "Looking for your position…"
+        guard let location = await LocationFix.shared.current() else {
+            fix = "No position: the system returned none. Check that Location Services is on."
+            return
+        }
+        let minutes = Int(-location.timestamp.timeIntervalSinceNow / 60)
+        fix = String(format: "Found: %.3f, %.3f (%@) — that is what Radar sends to SNCF.",
+                     location.coordinate.latitude, location.coordinate.longitude,
+                     minutes < 1 ? "just now" : "\(minutes) min ago")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func save() async {
@@ -73,35 +106,5 @@ struct SettingsView: View {
             tokenStatus = error == .unauthorized ? "Token rejected." : "Saved, but the SNCF API could not be reached."
         }
         WidgetCenter.shared.reloadAllTimelines()
-    }
-}
-
-@Observable
-final class LocationPermission: NSObject, CLLocationManagerDelegate {
-    private let manager = CLLocationManager()
-    var status: CLAuthorizationStatus
-
-    override init() {
-        status = manager.authorizationStatus
-        super.init()
-        manager.delegate = self
-    }
-
-    func request() { manager.requestWhenInUseAuthorization() }
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        status = manager.authorizationStatus
-        WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    override var description: String {
-        switch status {
-        case .authorizedAlways: "Allowed"
-        #if !os(macOS)
-        case .authorizedWhenInUse: "Allowed"
-        #endif
-        case .denied, .restricted: "Denied — enable Location Services for Trains near me in Settings"
-        default: "Not requested"
-        }
     }
 }

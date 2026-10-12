@@ -158,6 +158,7 @@ The 38 tests make no live API calls. They cover:
 | Station search fails with error `0` (token missing) | The app and the widget were signed with different teams, so they use different App Groups | Set `DEVELOPMENT_TEAM` in `Config/Local.xcconfig` only, so both targets get the same team |
 | The location prompt never appears; the app stays at "Not requested" | macOS remembers an earlier signing identity for that bundle id | Change `BUNDLE_ID_PREFIX` |
 | On iPhone, "Add your SNCF API token…" | A free Apple account cannot share an App Group on iOS | Set `SNCF_TOKEN` in `Config/Local.xcconfig` and build again |
+| The widget shows an old build, or stops getting a location | `xcodebuild` registers its product in LaunchServices, so a copy in DerivedData competes with the installed one — and that copy has its own bundle id, hence no location permission | `lsregister -u <path to the DerivedData app>`, delete that build, then `lsregister -f "/Applications/Trains near me.app"`. Pass `-derivedDataPath` somewhere disposable when building by hand |
 | The widget has no **Edit** option | Xcode's debug dylib hides the App Intent from the system | Keep `ENABLE_DEBUG_DYLIB: NO` in `project.yml` |
 
 ## Screenshots
