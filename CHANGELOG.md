@@ -11,6 +11,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - `scripts/render-screenshots.sh` regenerates the README, guide and social images from the real widget views.
 - Issue and pull request templates, contributing guide.
 
+### Added
+- Medium and large widgets name the service of each train — TER, TGV, OUIGO, Intercités, or Car when a coach replaces it.
+
 ### Fixed
 - The widget never got a position. Reading `CLLocationManager().authorizationStatus` off a throwaway manager answers `.notDetermined` until locationd replies, so an authorized widget decided it had no permission and gave up without asking. There is now one long-lived location client per process, the status is kept by its delegate, and a fix is attempted whatever the status says — it only names the failure.
 - Asking for the permission is not asking for a position either, so the system often had nothing cached and the widget's attempt started from cold. The host app now takes a fix at launch and shows what it found, and the widget waits up to 12 s, falling back to an older fix rather than to nothing.

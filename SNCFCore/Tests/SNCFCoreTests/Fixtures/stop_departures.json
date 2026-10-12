@@ -2,7 +2,7 @@
  "departures": [
   {
    "display_informations": {
-    "commercial_mode": "TER",
+    "commercial_mode": "REGIONAURA",
     "network": "TER Auvergne-Rhône-Alpes",
     "physical_mode": "TER / Intercités",
     "direction": "Valence Ville (Valence)",
@@ -37,9 +37,9 @@
   },
   {
    "display_informations": {
-    "commercial_mode": "TER",
+    "commercial_mode": "TGV INOUI",
     "network": "TER Auvergne-Rhône-Alpes",
-    "physical_mode": "TER / Intercités",
+    "physical_mode": "Train grande vitesse",
     "direction": "Lyon Part Dieu (Lyon)",
     "headsign": "17603",
     "trip_short_name": "17603",
@@ -79,9 +79,9 @@
   },
   {
    "display_informations": {
-    "commercial_mode": "TER",
+    "commercial_mode": "REGIONAURA",
     "network": "TER Auvergne-Rhône-Alpes",
-    "physical_mode": "TER / Intercités",
+    "physical_mode": "Train grande vitesse",
     "direction": "Chambéry - Challes-les-Eaux (Chambéry)",
     "headsign": "17605",
     "trip_short_name": "17605",
@@ -121,9 +121,9 @@
   },
   {
    "display_informations": {
-    "commercial_mode": "TER",
+    "commercial_mode": "REGIONAURA",
     "network": "TER Auvergne-Rhône-Alpes",
-    "physical_mode": "TER / Intercités",
+    "physical_mode": "Car TER",
     "direction": "Annecy (Annecy)",
     "headsign": "17607",
     "trip_short_name": "17607",

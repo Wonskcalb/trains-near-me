@@ -144,6 +144,17 @@ func fixture(_ name: String) throws -> Data {
         #expect(board[3].status == .unknown)
     }
 
+    /// SNCF names every TER after its region ("REGIONAURA"), so the brand alone is unreadable
+    /// and the physical mode has to finish the job.
+    @Test func serviceNamesAreReadable() throws {
+        let board = try NavitiaParser.stopDepartures(from: fixture("stop_departures"))
+        #expect(board.map(\.mode) == ["TER", "TGV", "TGV", "Car"])
+        #expect(try mixed().allSatisfy { $0.mode == "TER" })
+        #expect(NavitiaParser.mode(commercial: "OUIGO", physical: "Train grande vitesse") == "OUIGO")
+        #expect(NavitiaParser.mode(commercial: "INTERCITES", physical: "TER / Intercités") == "Intercités")
+        #expect(NavitiaParser.mode(commercial: nil, physical: nil) == nil)
+    }
+
     @Test func nearbySearchKeepsStopAreasInDistanceOrder() throws {
         #expect(try NavitiaParser.nearbyStations(from: fixture("places_nearby")) == [grenoble, voiron])
     }

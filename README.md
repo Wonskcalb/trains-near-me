@@ -81,7 +81,7 @@ scripts/    install.sh (build + install), render-screenshots.sh
 
 ## Display
 
-**Rows** show the scheduled time, then the journey duration (Trip) or the train's direction (Radar), and a status:
+**Rows** show the scheduled time, the service on medium and large widgets (TER, TGV, OUIGO, Intercités, Car — SNCF names every TER after its region, so the label comes from the brand when it is a national one and from the physical mode otherwise), then the journey duration (Trip) or the train's direction (Radar), and a status:
 
 | Status | Row style | Badge |
 |---|---|---|
@@ -119,6 +119,7 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 
 - `journeys[].status`: `NO_SERVICE` or `SIGNIFICANT_DELAYS`. A station board has no such field, so the severity of the linked disruption plays that role.
 - `departures[].stop_date_time.base_departure_time` and `departures[].display_informations.direction`, for the Radar board.
+- `display_informations.commercial_mode` and `physical_mode`, reduced to a short service name by `NavitiaParser.mode(commercial:physical:)`. A coach replacing a train ("Car TER") is labelled Car, never TER.
 - `disruptions[].severity.effect`, for disruptions linked from `sections[].display_informations.links[]`.
 - `impacted_stops[]`, matched on the origin and destination stop points:
   - `base_departure_time` and `amended_departure_time` give the delay;
@@ -131,7 +132,7 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 - **One reload, one SNCF request** (two for Radar: the station, then its board). The timeline then holds:
   - an entry just after each departure, so departed trains drop off — for every train fetched, which keeps the widget right for hours when no reload is granted;
   - an entry at +30 min that turns the timestamp orange, because the delays are no longer trustworthy.
-- **A refresh button sits in the header**, a `Button(intent:)` running `RefreshIntent`. App-requested reloads are served immediately, unlike the system's own schedule, so one click gives fresh delays the moment you open Notification Center. It reloads twice: the first pass redraws the widget's last board, kept in the App Group, faded and labelled "Updating…" — a widget only ever draws what a timeline gave it, so that is the only way a click can show anything before the network answers — and the second pass fetches. Both the request and the cache are keyed by widget kind and configuration, so a widget's button only ever refreshes itself.
+- **A refresh button sits in the header**, a `Button(intent:)` running `RefreshIntent`, which calls `WidgetCenter.reloadAllTimelines()`. App-requested reloads are served immediately, unlike the system's own schedule, so one click gives fresh delays the moment you open Notification Center.
 - **Reloads are asked for when they matter, not on a fixed interval.** WidgetKit grants roughly 40–70 reloads per widget per day; spending them uniformly means spending them at 3 a.m. and running out during the evening rush. So the next reload is asked for 5 min before the next train leaves, with two bounds: never closer than 20 min (`RefreshPlanner.minimumGap`, the budget knob — a train every quarter of an hour therefore costs 3 reloads an hour, not 4) and never further than 60 min. After the last train, a single reload is asked for just before the first train of the next service day, instead of polling all night. Errors are retried after 15 min. The Trip widget also reloads at the automatic switch time.
 - **One fetch covers hours**, not minutes: 12 journeys for Trip, 20 departures for Radar. A refused reload then costs an orange timestamp, not an empty widget.
 - **The system decides when reloads actually happen.** Widgets get a limited daily reload budget, and reloads come late when the Mac sleeps or the widget isn't visible. Delays can therefore be 15–30 min old. This is not a live departure board: the header shows when the data was fetched.
@@ -143,7 +144,7 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 cd SNCFCore && swift test
 ```
 
-The 39 tests make no live API calls. They cover:
+The 40 tests make no live API calls. They cover:
 - **Direction:** fixed, reversed, automatic around 13:00, custom switch time.
 - **Nearest station:** nearer to A, nearer to B, a tie, no location, and location overriding the configured order.
 - **Delay bands:** 0, 5, 10, 11, 19, 20 and 21 min, cancellation, unknown delay.

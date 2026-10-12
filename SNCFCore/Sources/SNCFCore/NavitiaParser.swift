@@ -87,6 +87,7 @@ public enum NavitiaParser {
         return TrainDeparture(
             scheduledDeparture: departure,
             scheduledArrival: arrival,
+            mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: originStop, significantDelays: journey.status == "SIGNIFICANT_DELAYS"),
             isCancelled: cancelled,
             trainNumber: info?.tripShortName ?? info?.headsign
@@ -105,10 +106,29 @@ public enum NavitiaParser {
         return TrainDeparture(
             scheduledDeparture: departure,
             direction: info?.direction,
+            mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: stop, significantDelays: linked.contains { $0.severity?.effect == "SIGNIFICANT_DELAYS" }),
             isCancelled: isCancelled(linked, at: stop),
             trainNumber: info?.tripShortName ?? info?.headsign
         )
+    }
+
+    /// SNCF answers with the commercial brand, which is a regional code for every TER
+    /// ("REGIONAURA", "TERGV"…), and with a normalised physical mode ("TER / Intercités",
+    /// "Train grande vitesse"). Neither is presentable on its own, so they are read in order
+    /// of what a traveller actually looks for: the national brand first, the family second.
+    static func mode(commercial: String?, physical: String?) -> String? {
+        let brand = (commercial ?? "").uppercased()
+        let family = (physical ?? "").folding(options: .diacriticInsensitive, locale: .init(identifier: "fr_FR")).uppercased()
+        for (needle, label) in [("OUIGO", "OUIGO"), ("TGV", "TGV"), ("INTERCIT", "Intercités"), ("EUROSTAR", "Eurostar"), ("LYRIA", "Lyria"), ("TER", "TER")] where brand.contains(needle) {
+            return label
+        }
+        // "Car TER" is a coach replacing a train, and saying "TER" would hide that, so road first.
+        if family.contains("CAR") || family.contains("BUS") { return "Car" }
+        if family.contains("TER") { return "TER" }
+        if family.contains("GRANDE VITESSE") { return "TGV" }
+        if family.contains("INTERCIT") { return "Intercités" }
+        return commercial?.isEmpty == false ? commercial : physical
     }
 
     static func byID(_ disruptions: [Disruption]?) -> [String: Disruption] {
@@ -217,6 +237,8 @@ struct Coord: Decodable {
 }
 
 struct DisplayInformations: Decodable {
+    let commercialMode: String?
+    let physicalMode: String?
     let direction: String?
     let headsign: String?
     let tripShortName: String?

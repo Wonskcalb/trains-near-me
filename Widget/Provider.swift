@@ -186,14 +186,16 @@ extension DeparturesEntry {
     static func preview(_ board: Board) -> DeparturesEntry {
         let now = Date.now
         let directions = ["Valence Ville", "Lyon Part-Dieu", "Chambéry", "Annecy"]
-        let trains = zip([(8, 0, 25), (38, 12, 24), (68, 23, 26), (98, 0, 25)], directions).map { plan, direction in
+        let modes = ["TER", "TER", "TGV", "TER"]
+        let trains = zip([(8, 0, 25), (38, 12, 24), (68, 23, 26), (98, 0, 25)], zip(directions, modes)).map { plan, labels in
             let (offset, delay, duration) = plan
+            let (direction, mode) = labels
             let departure = now.addingTimeInterval(TimeInterval(offset * 60))
             if case .radar = board {
-                return TrainDeparture(scheduledDeparture: departure, direction: direction, delayMinutes: delay, isCancelled: false, trainNumber: nil)
+                return TrainDeparture(scheduledDeparture: departure, direction: direction, mode: mode, delayMinutes: delay, isCancelled: false, trainNumber: nil)
             }
             return TrainDeparture(scheduledDeparture: departure, scheduledArrival: departure.addingTimeInterval(TimeInterval(duration * 60)),
-                                  delayMinutes: delay, isCancelled: false, trainNumber: nil)
+                                  mode: mode, delayMinutes: delay, isCancelled: false, trainNumber: nil)
         }
         return DeparturesEntry(date: now, fetchedAt: now, board: board, state: .departures(trains))
     }

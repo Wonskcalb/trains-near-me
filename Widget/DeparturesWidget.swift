@@ -354,6 +354,18 @@ struct DepartureRow: View {
                 .font(.system(size: compact ? 14 : 15, weight: .semibold).monospacedDigit())
                 .strikethrough(train.isCancelled)
                 .fixedSize()
+            // Which service runs it: the same journey can be a TER one hour and a TGV the next.
+            // Only where there is room for it; the small widget needs its width for the times.
+            if !compact, let mode = train.mode {
+                Text(mode)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+            }
             if !compact || !train.isCancelled {
                 // A journey knows how long it takes; a station board knows where the train goes.
                 if let duration = train.duration {

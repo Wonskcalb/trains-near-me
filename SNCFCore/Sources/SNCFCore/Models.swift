@@ -41,15 +41,18 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     public let scheduledArrival: Date?
     /// Headsign of the train's final stop; nil for a journey, where the arrival is known instead.
     public let direction: String?
+    /// Short service name: TER, TGV, OUIGO, Intercités… See `NavitiaParser.mode(commercial:physical:)`.
+    public let mode: String?
     /// nil when SNCF signals a disruption without an amended time.
     public let delayMinutes: Int?
     public let isCancelled: Bool
     public let trainNumber: String?
 
-    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?) {
+    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?) {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
         self.direction = direction
+        self.mode = mode
         self.delayMinutes = delayMinutes
         self.isCancelled = isCancelled
         self.trainNumber = trainNumber
