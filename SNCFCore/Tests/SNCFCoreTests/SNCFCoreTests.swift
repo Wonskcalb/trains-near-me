@@ -157,6 +157,16 @@ func fixture(_ name: String) throws -> Data {
         #expect(TrainServiceError.missingToken.localizedDescription == "Add your SNCF API token in the Trains near me app.")
     }
 
+    /// The refresh button redraws this while the new trains are fetched, so it has to survive
+    /// the trip through the App Group.
+    @Test func cachedBoardRoundTrip() throws {
+        let board = CachedBoard(fetchedAt: at(17, 40), origin: grenoble, destination: nil, trains: [
+            TrainDeparture(scheduledDeparture: at(17, 42), direction: "Valence Ville", delayMinutes: 12, isCancelled: false, trainNumber: "17601"),
+        ])
+        let restored = try JSONDecoder().decode(CachedBoard.self, from: JSONEncoder().encode(board))
+        #expect(restored == board)
+    }
+
     @Test func stationIdentifierRoundTrip() {
         #expect(Station(entityIdentifier: grenoble.entityIdentifier) == grenoble)
     }

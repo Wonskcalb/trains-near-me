@@ -74,6 +74,12 @@ struct JourneyIntent: WidgetConfigurationIntent {
         }
     }
 
+    /// Identifies this widget among several of the same kind. Built from the configured pair, not
+    /// from the leg being shown, so reversing the direction keeps the same widget.
+    var signature: String {
+        [departure?.station.id, arrival?.station.id].compactMap { $0 }.joined(separator: "|")
+    }
+
     var journey: JourneyConfiguration? {
         guard let a = departure?.station, let b = arrival?.station else { return nil }
         let switchMinute = (switchTime?.hour ?? 13) * 60 + (switchTime?.minute ?? 0)
@@ -88,14 +94,37 @@ struct RadarIntent: WidgetConfigurationIntent {
     static let description = IntentDescription("Next departures from the station closest to you.")
 }
 
-/// Clicking the widget's timestamp refreshes it on the spot. The system decides when widgets
-/// reload on their own, and in Notification Center that can be well over half an hour.
+/// The refresh button. The system decides when widgets reload on their own, and in Notification
+/// Center that can be well over half an hour.
+///
+/// It reloads twice on purpose. A widget only ever draws what a timeline gave it, so the first
+/// reload redraws the last known trains marked as updating — that is the click's feedback, since
+/// WidgetKit offers none of its own — and the second one, after the flag is cleared, fetches for
+/// real. Both are app-requested reloads, which the daily budget does not count.
 struct RefreshIntent: AppIntent {
     static let title: LocalizedStringResource = "Refresh the trains"
     static let isDiscoverable = false
 
+    /// Which widget was clicked: its kind, so only that kind reloads, and its configuration, so
+    /// only that widget shows the updating state when several of the same kind sit side by side.
+    @Parameter(title: "Widget kind") var kind: String
+    @Parameter(title: "Widget") var signature: String
+
+    init() {
+        kind = ""
+        signature = ""
+    }
+
+    init(kind: String, signature: String) {
+        self.kind = kind
+        self.signature = signature
+    }
+
     func perform() async throws -> some IntentResult {
-        WidgetCenter.shared.reloadAllTimelines()
+        SharedSettings.requestRefresh(kind: kind, signature: signature)
+        WidgetCenter.shared.reloadTimelines(ofKind: kind)
+        try? await Task.sleep(for: .seconds(1))
+        WidgetCenter.shared.reloadTimelines(ofKind: kind)
         return .result()
     }
 }

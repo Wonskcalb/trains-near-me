@@ -17,6 +17,12 @@ struct DeparturesEntry: TimelineEntry {
     let state: BoardState
     /// Set when nearest-station mode is on but the configured order had to be used instead.
     var locationIssue: LocationIssue? = nil
+    /// The refresh button was just clicked: these are the previous trains, redrawn while the new
+    /// ones are fetched, because a widget can only ever show what a timeline handed it.
+    var isRefreshing: Bool = false
+    /// Which widget this is, so its refresh button only ever refreshes itself.
+    var kind: String = ""
+    var signature: String = ""
 
     var isStale: Bool { RefreshPlanner.isStale(fetchedAt: fetchedAt, at: date) }
 
@@ -44,6 +50,8 @@ enum LocationIssue: Error {
 }
 
 struct TripProvider: AppIntentTimelineProvider {
+    static let kind = "DeparturesWidget"
+
     func placeholder(in context: Context) -> DeparturesEntry { .tripPreview }
 
     func snapshot(for configuration: JourneyIntent, in context: Context) async -> DeparturesEntry {
@@ -52,6 +60,9 @@ struct TripProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: JourneyIntent, in context: Context) async -> Timeline<DeparturesEntry> {
         let now = Date.now
+        if let refreshing = refreshingEntry(kind: Self.kind, signature: configuration.signature, now: now) {
+            return Timeline(entries: [refreshing], policy: .after(now.addingTimeInterval(30)))
+        }
         let entry = await fetch(configuration, now: now)
         guard entry.board != nil else { return Timeline(entries: [entry], policy: .never) }
 
@@ -64,7 +75,7 @@ struct TripProvider: AppIntentTimelineProvider {
 
     private func fetch(_ configuration: JourneyIntent, now: Date) async -> DeparturesEntry {
         guard let journey = configuration.journey else {
-            return DeparturesEntry(date: now, fetchedAt: now, board: nil, state: .noTrains)
+            return DeparturesEntry(date: now, fetchedAt: now, board: nil, state: .noTrains, kind: Self.kind)
         }
         var location: CLLocation?
         var issue: LocationIssue?
@@ -77,15 +88,20 @@ struct TripProvider: AppIntentTimelineProvider {
         let leg = JourneySelector.leg(for: journey, at: now, location: location)
         let state: BoardState
         do {
-            state = .from(try await SNCFClient(token: SharedSettings.token).departures(from: leg.from, to: leg.to, at: now), now: now)
+            let trains = try await SNCFClient(token: SharedSettings.token).departures(from: leg.from, to: leg.to, at: now)
+            state = .from(trains, now: now)
+            SharedSettings.cache(CachedBoard(fetchedAt: now, origin: leg.from, destination: leg.to, trains: trains), kind: Self.kind, signature: configuration.signature)
         } catch {
             state = .unavailable(error)
         }
-        return DeparturesEntry(date: now, fetchedAt: now, board: .trip(leg), state: state, locationIssue: issue)
+        return DeparturesEntry(date: now, fetchedAt: now, board: .trip(leg), state: state, locationIssue: issue,
+                               kind: Self.kind, signature: configuration.signature)
     }
 }
 
 struct RadarProvider: AppIntentTimelineProvider {
+    static let kind = "RadarWidget"
+
     func placeholder(in context: Context) -> DeparturesEntry { .radarPreview }
 
     func snapshot(for configuration: RadarIntent, in context: Context) async -> DeparturesEntry {
@@ -94,6 +110,9 @@ struct RadarProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: RadarIntent, in context: Context) async -> Timeline<DeparturesEntry> {
         let now = Date.now
+        if let refreshing = refreshingEntry(kind: Self.kind, signature: Self.kind, now: now) {
+            return Timeline(entries: [refreshing], policy: .after(now.addingTimeInterval(30)))
+        }
         return makeTimeline(await fetch(now: now), now: now, flip: nil)
     }
 
@@ -101,7 +120,9 @@ struct RadarProvider: AppIntentTimelineProvider {
     /// twice the trip widget's budget, still far below the free tier's 5 000 requests a day.
     private func fetch(now: Date) async -> DeparturesEntry {
         func entry(_ station: Station?, _ state: BoardState) -> DeparturesEntry {
-            DeparturesEntry(date: now, fetchedAt: now, board: .radar(station), state: state)
+            // The radar has a single configuration, so its kind doubles as its signature.
+            DeparturesEntry(date: now, fetchedAt: now, board: .radar(station), state: state,
+                            kind: Self.kind, signature: Self.kind)
         }
         guard case .success(let location) = await currentLocation() else {
             return entry(nil, .unavailable(.noLocation))
@@ -111,11 +132,27 @@ struct RadarProvider: AppIntentTimelineProvider {
             guard let station = try await client.nearestStation(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude) else {
                 return entry(nil, .unavailable(.noStationNearby))
             }
-            return entry(station, .from(try await client.departures(from: station, at: now), now: now))
+            let trains = try await client.departures(from: station, at: now)
+            SharedSettings.cache(CachedBoard(fetchedAt: now, origin: station, destination: nil, trains: trains), kind: Self.kind, signature: Self.kind)
+            return entry(station, .from(trains, now: now))
         } catch {
             return entry(nil, .unavailable(error))
         }
     }
+}
+
+/// The click's feedback: the last board, redrawn at once and marked as updating, while the second
+/// reload the intent asks for fetches the real thing. Without a cached board there is nothing to
+/// draw, so the fetch simply happens as usual.
+func refreshingEntry(kind: String, signature: String, now: Date) -> DeparturesEntry? {
+    // Taken rather than timed out: however long the extension takes to wake up, the clicked widget
+    // draws the updating state exactly once and its next reload fetches for real.
+    guard SharedSettings.takeRefreshRequest(kind: kind, signature: signature),
+          let cached = SharedSettings.cachedBoard(kind: kind, signature: signature) else { return nil }
+    let board = cached.destination.map { Board.trip(Leg(from: cached.origin, to: $0)) } ?? .radar(cached.origin)
+    return DeparturesEntry(date: now, fetchedAt: cached.fetchedAt, board: board,
+                           state: .from(cached.trains, now: now), isRefreshing: true,
+                           kind: kind, signature: signature)
 }
 
 /// One entry now, one just after each train leaves, one when the data goes stale.
@@ -123,7 +160,8 @@ func makeTimeline(_ entry: DeparturesEntry, now: Date, flip: Date?) -> Timeline<
     var entries = [entry]
     if case .departures(let trains) = entry.state {
         entries = RefreshPlanner.entryDates(fetchedAt: now, departures: trains).map {
-            DeparturesEntry(date: $0, fetchedAt: now, board: entry.board, state: entry.state, locationIssue: entry.locationIssue)
+            DeparturesEntry(date: $0, fetchedAt: now, board: entry.board, state: entry.state, locationIssue: entry.locationIssue,
+                            kind: entry.kind, signature: entry.signature)
         }
     }
     var reload = RefreshPlanner.nextRefresh(fetchedAt: now, state: entry.state)

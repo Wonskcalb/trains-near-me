@@ -22,7 +22,7 @@ let widgetFamilies: [WidgetFamily] = {
 struct TripWidget: Widget {
     var body: some WidgetConfiguration {
         // The kind is what macOS uses to find already-placed widgets, so it keeps its old name.
-        AppIntentConfiguration(kind: "DeparturesWidget", intent: JourneyIntent.self, provider: TripProvider()) { entry in
+        AppIntentConfiguration(kind: TripProvider.kind, intent: JourneyIntent.self, provider: TripProvider()) { entry in
             DeparturesView(entry: entry)
         }
         .configurationDisplayName("Trip")
@@ -33,7 +33,7 @@ struct TripWidget: Widget {
 
 struct RadarWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "RadarWidget", intent: RadarIntent.self, provider: RadarProvider()) { entry in
+        AppIntentConfiguration(kind: RadarProvider.kind, intent: RadarIntent.self, provider: RadarProvider()) { entry in
             DeparturesView(entry: entry)
         }
         .configurationDisplayName("Radar")
@@ -80,7 +80,8 @@ struct DeparturesView: View {
         VStack(alignment: .leading, spacing: compact ? 3 : 4) {
             if let board = entry.board {
                 header(board)
-                content
+                // Faded while the new trains are on their way, so the click visibly does something.
+                content.opacity(entry.isRefreshing ? 0.35 : 1)
             } else {
                 message("Choose stations", detail: "Edit the widget to pick departure and arrival.")
             }
@@ -111,9 +112,14 @@ struct DeparturesView: View {
                 titles("Nearest station", station?.name ?? "Looking around…", label: "Departures from \(station?.name ?? "the nearest station")")
             }
             Spacer(minLength: 4)
-            // How old the delays are. Shown once stale even on the small widget, where there
-            // is otherwise no room for it.
-            if !compact || entry.isStale {
+            if entry.isRefreshing {
+                Text(compact ? "…" : "Updating…")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            } else if !compact || entry.isStale {
+                // How old the delays are. Shown once stale even on the small widget, where there
+                // is otherwise no room for it.
                 HStack(spacing: 2) {
                     if entry.isStale { Image(systemName: "clock.badge.exclamationmark") }
                     Text(entry.fetchedAt, style: .time)
@@ -123,7 +129,7 @@ struct DeparturesView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(date: .omitted, time: .shortened))")
             }
-            RefreshButton(compact: compact)
+            RefreshButton(compact: compact, kind: entry.kind, signature: entry.signature)
         }
         .padding(.bottom, 2)
         if let issue = entry.locationIssue {
@@ -197,9 +203,11 @@ struct DeparturesView: View {
 /// well over half an hour. This asks for one now; app-requested reloads are served immediately.
 struct RefreshButton: View {
     let compact: Bool
+    let kind: String
+    let signature: String
 
     var body: some View {
-        Button(intent: RefreshIntent()) {
+        Button(intent: RefreshIntent(kind: kind, signature: signature)) {
             Image(systemName: "arrow.clockwise")
                 .font(.system(size: compact ? 9 : 10, weight: .bold))
                 .foregroundStyle(.secondary)

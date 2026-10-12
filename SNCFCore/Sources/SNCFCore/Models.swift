@@ -35,7 +35,7 @@ public enum DepartureStatus: Equatable, Sendable {
     }
 }
 
-public struct TrainDeparture: Hashable, Sendable {
+public struct TrainDeparture: Hashable, Codable, Sendable {
     public let scheduledDeparture: Date
     /// nil on a station board: the departures endpoint only says when the train leaves.
     public let scheduledArrival: Date?
