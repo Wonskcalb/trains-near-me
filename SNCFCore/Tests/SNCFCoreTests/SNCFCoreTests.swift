@@ -195,12 +195,48 @@ func fixture(_ name: String) throws -> Data {
 }
 
 @Suite struct Refresh {
-    @Test func entriesDropDepartedTrainsAndEndStale() throws {
+    func train(_ date: Date) -> TrainDeparture {
+        TrainDeparture(scheduledDeparture: date, scheduledArrival: date.addingTimeInterval(1500), delayMinutes: 0, isCancelled: false, trainNumber: nil)
+    }
+
+    func reload(_ state: BoardState, at date: Date = at(17, 40)) -> Date {
+        RefreshPlanner.nextRefresh(fetchedAt: date, state: state)
+    }
+
+    @Test func reloadLandsJustBeforeTheNextTrain() {
+        #expect(reload(.departures([train(at(18, 30))])) == at(18, 25))
+    }
+
+    @Test func aTrainEveryQuarterHourStillRespectsTheReloadBudget() {
+        let trains = [at(17, 45), at(18, 0), at(18, 15), at(18, 30)].map(train)
+        // Five minutes before the next train would be three reloads in the next half hour, which
+        // empties the daily budget by mid-afternoon. The 20-minute floor wins instead.
+        #expect(reload(.departures(trains)) == at(18, 0))
+    }
+
+    @Test func sparseTrainsNeverWaitMoreThanAnHour() {
+        #expect(reload(.departures([train(at(22, 0))])) == at(18, 40))
+    }
+
+    @Test func theNightCostsOneReload() {
+        let firstTrain = at(5, 58).addingTimeInterval(86400)
+        #expect(reload(.endOfService(firstTrain: firstTrain), at: at(23, 40)) == firstTrain.addingTimeInterval(-5 * 60))
+    }
+
+    @Test func errorsAreRetriedSooner() {
+        #expect(reload(.unavailable(.offline)) == at(17, 55))
+    }
+
+    @Test func entriesDropDepartedTrainsAndOutliveTheStaleMark() throws {
         let trains = try NavitiaParser.departures(from: fixture("journeys_mixed"), origin: grenoble, destination: voiron)
         let dates = RefreshPlanner.entryDates(fetchedAt: at(17, 40), departures: trains)
         #expect(dates.first == at(17, 40))
+        // One entry a minute after each train leaves, and one at the 30-minute stale mark.
         #expect(dates.contains(at(17, 43)))
-        #expect(dates.last == at(18, 10))
+        #expect(dates.contains(at(18, 10)))
+        // The last train is still listed long after the delays went stale.
+        #expect(dates.last == trains.last?.expectedDeparture.addingTimeInterval(60))
+        #expect(dates.last ?? .distantPast > at(18, 10))
         #expect(RefreshPlanner.isStale(fetchedAt: at(17, 40), at: at(18, 10)))
     }
 }

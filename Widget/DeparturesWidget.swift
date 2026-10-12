@@ -111,11 +111,19 @@ struct DeparturesView: View {
                 titles("Nearest station", station?.name ?? "Looking around…", label: "Departures from \(station?.name ?? "the nearest station")")
             }
             Spacer(minLength: 4)
-            if !compact {
-                Text(entry.fetchedAt, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            // How old the delays are. Shown once stale even on the small widget, where there
+            // is otherwise no room for it.
+            if !compact || entry.isStale {
+                HStack(spacing: 2) {
+                    if entry.isStale { Image(systemName: "clock.badge.exclamationmark") }
+                    Text(entry.fetchedAt, style: .time)
+                }
+                .font(.caption2)
+                .foregroundStyle(entry.isStale ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(date: .omitted, time: .shortened))")
             }
+            RefreshButton(compact: compact)
         }
         .padding(.bottom, 2)
         if let issue = entry.locationIssue {
@@ -142,38 +150,36 @@ struct DeparturesView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if entry.isStale {
-            message("Data out of date", detail: "Waiting for the system to refresh the widget.")
-        } else {
-            switch entry.state {
-            case .departures:
-                let upcoming = entry.upcoming.prefix(rowLimit)
-                if upcoming.isEmpty {
-                    message("No more trains", detail: "Refreshing soon.")
-                } else {
-                    ForEach(Array(upcoming), id: \.self) { DepartureRow(train: $0, compact: compact) }
-                    Spacer(minLength: 0)
-                }
-            case .noTrains:
-                message("No trains", detail: "No departure found for now.")
-            case .endOfService(let firstTrain):
+        switch entry.state {
+        case .departures:
+            let upcoming = entry.upcoming.prefix(rowLimit)
+            if upcoming.isEmpty {
+                // Nothing left of the last fetch: only then is old data worth a warning.
+                message(entry.isStale ? "Data out of date" : "No more trains",
+                        detail: entry.isStale ? "Waiting for the system to refresh the widget." : "Refreshing soon.")
+            } else {
+                ForEach(Array(upcoming), id: \.self) { DepartureRow(train: $0, compact: compact) }
                 Spacer(minLength: 0)
-                EndOfService(firstTrain: firstTrain, now: entry.date, compact: compact)
-                Spacer(minLength: 0)
-            case .noService:
-                Spacer(minLength: 0)
-                VStack(spacing: 2) {
-                    Text("NO SERVICE").font(.system(size: compact ? 16 : 20, weight: .heavy)).tracking(1)
-                    Text("All trains cancelled").font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 8))
-                .frame(maxWidth: .infinity)
-                Spacer(minLength: 0)
-            case .unavailable(let error):
-                message("SNCF data unavailable", detail: error.localizedDescription)
             }
+        case .noTrains:
+            message("No trains", detail: "No departure found for now.")
+        case .endOfService(let firstTrain):
+            Spacer(minLength: 0)
+            EndOfService(firstTrain: firstTrain, now: entry.date, compact: compact)
+            Spacer(minLength: 0)
+        case .noService:
+            Spacer(minLength: 0)
+            VStack(spacing: 2) {
+                Text("NO SERVICE").font(.system(size: compact ? 16 : 20, weight: .heavy)).tracking(1)
+                Text("All trains cancelled").font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 8))
+            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+        case .unavailable(let error):
+            message("SNCF data unavailable", detail: error.localizedDescription)
         }
     }
 
@@ -184,6 +190,24 @@ struct DeparturesView: View {
             Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(3)
             Spacer(minLength: 0)
         }
+    }
+}
+
+/// The system decides on its own when a widget reloads, and in Notification Center that can be
+/// well over half an hour. This asks for one now; app-requested reloads are served immediately.
+struct RefreshButton: View {
+    let compact: Bool
+
+    var body: some View {
+        Button(intent: RefreshIntent()) {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: compact ? 9 : 10, weight: .bold))
+                .foregroundStyle(.secondary)
+                .padding(compact ? 3 : 4)
+                .background(.quaternary, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Refresh")
     }
 }
 

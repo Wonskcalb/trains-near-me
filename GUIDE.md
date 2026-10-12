@@ -161,12 +161,13 @@ Note that apps installed with a free Apple account stop working after 7 days on 
 | **End of service** on a night-blue background | Nothing is wrong, the last train of the day has left. Shows when the first train runs, usually tomorrow morning. |
 | **No trains** | SNCF found no direct train at all between the two stations |
 | **SNCF data unavailable** | No internet, invalid token, quota reached, or the SNCF API is down. The reason is shown below the title. |
-| **Data out of date** | The data is more than 30 min old. The widget never shows old times as if they were current. |
+| Orange time at the top right | The delays were checked more than 30 min ago. The train times themselves are still right. Click the ↻ button to refresh now. |
+| **Data out of date** | Nothing is left of the last update. Click the ↻ button at the top right. |
 | Orange **Location…** / **No location…** line | Nearest-station mode is on but your location is unavailable. The configured direction is used; click the widget to refresh. |
 
 ### How fresh is the data?
 
-macOS, not the app, decides when the widget refreshes: roughly every 15–30 minutes, and less often while the Mac sleeps. The time at the top right shows the last update. For minute-by-minute information, use the SNCF Connect app.
+macOS, not the app, decides when the widget refreshes on its own: roughly every 15–30 minutes, and less often while the Mac sleeps or Notification Center stays closed. The time at the top right shows the last update, and turns orange once the delays are over 30 min old. **The ↻ button next to it refreshes immediately.** For minute-by-minute information, use the SNCF Connect app.
 
 ---
 

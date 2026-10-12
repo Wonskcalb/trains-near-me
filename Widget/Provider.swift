@@ -20,17 +20,17 @@ struct DeparturesEntry: TimelineEntry {
 
     var isStale: Bool { RefreshPlanner.isStale(fetchedAt: fetchedAt, at: date) }
 
-    /// Trains still to come; empty once the data is too old to be shown as current.
+    /// Trains still to come. Kept past `staleAfter`: a schedule fetched an hour ago still says
+    /// when the next train leaves, and the header marks how old the delays are.
     var upcoming: [TrainDeparture] {
-        guard case .departures(let trains) = state, !isStale else { return [] }
+        guard case .departures(let trains) = state else { return [] }
         return trains.filter { $0.expectedDeparture > date }
     }
 
     /// One short line for the Lock Screen, where there is no room for a title and a detail.
     var shortStatus: String {
-        if isStale { return "Out of date" }
         switch state {
-        case .departures: return "No more trains"
+        case .departures: return isStale ? "Out of date" : "No more trains"
         case .noTrains: return "No trains"
         case .endOfService: return "End of service"
         case .noService: return "All cancelled"

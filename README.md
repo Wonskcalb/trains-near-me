@@ -101,16 +101,16 @@ scripts/    install.sh (build + install), render-screenshots.sh
 | **End of service** on a night sky | Today's last train has left; shows the first train of the next service day. Trains up to 03:00 count as the previous evening. |
 | **No trains** | SNCF found no direct train at all |
 | **SNCF data unavailable** | Offline, token missing or rejected, quota reached, server error, or unexpected data. The widget shows the reason. |
-| **Data out of date** | The last fetch is 30 minutes old or more. Old trains are never shown as current. |
+| **Data out of date** | Only when nothing is left of the last fetch. Past 30 minutes the trains stay listed, with the timestamp in orange: the schedule still holds, the delays may not. The refresh button fetches again. |
 | Orange **Location** line | Nearest-station mode is on but no location was available. The configured order is used instead; clicking the widget opens the app, which refreshes it with a fix. |
 
 ## How it uses the SNCF API
 
 The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP Basic, with the token as the username and an empty password.
 
-- **Trip departures:** `GET /coverage/sncf/journeys?from=…&to=…&data_freshness=base_schedule&max_nb_transfers=0&direct_path=none&min_nb_journeys=8`
+- **Trip departures:** `GET /coverage/sncf/journeys?from=…&to=…&data_freshness=base_schedule&max_nb_transfers=0&direct_path=none&min_nb_journeys=12`
 - **Radar, the station around you:** `GET /coverage/sncf/coord/{lon};{lat}/places_nearby?type[]=stop_area&distance=20000&count=5`, with the coordinates rounded to three decimals. The answer is ordered by distance.
-- **Radar departures:** `GET /coverage/sncf/stop_areas/{id}/departures?from_datetime=…&data_freshness=base_schedule&count=8`
+- **Radar departures:** `GET /coverage/sncf/stop_areas/{id}/departures?from_datetime=…&data_freshness=base_schedule&count=20`
 - **Station search:** `GET /coverage/sncf/places?q=…&type[]=stop_area`, used by the Trip widget configuration.
 
 **Why `base_schedule`:** with `realtime`, cancelled trains disappear from the results. With `base_schedule`, every scheduled trip is returned, and real-time changes come as linked disruptions. One request therefore gives schedules, delays and cancellations.
@@ -129,9 +129,11 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 ## Refresh and WidgetKit limits
 
 - **One reload, one SNCF request** (two for Radar: the station, then its board). The timeline then holds:
-  - an entry just after each departure, so departed trains drop off;
-  - a final entry at +30 min that switches the widget to "Data out of date".
-- **Requested reload interval:** 15 min. It is 60 min when there are no trains, and the widget also reloads at the automatic switch time.
+  - an entry just after each departure, so departed trains drop off — for every train fetched, which keeps the widget right for hours when no reload is granted;
+  - an entry at +30 min that turns the timestamp orange, because the delays are no longer trustworthy.
+- **A refresh button sits in the header**, a `Button(intent:)` running `RefreshIntent`, which calls `WidgetCenter.reloadAllTimelines()`. App-requested reloads are served immediately, unlike the system's own schedule, so one click gives fresh delays the moment you open Notification Center.
+- **Reloads are asked for when they matter, not on a fixed interval.** WidgetKit grants roughly 40–70 reloads per widget per day; spending them uniformly means spending them at 3 a.m. and running out during the evening rush. So the next reload is asked for 5 min before the next train leaves, with two bounds: never closer than 20 min (`RefreshPlanner.minimumGap`, the budget knob — a train every quarter of an hour therefore costs 3 reloads an hour, not 4) and never further than 60 min. After the last train, a single reload is asked for just before the first train of the next service day, instead of polling all night. Errors are retried after 15 min. The Trip widget also reloads at the automatic switch time.
+- **One fetch covers hours**, not minutes: 12 journeys for Trip, 20 departures for Radar. A refused reload then costs an orange timestamp, not an empty widget.
 - **The system decides when reloads actually happen.** Widgets get a limited daily reload budget, and reloads come late when the Mac sleeps or the widget isn't visible. Delays can therefore be 15–30 min old. This is not a live departure board: the header shows when the data was fetched.
 - **Location:** the widget reads the system's cached fix if it is under 15 min old. Otherwise it waits up to 5 s for one fix. In Trip mode the coordinates are only compared with the two station coordinates, on the device. In Radar mode they are rounded to about 100 m and sent to `places_nearby`. macOS reliably hands widgets a fix only while the host app is active, so the app reloads the widget every time it opens.
 
@@ -141,13 +143,13 @@ The API is Navitia-based. Docs: <https://doc.navitia.io>. Authentication is HTTP
 cd SNCFCore && swift test
 ```
 
-The 33 tests make no live API calls. They cover:
+The 38 tests make no live API calls. They cover:
 - **Direction:** fixed, reversed, automatic around 13:00, custom switch time.
 - **Nearest station:** nearer to A, nearer to B, a tie, no location, and location overriding the configured order.
 - **Delay bands:** 0, 5, 10, 11, 19, 20 and 21 min, cancellation, unknown delay.
 - **Journey filtering**, and the **service day**: tomorrow's trains are not listed today, a 00:15 train still counts as tonight, and end of service is told apart from all trains cancelled.
 - **Response parsing**, against the fixtures in `SNCFCore/Tests/SNCFCoreTests/Fixtures`: on time, delayed, cancelled, missing real-time data, all trains cancelled, `no_solution`, malformed data, station search, station board with directions, and nearby stations in distance order.
-- **Refresh plan.**
+- **Refresh plan:** entries outliving the stale mark, and the reload budget — a train every 15 min floored to 20 min, sparse trains capped at an hour, one reload for the whole night, errors retried sooner.
 
 ## Troubleshooting
 

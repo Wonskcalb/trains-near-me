@@ -1,5 +1,6 @@
 import AppIntents
 import SNCFCore
+import WidgetKit
 
 struct StationEntity: AppEntity {
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Station"
@@ -85,4 +86,16 @@ struct JourneyIntent: WidgetConfigurationIntent {
 struct RadarIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Radar"
     static let description = IntentDescription("Next departures from the station closest to you.")
+}
+
+/// Clicking the widget's timestamp refreshes it on the spot. The system decides when widgets
+/// reload on their own, and in Notification Center that can be well over half an hour.
+struct RefreshIntent: AppIntent {
+    static let title: LocalizedStringResource = "Refresh the trains"
+    static let isDiscoverable = false
+
+    func perform() async throws -> some IntentResult {
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
 }

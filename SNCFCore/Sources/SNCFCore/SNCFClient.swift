@@ -2,7 +2,11 @@ import Foundation
 
 /// api.sncf.com (Navitia). Free tier: 5 000 requests/day, token sent as Basic-auth username.
 public struct SNCFClient {
-    public static let departuresPerRequest = 8
+    /// Enough journeys for a whole evening: the timeline keeps listing them even when the system
+    /// grants no reload, and a longer list costs the same single request.
+    public static let departuresPerRequest = 12
+    /// A busy station board burns through departures faster, so it asks for more.
+    public static let boardDeparturesPerRequest = 20
     /// Radar mode: how far to look for a station around you.
     public static let searchRadiusKilometres = 20
 
@@ -34,7 +38,7 @@ public struct SNCFClient {
         let data = try await get("stop_areas/\(station.id)/departures", [
             "from_datetime": NavitiaParser.dateFormatter.string(from: date),
             "data_freshness": "base_schedule",
-            "count": String(Self.departuresPerRequest),
+            "count": String(Self.boardDeparturesPerRequest),
             "disable_geojson": "true",
         ])
         return try NavitiaParser.stopDepartures(from: data)

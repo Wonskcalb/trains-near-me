@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - Issue and pull request templates, contributing guide.
 
 ### Changed
+- A refresh button in each widget's header, which fetches immediately instead of waiting for the system's next reload.
+- Reloads are now asked for 5 min before the next train instead of every 15 min, bounded by a 20-minute floor and a 60-minute ceiling, with a single reload booked for the night. The daily WidgetKit budget is spent when a delay can actually appear.
+- Each fetch covers hours: 12 journeys for Trip, 20 departures for Radar.
+- Trains stay listed after the 30-minute mark instead of being replaced by "Data out of date"; the timestamp turns orange to say the delays are old. The timeline now holds an entry for every train fetched, so one fetch keeps the widget right for the whole evening.
 - The widget is now a bundle of two widgets, **Trip** (the former journey widget, same identifier and settings) and **Radar**.
 - Privacy wording: a position now leaves the device in Radar mode only, rounded to about 100 m.
 
