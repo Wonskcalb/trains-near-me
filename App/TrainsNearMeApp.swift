@@ -3,7 +3,8 @@ import SNCFCore
 import SwiftUI
 import WidgetKit
 
-/// Exists only to store the API token and obtain location permission; the widget is the product.
+/// On macOS it exists only to store the API token and obtain location permission; the widget is the
+/// product there. On iOS it is a real app: the radar and the saved journeys, same data as the widgets.
 @main
 struct TrainsNearMeApp: App {
     var body: some Scene {
@@ -13,7 +14,7 @@ struct TrainsNearMeApp: App {
         }
         .windowResizability(.contentSize)
         #else
-        WindowGroup { SettingsView() }
+        WindowGroup { RootView() }
         #endif
     }
 }

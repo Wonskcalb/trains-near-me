@@ -23,6 +23,7 @@ Native macOS and iOS widgets showing the next SNCF trains, with real-time delays
   - **Nearest station:** optionally, the configured station closest to you becomes the departure. That comparison is made on the device; nothing is sent.
 - **Radar has nothing to configure:** it follows you. To find the station around you it sends your position, rounded to three decimals (about 100 m), to the SNCF API. That is the only case where a position leaves the device.
 - **Lock Screen on iOS:** both widgets also come in the rectangular and circular accessory sizes.
+- **An app on iOS:** the radar full-screen, and every saved journey as a card whose next departures slide sideways, flagged on its title when a train is delayed or cancelled. Saved journeys also become the suggestions offered when you configure a Trip widget. On macOS the app is still one settings window.
 
 **Just want to use it?** Follow the step-by-step guide: [GUIDE.md](GUIDE.md). You'll need Xcode and a free Apple account, and one script does the build and install:
 
@@ -73,7 +74,7 @@ xcodegen generate
 ```
 SNCFCore/   Swift package: domain model, SNCF client + parser, direction/position logic, refresh plan, tests
 Widget/     Widget extension: App Intent configuration, timeline provider, SwiftUI views
-App/        Host app: stores the API token (macOS), requests location permission (one window)
+App/        Host app: settings window on macOS; on iOS a three-tab app — radar, saved journeys, settings
 Config/     Shared build settings; Local.xcconfig (git-ignored) holds your team id
 Design/     App icon renderer, widget screenshot renderer and the rendered images
 scripts/    install.sh (build + install), render-screenshots.sh

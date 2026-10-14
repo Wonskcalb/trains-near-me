@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- **An app on iOS**, instead of a window that only held the token. Three tabs: **Near me**, the radar board full-screen; **Journeys**, every saved journey at once; and **Settings**, the former window. macOS is unchanged — the widgets are still the product there.
+- Each saved journey is a card carrying its next departures as tiles that slide sideways, and an icon on its title as soon as something is wrong with it: a cancellation, a delay, the end of the service, or data that could not be fetched. The title names the leg actually being shown, so an automatic journey past its switch time reads the way it runs; one that departs from the nearest station names its pair with a two-way arrow instead, because it has no fixed departure to name.
+- Both screens refresh themselves — a minute's tick drops the trains that have left, and the boards are fetched again once the delays go stale — say when they were last updated, and pull to refresh when you would rather not wait.
+- Near me carries the radar symbol next to its title, and the dish sweeps while a position is being found.
+- **Find me!** on Near me, which refuses the system's cached fix and waits for a live one. Everything else takes whatever position the system already has, which is right for a screen that reloads on its own and wrong for someone who has just got off a train.
+- Saved journeys are stored in the App Group, so the Trip widget's station picker now suggests their stations instead of offering nothing until you type.
+
 ### Fixed
 - Signing for an iPhone failed with a paid team: the App Group was spelled `$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)`, which is the macOS shape. That variable only exists at signing time, and a paid team makes Xcode register the group on the developer portal, which rejects it — taking provisioning profile creation down with it. `SNCF_APP_GROUP` now resolves to the team prefix on macOS and to `group.<bundle prefix>` on iOS, which is the shape iOS requires.
 

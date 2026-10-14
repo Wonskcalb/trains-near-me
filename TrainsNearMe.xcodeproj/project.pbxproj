@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */; };
 		1AFB944E672A5436A5501754 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFF2E10643CEC9A8ED29159F /* Assets.xcassets */; };
+		3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CE2524109D16225D1BB68B /* BoardView.swift */; };
+		5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EC3D71442832142A87AC2F /* JourneysView.swift */; };
 		6D8A2B2469753A72D5446915 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */; };
 		7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */; };
 		9DC5898F32BB15E8CFDB1C77 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */; };
@@ -18,6 +20,7 @@
 		B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */; };
 		BA94592906FDBECE0E26B092 /* TrainsNearMeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0841E4888C3F59FD6494FD2 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A265E336545C59C7F21A33A /* SNCFCore */; };
+		CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513970A98529F419C18FB0B7 /* RootView.swift */; };
 		E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072468D7CF61AC0275D3A463 /* JourneyIntent.swift */; };
 /* End PBXBuildFile section */
 
@@ -50,11 +53,14 @@
 		2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TrainsNearMeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F3DEB15EE7B3CF12AEC21D2 /* SNCFCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SNCFCore; path = SNCFCore; sourceTree = SOURCE_ROOT; };
 		4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		513970A98529F419C18FB0B7 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		53A33FCCCFE5DB826C1A1DD4 /* TrainsNearMe-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TrainsNearMe-iOS.entitlements"; sourceTree = "<group>"; };
+		56EC3D71442832142A87AC2F /* JourneysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneysView.swift; sourceTree = "<group>"; };
 		5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7493B2EAAED743D0DB07E6B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainsNearMeApp.swift; sourceTree = "<group>"; };
+		95CE2524109D16225D1BB68B /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
 		97F2EB8890AACB58A1EAB3CF /* TrainsNearMe.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TrainsNearMe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D5312ED0A2FD2363A7F3B77 /* TrainsNearMeWidget-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TrainsNearMeWidget-iOS.entitlements"; sourceTree = "<group>"; };
 		AEC7157EEB5104942A376232 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -124,8 +130,11 @@
 			isa = PBXGroup;
 			children = (
 				DFF2E10643CEC9A8ED29159F /* Assets.xcassets */,
+				95CE2524109D16225D1BB68B /* BoardView.swift */,
 				7493B2EAAED743D0DB07E6B8 /* Info.plist */,
+				56EC3D71442832142A87AC2F /* JourneysView.swift */,
 				C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */,
+				513970A98529F419C18FB0B7 /* RootView.swift */,
 				53A33FCCCFE5DB826C1A1DD4 /* TrainsNearMe-iOS.entitlements */,
 				DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */,
 				90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */,
@@ -274,6 +283,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */,
+				5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */,
+				CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */,
 				7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
