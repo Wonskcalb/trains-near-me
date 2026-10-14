@@ -27,23 +27,25 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("SNCF API token") {
-                #if os(macOS)
-                SecureField("Token", text: $token)
-                HStack {
-                    Button("Save and test") { Task { await save() } }
-                        .disabled(token.isEmpty)
-                    Text(tokenStatus).font(.caption).foregroundStyle(.secondary)
+                // Typing a token only reaches the widget through the App Group, which a free Apple
+                // account does not get on iOS. There, the compiled-in SNCF_TOKEN is all there is.
+                if SharedSettings.isShared {
+                    SecureField("Token", text: $token)
+                        .textContentType(.password)
+                    HStack {
+                        Button("Save and test") { Task { await save() } }
+                            .disabled(token.isEmpty)
+                        Text(tokenStatus).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Link("Get a free token", destination: URL(string: "https://numerique.sncf.com/startup/api/token-developpeur/")!)
+                        .font(.caption)
+                } else {
+                    Text(SharedSettings.bundled == nil
+                         ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
+                         : "Token taken from the build settings (SNCF_TOKEN). Sign with a real team to type it here instead.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                Link("Get a free token", destination: URL(string: "https://numerique.sncf.com/startup/api/token-developpeur/")!)
-                    .font(.caption)
-                #else
-                // A free Apple account cannot share an App Group on iOS, so the token is compiled in instead.
-                Text(SharedSettings.bundled == nil
-                     ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
-                     : "Token taken from the build settings (SNCF_TOKEN).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                #endif
             }
             Section("Location (needed by Radar, optional for Trip)") {
                 HStack {

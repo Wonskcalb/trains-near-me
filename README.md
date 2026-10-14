@@ -51,11 +51,11 @@ Requires Xcode 16 or later, and macOS 15 or iOS 18 or later.
 
 Same project, same scheme: pick your device in Xcode and run. Two differences:
 
-- **The token is compiled in.** A free Apple account cannot use App Groups on iOS, so the app and the widget cannot share what you type in the app. Put the token in `Config/Local.xcconfig` instead:
+- **The token needs a paid team, or a rebuild.** App Groups are what let the app hand the token to the widget, and a free Apple account does not get one on iOS. With a real team, type the token in the app as on macOS. Without one, compile it in:
   ```
   SNCF_TOKEN = 3b036afe-0110-4202-b9ed-99718476c2e0
   ```
-  then build again. The app shows whether the build carries a token.
+  in `Config/Local.xcconfig`, then build again. The app window says which of the two applies to your build.
 - **Location** is asked for at first launch, as on macOS; Radar needs it.
 
 The Xcode project is generated from `project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen). After editing `project.yml`, regenerate it:
@@ -158,7 +158,9 @@ The 40 tests make no live API calls. They cover:
 |---|---|---|
 | Station search fails with error `0` (token missing) | The app and the widget were signed with different teams, so they use different App Groups | Set `DEVELOPMENT_TEAM` in `Config/Local.xcconfig` only, so both targets get the same team |
 | The location prompt never appears; the app stays at "Not requested" | macOS remembers an earlier signing identity for that bundle id | Change `BUNDLE_ID_PREFIX` |
-| On iPhone, "Add your SNCF API token…" | A free Apple account cannot share an App Group on iOS | Set `SNCF_TOKEN` in `Config/Local.xcconfig` and build again |
+| On iPhone, "Add your SNCF API token…" | A free Apple account cannot share an App Group on iOS | Set `SNCF_TOKEN` in `Config/Local.xcconfig` and build again, or sign with a paid team |
+| `An invalid value '$(TeamIdentifierPrefix)…' was provided for the parameter 'identifier'`, then `No profiles … were found` | The App Group is shaped for macOS. `$(TeamIdentifierPrefix)` only exists at signing time, and a paid team makes Xcode register the group on the developer portal, where the unexpanded variable is rejected | Already handled: `SNCF_APP_GROUP` in `project.yml` carries the team prefix on macOS and a `group.` prefix on iOS. Run `xcodegen generate` if you edited the project by hand |
+| The team you picked in Xcode is gone after `xcodegen generate` | The project is generated from `project.yml`; Xcode's own edits are overwritten | Set `DEVELOPMENT_TEAM` in `Config/Local.xcconfig` instead |
 | The widget shows an old build, or stops getting a location | `xcodebuild` registers its product in LaunchServices, so a copy in DerivedData competes with the installed one — and that copy has its own bundle id, hence no location permission | `lsregister -u <path to the DerivedData app>`, delete that build, then `lsregister -f "/Applications/Trains near me.app"`. Pass `-derivedDataPath` somewhere disposable when building by hand |
 | The widget has no **Edit** option | Xcode's debug dylib hides the App Intent from the system | Keep `ENABLE_DEBUG_DYLIB: NO` in `project.yml` |
 

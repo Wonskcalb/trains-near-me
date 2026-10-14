@@ -32,7 +32,7 @@
 	<key>NSWidgetWantsLocation</key>
 	<true/>
 	<key>SNCFAppGroup</key>
-	<string>$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)</string>
+	<string>$(SNCF_APP_GROUP)</string>
 	<key>SNCFToken</key>
 	<string>$(SNCF_TOKEN)</string>
 </dict>

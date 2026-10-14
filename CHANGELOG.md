@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Signing for an iPhone failed with a paid team: the App Group was spelled `$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)`, which is the macOS shape. That variable only exists at signing time, and a paid team makes Xcode register the group on the developer portal, which rejects it — taking provisioning profile creation down with it. `SNCF_APP_GROUP` now resolves to the team prefix on macOS and to `group.<bundle prefix>` on iOS, which is the shape iOS requires.
+
+### Changed
+- The token can be typed in the app on iOS too, wherever an App Group exists. The compiled-in `SNCF_TOKEN` stays the fallback for free Apple accounts, which get no App Group there.
+
 ## [1.1.0] - 2026-10-12
 
 ### Added

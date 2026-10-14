@@ -12,6 +12,12 @@ settings:
     MARKETING_VERSION: "1.1"
     CURRENT_PROJECT_VERSION: "4"
     CODE_SIGN_STYLE: Automatic
+    # App Group identifiers are shaped differently per platform: macOS requires the team id as a
+    # prefix, iOS requires "group.". `$(TeamIdentifierPrefix)` only exists at signing time, so it
+    # must never reach iOS, where Xcode registers the group on the developer portal and rejects an
+    # unexpanded variable ("An invalid value '$(TeamIdentifierPrefix)…' was provided").
+    SNCF_APP_GROUP: $(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)
+    SNCF_APP_GROUP[sdk=iphone*]: group.$(BUNDLE_ID_PREFIX)
     ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
     SUPPORTS_MACCATALYST: NO
     # The App Intents runtime looks the configuration intent up in the main executable; with Xcode's
@@ -34,9 +40,7 @@ targets:
         PRODUCT_MODULE_NAME: TrainsNearMe
         PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac
         GENERATE_INFOPLIST_FILE: YES
-        # On iOS a free Apple account cannot use App Groups, so that build ships no entitlements
-        # and reads the token from SNCF_TOKEN instead.
-        CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: ""
+        CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: App/TrainsNearMe-iOS.entitlements
     info:
       path: App/Info.plist
       properties:
@@ -45,7 +49,7 @@ targets:
         UILaunchScreen: {}
         NSLocationUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
         NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
-        SNCFAppGroup: $(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)
+        SNCFAppGroup: $(SNCF_APP_GROUP)
         SNCFToken: $(SNCF_TOKEN)
     entitlements:
       path: App/TrainsNearMe.entitlements
@@ -53,7 +57,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.personal-information.location: true
-        com.apple.security.application-groups: [$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)]
+        com.apple.security.application-groups: [$(SNCF_APP_GROUP)]
   TrainsNearMeWidget:
     type: app-extension
     supportedDestinations: [macOS, iOS]
@@ -66,7 +70,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac.widget
         GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: ""
+        CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: Widget/TrainsNearMeWidget-iOS.entitlements
     info:
       path: Widget/Info.plist
       properties:
@@ -76,7 +80,7 @@ targets:
         NSWidgetWantsLocation: true
         NSLocationUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
         NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
-        SNCFAppGroup: $(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)
+        SNCFAppGroup: $(SNCF_APP_GROUP)
         SNCFToken: $(SNCF_TOKEN)
     entitlements:
       path: Widget/TrainsNearMeWidget.entitlements
@@ -84,4 +88,4 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.personal-information.location: true
-        com.apple.security.application-groups: [$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)]
+        com.apple.security.application-groups: [$(SNCF_APP_GROUP)]

@@ -122,13 +122,13 @@ If location is off, the widget says so: allow it in **System Settings › Privac
 You need Xcode on a Mac to install it, as above, plus two changes:
 
 1. Open `TrainsNearMe.xcodeproj`, pick your iPhone in the device menu at the top, then press ▶.
-2. Put your SNCF token in `Config/Local.xcconfig` before building:
+2. If you only have a **free** Apple account, put your SNCF token in `Config/Local.xcconfig` before building:
 
    ```
    SNCF_TOKEN = 3b036afe-0110-4202-b9ed-99718476c2e0
    ```
 
-   On iPhone a free Apple account cannot share the token between the app and the widget, so it has to be built into the app. The app tells you whether the build carries one.
+   On iPhone a free account cannot share the token between the app and the widget, so it has to be built in. With a paid developer account you type it in the app, as on the Mac. The app window tells you which case you are in.
 
 Then add the widget as usual: long-press the Home Screen › **+** › **Trains near me**. Both widgets also exist in the Lock Screen sizes (long-press the Lock Screen › **Customise**).
 

@@ -4,16 +4,21 @@ import Foundation
 public enum SharedSettings {
     static let tokenKey = "sncfToken"
 
-    /// The group id comes from Info.plist (`SNCFAppGroup`) so it can carry the signing team prefix.
+    /// The group id comes from Info.plist (`SNCFAppGroup`) so it can carry the per-platform shape:
+    /// the team prefix on macOS, a "group." prefix on iOS.
     static var defaults: UserDefaults? {
         guard let group = Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String else { return nil }
         return UserDefaults(suiteName: group)
     }
 
+    /// Whether the app and the widget actually share storage. False without a real signing team on
+    /// iOS, where a free Apple account gets no App Group: the token then has to be compiled in.
+    public static var isShared: Bool { defaults != nil }
+
     /// Set by a widget's refresh button so the next timeline can show that widget's last result
     /// marked as updating, before the network answers. Stored per widget kind and per widget, so
-    /// clicking one widget never puts another in the updating state. Unavailable on iOS, where
-    /// there is no shared group: the widget then behaves as it did, fetching straight away.
+    /// clicking one widget never puts another in the updating state. A no-op without an App Group,
+    /// where the widget simply fetches straight away.
     public static func requestRefresh(kind: String, signature: String) {
         guard let data = try? JSONEncoder().encode(RefreshRequest(signature: signature, at: .now)) else { return }
         defaults?.set(data, forKey: "refresh.\(kind)")
@@ -46,8 +51,8 @@ public enum SharedSettings {
         set { defaults?.set(newValue, forKey: tokenKey) }
     }
 
-    /// Typed in the host app, shared through the App Group. Unavailable on iOS, where a free
-    /// Apple account cannot use App Groups; `SNCF_TOKEN` in Config/Local.xcconfig takes over.
+    /// Typed in the host app, shared through the App Group. Without one — a free Apple account on
+    /// iOS — `SNCF_TOKEN` in Config/Local.xcconfig takes over.
     static var stored: String? { trimmed(defaults?.string(forKey: tokenKey)) }
 
     public static var bundled: String? { trimmed(Bundle.main.object(forInfoDictionaryKey: "SNCFToken") as? String) }
