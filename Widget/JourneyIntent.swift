@@ -20,7 +20,15 @@ struct StationQuery: EntityStringQuery {
         try await SNCFClient(token: SharedSettings.token).searchStations(string).map(StationEntity.init)
     }
 
-    func suggestedEntities() async throws -> [StationEntity] { [] }
+    /// The stations of the journeys saved in the app, so a widget can be configured without typing
+    /// — and without a request. Empty where there is no App Group to read them from.
+    func suggestedEntities() async throws -> [StationEntity] {
+        var seen = Set<String>()
+        return SharedSettings.favorites
+            .flatMap { [$0.stationA, $0.stationB] }
+            .filter { seen.insert($0.id).inserted }
+            .map(StationEntity.init)
+    }
 }
 
 enum DirectionOption: String, AppEnum {
