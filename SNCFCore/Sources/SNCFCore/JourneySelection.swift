@@ -7,7 +7,9 @@ public enum DirectionMode: String, Codable, Sendable {
     case automatic
 }
 
-public struct JourneyConfiguration: Equatable, Sendable {
+/// Codable and Hashable so the app can save a list of these in the App Group, which is also how
+/// the widget's station picker learns about them.
+public struct JourneyConfiguration: Codable, Hashable, Sendable {
     public var stationA: Station
     public var stationB: Station
     public var direction: DirectionMode

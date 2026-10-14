@@ -46,6 +46,20 @@ public enum SharedSettings {
         defaults?.set(data, forKey: "board.\(kind)#\(signature)")
     }
 
+    /// The journeys saved in the app. Kept in the App Group so the widget's station picker can
+    /// suggest their stations, and in the app's own defaults when there is no group — a free Apple
+    /// account on iOS — where the only thing lost is those suggestions.
+    public static var favorites: [JourneyConfiguration] {
+        get {
+            guard let data = (defaults ?? .standard).data(forKey: "favorites") else { return [] }
+            return (try? JSONDecoder().decode([JourneyConfiguration].self, from: data)) ?? []
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            (defaults ?? .standard).set(data, forKey: "favorites")
+        }
+    }
+
     public static var token: String? {
         get { stored ?? bundled }
         set { defaults?.set(newValue, forKey: tokenKey) }

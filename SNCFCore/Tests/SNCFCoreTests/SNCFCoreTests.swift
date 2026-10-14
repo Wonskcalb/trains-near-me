@@ -261,3 +261,14 @@ func fixture(_ name: String) throws -> Data {
         #expect(RefreshPlanner.isStale(fetchedAt: at(17, 40), at: at(18, 10)))
     }
 }
+
+/// The app's saved journeys travel to the widget as JSON in the App Group, so a journey has to
+/// survive the round trip whole — a dropped switch time or direction would silently change the leg.
+@Suite struct SavedJourneys {
+    @Test func survivesTheRoundTrip() throws {
+        let journey = JourneyConfiguration(stationA: grenoble, stationB: voiron, direction: .automatic,
+                                           switchMinute: 17 * 60 + 45, nearestStationAsDeparture: true)
+        let data = try JSONEncoder().encode([journey])
+        #expect(try JSONDecoder().decode([JourneyConfiguration].self, from: data) == [journey])
+    }
+}
