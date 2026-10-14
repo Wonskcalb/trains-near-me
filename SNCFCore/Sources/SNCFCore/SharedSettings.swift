@@ -65,6 +65,18 @@ public enum SharedSettings {
         set { defaults?.set(newValue, forKey: tokenKey) }
     }
 
+    /// How the iOS app paints itself. A local preference, not shared with the widget: a widget
+    /// always follows the system appearance and cannot be forced per-app, so this lives in whatever
+    /// defaults exist — the App Group when there is one, the app's own otherwise.
+    public enum Appearance: String, CaseIterable, Sendable {
+        case system, light, dark
+    }
+
+    public static var appearance: Appearance {
+        get { (defaults ?? .standard).string(forKey: "appearance").flatMap(Appearance.init) ?? .system }
+        set { (defaults ?? .standard).set(newValue.rawValue, forKey: "appearance") }
+    }
+
     /// Typed in the host app, shared through the App Group. Without one — a free Apple account on
     /// iOS — `SNCF_TOKEN` in Config/Local.xcconfig takes over.
     static var stored: String? { trimmed(defaults?.string(forKey: tokenKey)) }

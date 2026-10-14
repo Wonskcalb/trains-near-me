@@ -28,21 +28,42 @@ public final class LocationFix: NSObject, CLLocationManagerDelegate {
     }
 
     /// macOS only ever grants "always" to a widget; iOS only ever grants "when in use".
-    public var isAuthorized: Bool {
-        #if os(macOS)
+    public var isAuthorized: Bool {        #if os(macOS)
         return status == .authorizedAlways
         #else
         return [.authorizedAlways, .authorizedWhenInUse].contains(status)
         #endif
     }
 
+    #if DEBUG
+    /// True while the screenshot script is driving the host app, which feeds a position through
+    /// simctl: skip the permission alert that would otherwise sit on top of every captured screen.
+    static var screenshotMode: Bool {
+        ProcessInfo.processInfo.environment["SCREENSHOT_TAB"] != nil
+    }
+    #endif
+
     /// Only the host app can ask: an extension cannot show the prompt.
-    public func requestAuthorization() { manager.requestWhenInUseAuthorization() }
+    public func requestAuthorization() {
+        #if DEBUG
+        // The screenshot script feeds a position through simctl and must not have the system
+        // permission alert sitting on top of every captured screen.
+        if Self.screenshotMode { return }
+        #endif
+        manager.requestWhenInUseAuthorization()
+    }
 
     /// The system's cached fix while it is fresh enough, otherwise a live one. A widget gets about
     /// 30 s to build its timeline and a cold fix over Wi-Fi regularly needs ten of them, so the wait
     /// is long enough to succeed and short enough to leave time for the SNCF request.
     public func current(cachedWithin: TimeInterval = 15 * 60, timeout: TimeInterval = 12) async -> CLLocation? {
+        #if DEBUG
+        // Screenshot mode: return the position simctl set, without CLLocationUpdate.liveUpdates(),
+        // which would implicitly raise the permission alert over every captured screen.
+        if Self.screenshotMode {
+            return manager.location ?? CLLocation(latitude: 45.19149, longitude: 5.71454)
+        }
+        #endif
         let process = ProcessInfo.processInfo.processName
         // A refusal is the one status worth trusting early: locationd never reports it by mistake.
         if status == .denied || status == .restricted {

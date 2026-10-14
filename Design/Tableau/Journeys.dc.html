@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Journeys</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16171A;text-decoration:none}a:hover{color:#000000}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; box-sizing: border-box; background: #F2EFE8; color: #16171A; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+
+  <!-- toolbar -->
+  <div style="position: absolute; top: 54px; left: 16px; right: 16px; height: 44px; display: flex; justify-content: flex-end; align-items: center">
+    <button style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid rgba(22,23,26,0.06); background: rgba(255,255,255,0.72); color: #16171A; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); box-shadow: 0 2px 10px rgba(22,23,26,0.06)" aria-label="Add a journey">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+    </button>
+  </div>
+
+  <div style="position: absolute; top: 104px; left: 0; right: 0; padding: 0 16px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px">
+      <h1 style="margin: 0; font-size: 34px; font-weight: 700">Journeys</h1>
+      <span style="display: flex; align-items: center; gap: 7px; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E"><span style="width: 7px; height: 7px; border-radius: 4px; background: #2E9D5B"></span>Updated at 17:40</span>
+    </div>
+
+    <!-- card 1: trouble -->
+    <div style="background: #FBFAF7; border-radius: 24px; border: 1px solid rgba(22,23,26,0.06); box-shadow: 0 1px 2px rgba(22,23,26,0.04), 0 8px 24px rgba(22,23,26,0.04); overflow: hidden">
+      <a href="Board.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px">
+        <div style="width: 12px; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true">
+          <div style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #8C8A83; box-sizing: border-box"></div>
+          <div style="flex: 1; width: 2px; background: #8C8A83; margin: 2px 0"></div>
+          <div style="width: 12px; height: 12px; border-radius: 6px; background: #16171A; box-shadow: 0 0 0 3px {{accent}}"></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Grenoble</span>
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="font-size: 20px; font-weight: 700">Voiron</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#D9771A" stroke="#FBFAF7" stroke-width="1.6" stroke-linejoin="round" role="img" aria-label="A train is delayed"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01" stroke="#FBFAF7" stroke-width="2.2" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #66645E">REVERSES 13:00</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9A69E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+      </a>
+      <div style="display: flex; gap: 8px; padding: 0 16px 16px; overflow: hidden">
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #ECE8DF; display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">17:42</span>
+          <span style="font: 600 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #2B7F4C">in 2 min</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">25 min</span></div>
+        </div>
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #F2DFC6; display: flex; flex-direction: column; gap: 3px">
+          <div style="display: flex; align-items: baseline; gap: 6px"><span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">18:12</span><span style="font: 700 13px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808">+12</span></div>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #6B4A2A">in 42 min</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6B4A2A">24 min</span></div>
+        </div>
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #F1D5CF; display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace; color: #7A6A66; text-decoration: line-through">18:42</span>
+          <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #A3231A">CANCELLED</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E5550">26 min</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- card 2: all good -->
+    <div style="background: #FBFAF7; border-radius: 24px; border: 1px solid rgba(22,23,26,0.06); box-shadow: 0 1px 2px rgba(22,23,26,0.04), 0 8px 24px rgba(22,23,26,0.04); overflow: hidden">
+      <a href="Board.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px">
+        <div style="width: 12px; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true">
+          <div style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #8C8A83; box-sizing: border-box"></div>
+          <div style="flex: 1; width: 2px; background: #8C8A83; margin: 2px 0"></div>
+          <div style="width: 12px; height: 12px; border-radius: 6px; background: #16171A; box-shadow: 0 0 0 3px {{accent}}"></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Voiron</span>
+          <span style="font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Lyon Part-Dieu</span>
+        </div>
+        <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #66645E">ALWAYS THIS WAY</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9A69E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+      </a>
+      <div style="display: flex; gap: 8px; padding: 0 16px 16px; overflow: hidden">
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #ECE8DF; display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">17:58</span>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">in 18 min</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">68 min</span></div>
+        </div>
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #ECE8DF; display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">18:28</span>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">in 48 min</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">68 min</span></div>
+        </div>
+        <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #ECE8DF; display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">18:58</span>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">in 1 h 18</span>
+          <div style="flex: 1"></div>
+          <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">67 min</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- card 3: follows you, end of service -->
+    <div style="background: #FBFAF7; border-radius: 24px; border: 1px solid rgba(22,23,26,0.06); box-shadow: 0 1px 2px rgba(22,23,26,0.04), 0 8px 24px rgba(22,23,26,0.04); overflow: hidden">
+      <a href="Board.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px">
+        <div style="width: 12px; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true">
+          <div style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #8C8A83; box-sizing: border-box"></div>
+          <div style="flex: 1; width: 2px; background: #8C8A83; margin: 2px 0"></div>
+          <div style="width: 12px; height: 12px; border-radius: 6px; background: #16171A; box-shadow: 0 0 0 3px {{accent}}"></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Chirens</span>
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="font-size: 20px; font-weight: 700">Grenoble</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#8C8A83" role="img" aria-label="End of service"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </div>
+        </div>
+        <span style="display: flex; align-items: center; gap: 5px; font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #66645E"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"></path></svg>FOLLOWS YOU</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9A69E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+      </a>
+      <div style="margin: 0 16px 16px; padding: 12px 14px; border-radius: 14px; background: #ECE8DF; display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 14px; color: #47463F">End of service</span>
+        <span style="font: 600 13px 'JetBrains Mono', ui-monospace, monospace">First train 05:47</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating glass tab bar -->
+  <nav style="position: absolute; left: 22px; right: 22px; bottom: 26px; height: 64px; border-radius: 32px; background: rgba(255,255,255,0.78); border: 1px solid rgba(22,23,26,0.07); backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(22,23,26,0.12); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 5px; box-sizing: border-box; gap: 4px" aria-label="Tabs">
+    <a href="Main.dc.html" style="border-radius: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #47463F; font-size: 10.5px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49"></path><path d="M7.76 16.24a6 6 0 0 1 0-8.49"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M4.93 19.07a10 10 0 0 1 0-14.14"></path></svg>
+      Near me
+    </a>
+    <a href="Journeys.dc.html" style="border-radius: 27px; background: rgba(255,194,61,0.32); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #16171A; font-size: 10.5px; font-weight: 700" aria-current="page">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="5" r="2.5"></circle><path d="M6 7.5V11a4 4 0 0 0 4 4h5"></path><circle cx="18.5" cy="15" r="3" fill="currentColor"></circle></svg>
+      Journeys
+    </a>
+    <a href="Settings.dc.html" style="border-radius: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #47463F; font-size: 10.5px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10"></path><path d="M18 7h2"></path><circle cx="16" cy="7" r="2"></circle><path d="M4 17h2"></path><path d="M10 17h10"></path><circle cx="8" cy="17" r="2"></circle></svg>
+      Settings
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FFC23D","options":["#FFC23D","#F5E6C8","#7CC4FF","#46C27A"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FFC23D' };
+  }
+}
+</script>
+</body>
+</html>

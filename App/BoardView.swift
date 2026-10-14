@@ -17,6 +17,8 @@ struct BoardView: View {
     @State private var state: BoardState?
     @State private var fetchedAt = Date.distantPast
     @State private var loading = false
+    /// The departure a tap opened the full-trip sheet for, nil when closed.
+    @State private var trip: TripRequest?
 
     /// A fresh fix is only ever worth asking for where the position decides what is shown.
     private var followsYou: Bool { journey?.nearestStationAsDeparture ?? true }
@@ -25,27 +27,18 @@ struct BoardView: View {
         // Trains that have left have to drop off the list on their own: unlike a widget, a screen
         // can sit open for an hour, and the fetch is good for the whole evening.
         TimelineView(.everyMinute) { context in
-            List {
-                if journey == nil { radarTitle }
-                Section {
-                    content(now: context.date)
-                } header: {
-                    header
-                } footer: {
-                    if state != nil { footer(now: context.date) }
-                }
-            }
+            scroll(now: context.date)
         }
-        // The navigation bar is empty on the radar — the title is drawn in the list — so the
-        // list's own top margin would stack on top of a bar's worth of nothing.
-        .contentMargins(.top, journey == nil ? 0 : nil, for: .scrollContent)
+        .background(Color.ground.ignoresSafeArea())
         .refreshable { await load() }
         .task {
             // Also on coming back to a screen whose delays have gone stale; pull down for the rest.
             if state == nil || RefreshPlanner.isStale(fetchedAt: fetchedAt, at: .now) { await load() }
         }
-        .navigationTitle(journey == nil ? "" : origin?.name ?? "Journey")
-        .navigationBarTitleDisplayMode(journey == nil ? .inline : .large)
+        // The headers are drawn in the content — the radar's dish has to sweep, the journey has its
+        // route glyph — so the bar carries only the back button a pushed board gets for free.
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if followsYou {
                 // `current()` hands back the system's cached fix while it is under 15 min old,
@@ -57,7 +50,38 @@ struct BoardView: View {
                     .disabled(loading)
             }
         }
+        .sheet(item: $trip) { request in
+            TripSheet(train: request.train, boarding: request.boarding)
+        }
     }
+
+    /// Opens the full-trip sheet, but only for a row that carries a vehicle_journey id — journey
+    /// rows have none, so a tap there does nothing rather than open an empty sheet.
+    private func showTrip(_ train: TrainDeparture) {
+        guard train.vehicleJourneyID != nil else { return }
+        trip = TripRequest(train: train, boarding: origin?.name)
+    }
+
+    // No service gets a full-bleed hazard band that has to run under the navigation bar, so it is its
+    // own layout rather than a card inside the padded column.
+    @ViewBuilder private func scroll(now: Date) -> some View {
+        if case .noService = state {
+            noServiceScroll(now: now)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    header
+                    content(now: now)
+                    if state != nil { footerView(now: now) }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+
+    // MARK: Headers
 
     /// The radar's own title, drawn rather than handed to the navigation bar: a large title is
     /// rendered from a plain string, so an interpolated symbol is dropped on the way in. Drawing it
@@ -66,69 +90,314 @@ struct BoardView: View {
         HStack(spacing: 10) {
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(.tint)
+                .foregroundStyle(Color.amber)
                 .symbolEffect(.variableColor.iterative, isActive: loading)
-            Text("Near me").font(.largeTitle.bold())
+            Text("Near me").font(.largeTitle.bold()).foregroundStyle(Color.ink)
             Spacer(minLength: 0)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 10, trailing: 0))
     }
 
     @ViewBuilder private var header: some View {
-        if let origin {
-            if let destination {
-                Text("\(origin.name) → \(destination.name)")
-            } else {
-                Text("Departures from \(origin.name)")
-            }
+        if journey == nil {
+            radarTitle
         } else {
-            Text(journey == nil ? "Nearest station" : "Journey")
+            VStack(alignment: .leading, spacing: 14) {
+                routeHeader
+                chips
+            }
         }
     }
+
+    private var routeHeader: some View {
+        HStack(alignment: .center, spacing: 14) {
+            RoutePins(destination: .solid(.amber), originDiameter: 10, destinationDiameter: 14)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(origin?.name ?? " ")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Color.ink.opacity(0.7))
+                Text(destination?.name ?? "Journey")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var chips: some View {
+        HStack(spacing: 8) {
+            chip("DIRECT ONLY")
+            if let journey { chip(directionCaps(journey)) }
+        }
+    }
+
+    private func chip(_ text: String) -> some View {
+        Text(text)
+            .font(.mono(11, weight: .semibold))
+            .tracking(1.1)
+            .foregroundStyle(Color.ink.opacity(0.85))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.raised, in: RoundedRectangle(cornerRadius: 9))
+    }
+
+    /// The journey's direction as a mono-caps chip, the counterpart of the Journeys tab's rule.
+    private func directionCaps(_ journey: JourneyConfiguration) -> String {
+        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        switch journey.direction {
+        case .forward: return "ALWAYS THIS WAY"
+        case .reverse: return "ALWAYS REVERSED"
+        case .automatic: return "REVERSES AT \(clock(journey.switchMinute))"
+        }
+    }
+
+    // MARK: Content
 
     @ViewBuilder private func content(now: Date) -> some View {
         switch state {
         case nil:
-            HStack(spacing: 8) {
-                ProgressView()
-                Text("Looking for trains…").foregroundStyle(.secondary)
-            }
+            loadingCard
         case .departures(let trains):
-            let upcoming = trains.filter { $0.expectedDeparture > now }
-            if upcoming.isEmpty {
-                message("No more trains", "Nothing left of the last fetch. Pull down to look again.")
-            } else {
-                ForEach(upcoming, id: \.self) { TrainRow(train: $0) }
-            }
+            if journey == nil { radarDepartures(trains, now: now) } else { journeyDepartures(trains, now: now) }
         case .noTrains:
-            message("No trains", "No departure found for now.")
+            messageCard("No trains", "No departure found for now.")
         case .endOfService(let firstTrain):
-            message("End of service", "First train at \(firstTrain.formatted(date: .omitted, time: .shortened)).")
+            endOfServiceCard(firstTrain: firstTrain, now: now)
         case .noService:
-            message("All trains cancelled", "Every departure of the day is cancelled.")
+            EmptyView() // Handled by `noServiceScroll`.
         case .unavailable(let error):
-            message("SNCF data unavailable", error.appDescription)
+            messageCard("SNCF data unavailable", error.appDescription)
         }
     }
 
-    private func footer(now: Date) -> some View {
-        Text(RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
-             ? "Delays last checked at \(fetchedAt.formatted(date: .omitted, time: .shortened)) — out of date"
-             : "Updated at \(fetchedAt.formatted(date: .omitted, time: .shortened))")
-            .foregroundStyle(RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now) ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+    @ViewBuilder private func radarDepartures(_ trains: [TrainDeparture], now: Date) -> some View {
+        let upcoming = trains.filter { $0.expectedDeparture > now }
+        if upcoming.isEmpty {
+            messageCard("No more trains", "Nothing left of the last fetch. Pull down to look again.")
+        } else {
+            nearestCard(next: upcoming[0], now: now)
+                .contentShape(Rectangle())
+                .onTapGesture { showTrip(upcoming[0]) }
+            if upcoming.count > 1 {
+                TrackRule(label: "THEN")
+                boardCard {
+                    let rows = Array(upcoming.dropFirst().enumerated())
+                    ForEach(rows, id: \.element) { idx, train in
+                        RadarRow(train: train, now: now)
+                            .padding(.horizontal, 16).padding(.vertical, 13)
+                            .contentShape(Rectangle())
+                            .onTapGesture { showTrip(train) }
+                        if idx < rows.count - 1 { rowDivider }
+                    }
+                }
+            }
+        }
     }
 
-    private func message(_ title: String, _ detail: String) -> some View {
+    @ViewBuilder private func journeyDepartures(_ trains: [TrainDeparture], now: Date) -> some View {
+        let upcoming = trains.filter { $0.expectedDeparture > now }
+        if upcoming.isEmpty {
+            messageCard("No more trains", "Nothing left of the last fetch. Pull down to look again.")
+        } else {
+            boardCard {
+                let rows = Array(upcoming.enumerated())
+                ForEach(rows, id: \.element) { idx, train in
+                    JourneyRow(train: train, now: now, isFirst: idx == 0)
+                        .padding(.horizontal, 16).padding(.vertical, 15)
+                        .background(idx == 0 ? Color.amber.opacity(0.06) : Color.clear)
+                    if idx < rows.count - 1 { rowDivider }
+                }
+            }
+        }
+    }
+
+    /// The radar's hero: the nearest station, and its very next train on the split-flap.
+    private func nearestCard(next: TrainDeparture, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("NEAREST STATION")
+                        .font(.mono(11, weight: .semibold)).tracking(1.4)
+                        .foregroundStyle(Color.inkSecondary)
+                    Text(origin?.name ?? "Station")
+                        .font(.system(size: 26, weight: .bold)).foregroundStyle(Color.ink)
+                }
+                Spacer(minLength: 8)
+                HStack(spacing: 6) {
+                    Circle().fill(Color.soon).frame(width: 7, height: 7)
+                    Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                        .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                }
+            }
+            HStack(alignment: .center, spacing: 16) {
+                FlapTime(date: next.expectedDeparture)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let direction = next.direction {
+                        Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink).lineLimit(1)
+                    }
+                    HStack(spacing: 7) {
+                        if let mode = next.mode { ModeChip(mode) }
+                        if let number = next.trainNumber {
+                            Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                        }
+                    }
+                    Text(leavesIn(next, now: now))
+                        .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+                }
+                Spacer(minLength: 0)
+                if next.vehicleJourneyID != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+
+    private var loadingCard: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+            Text("Looking for trains…").foregroundStyle(Color.inkSecondary)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+
+    private func messageCard(_ title: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(.headline)
-            Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            Text(title).font(.headline).foregroundStyle(Color.ink)
+            Text(detail).font(.subheadline).foregroundStyle(Color.inkSecondary)
         }
-        .padding(.vertical, 4)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
+
+    /// The day is over. Keep the widget's navy-and-moon direction; the first train in amber mono.
+    private func endOfServiceCard(firstTrain: Date, now: Date) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "moon.zzz.fill").font(.system(size: 26)).foregroundStyle(.white.opacity(0.7))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("End of service").font(.headline).foregroundStyle(.white)
+                (Text("First train at ")
+                    .foregroundColor(.white.opacity(0.75))
+                 + Text(firstTrain, format: .dateTime.hour().minute())
+                    .font(.mono(15, weight: .semibold)).foregroundColor(.amber))
+                    .font(.subheadline)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Self.night, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    // MARK: No service
+
+    private func noServiceScroll(now: Date) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                HazardBackground(variant: .band)
+                    .frame(height: 240)
+                    .overlay(alignment: .bottom) { noServicePlate.padding(.bottom, 30) }
+                    .ignoresSafeArea(edges: .top)
+                VStack(alignment: .leading, spacing: 16) {
+                    header
+                    messageCard("All trains cancelled", "Every departure of the day is cancelled.")
+                    sncfConnect("Find another way in SNCF Connect", amber: true)
+                    disclaimer(full: false)
+                }
+                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
+            }
+        }
+    }
+
+    private var noServicePlate: some View {
+        VStack(spacing: 5) {
+            Text("NO SERVICE").font(.mono(30, weight: .heavy)).tracking(3).foregroundStyle(Color.ink)
+            Text("Every train of the day is cancelled").font(.subheadline).foregroundStyle(Color.inkSecondary)
+        }
+        .padding(.horizontal, 24).padding(.vertical, 16)
+        .background(Color.ground, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: Footer
+
+    @ViewBuilder private func footerView(now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            updatedLine(now: now)
+            // The ticket link and disclaimer belong to a saved journey; the radar stays a bare board.
+            if journey != nil {
+                sncfConnect("Tickets & details in SNCF Connect", amber: false)
+                disclaimer(full: true)
+            }
+        }
+    }
+
+    private func updatedLine(now: Date) -> some View {
+        let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
+        let time = fetchedAt.formatted(date: .omitted, time: .shortened)
+        return HStack(spacing: 7) {
+            Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
+            Text(stale ? "Delays last checked at \(time) — out of date" : "Updated at \(time) · pull to refresh")
+                .font(.mono(12)).foregroundStyle(stale ? Color.caution : Color.inkSecondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 4)
+    }
+
+    private func sncfConnect(_ title: String, amber: Bool) -> some View {
+        Link(destination: URL(string: "https://www.sncf-connect.com")!) {
+            HStack(spacing: 8) {
+                Text(title).font(.system(size: 16, weight: amber ? .bold : .semibold))
+                    .foregroundStyle(amber ? Color.ground : Color.ink)
+                Image(systemName: "arrow.up.right").font(.subheadline.weight(.bold))
+                    .foregroundStyle(amber ? Color.ground : Color.amber)
+            }
+            .frame(maxWidth: .infinity).frame(height: amber ? 52 : 50)
+            .background(amber ? AnyShapeStyle(Color.amber) : AnyShapeStyle(Color.raised),
+                        in: RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                if !amber { RoundedRectangle(cornerRadius: 16).stroke(Color.ink.opacity(0.08), lineWidth: 1) }
+            }
+        }
+    }
+
+    private func disclaimer(full: Bool) -> some View {
+        Text(full
+             ? "Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API. Check the station boards before you run."
+             : "Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API.")
+            .font(.footnote).foregroundStyle(Color.inkSecondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity).padding(.horizontal, 12)
+    }
+
+    // MARK: Shared bits
+
+    private var rowDivider: some View { Divider().overlay(Color.ink.opacity(0.07)) }
+
+    @ViewBuilder private func boardCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 0) { content() }
+            .background(Color.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+    }
+
+    /// The widget's end-of-service navy, reused so the two surfaces read as one app.
+    private static let night = LinearGradient(
+        colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
+        startPoint: .top, endPoint: .bottom)
 
     /// "Find me!" refuses the cache; everything else takes whatever the system already has.
     private func fix(fresh: Bool) async -> CLLocation? {
@@ -186,6 +455,180 @@ struct BoardView: View {
     }
 }
 
+// MARK: - Rows
+
+/// A radar row: a time, where the train goes, and either the minutes left or a status pill.
+struct RadarRow: View {
+    let train: TrainDeparture
+    let now: Date
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                    .font(.mono(19, weight: .semibold))
+                    .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                    .strikethrough(train.isCancelled)
+                if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
+                    Text(train.expectedDeparture, format: .dateTime.hour().minute())
+                        .font(.mono(12, weight: .semibold))
+                        .foregroundStyle(train.status.tableauInk)
+                }
+            }
+            .frame(width: 60, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                if let direction = train.direction {
+                    Text(direction).font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink).lineLimit(1)
+                } else if let duration = train.duration {
+                    Text("\(Int(duration / 60)) min").font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink)
+                }
+                HStack(spacing: 7) {
+                    if let mode = train.mode { ModeChip(mode) }
+                    if let number = train.trainNumber {
+                        Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    }
+                }
+            }
+            .opacity(train.isCancelled ? 0.6 : 1)
+
+            Spacer(minLength: 4)
+            trailing
+            if train.vehicleJourneyID != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.inkSecondary.opacity(0.5))
+            }
+        }
+    }
+
+    @ViewBuilder private var trailing: some View {
+        switch train.status {
+        case .onTime:
+            Text(relativeTime(train.expectedDeparture, from: now))
+                .font(.mono(13)).foregroundStyle(Color.inkSecondary).fixedSize()
+        case .delayed, .severelyDelayed:
+            StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+        case .cancelled:
+            StatusPill("CANCELLED", status: .cancelled)
+        case .unknown:
+            StatusPill("delay ?", status: .unknown)
+        }
+    }
+}
+
+/// A journey row: departure → arrival with a dashed connector, the next one tagged, delays shown as
+/// a pill with the amended departure under it.
+struct JourneyRow: View {
+    let train: TrainDeparture
+    let now: Date
+    let isFirst: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 10) {
+                    Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                        .font(.mono(24, weight: .bold))
+                        .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                        .strikethrough(train.isCancelled)
+                    if train.scheduledArrival != nil {
+                        DashConnector()
+                        Text(train.scheduledArrival!, format: .dateTime.hour().minute())
+                            .font(.mono(16, weight: .medium))
+                            .foregroundStyle(Color.ink.opacity(0.85))
+                            .strikethrough(train.isCancelled)
+                    }
+                }
+                HStack(spacing: 7) {
+                    if let mode = train.mode { ModeChip(mode) }
+                    Text(numberAndDuration).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                }
+            }
+            .opacity(train.isCancelled ? 0.6 : 1)
+
+            Spacer(minLength: 4)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                if isFirst { nextTag }
+                trailing
+            }
+        }
+    }
+
+    private var nextTag: some View {
+        Text("NEXT")
+            .font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.ground)
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(Color.amber, in: RoundedRectangle(cornerRadius: 5))
+    }
+
+    @ViewBuilder private var trailing: some View {
+        switch train.status {
+        case .onTime:
+            Text(isFirst ? "in \(relativeTime(train.expectedDeparture, from: now))" : relativeTime(train.expectedDeparture, from: now))
+                .font(.mono(isFirst ? 14 : 13, weight: isFirst ? .semibold : .regular))
+                .foregroundStyle(isFirst ? Color.soon : Color.inkSecondary)
+                .fixedSize()
+        case .delayed, .severelyDelayed:
+            StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+            Text("leaves \(train.expectedDeparture.formatted(date: .omitted, time: .shortened))")
+                .font(.mono(12)).foregroundStyle(train.status.tableauInk)
+        case .cancelled:
+            StatusPill("CANCELLED", status: .cancelled)
+        case .unknown:
+            StatusPill("delay ?", status: .unknown)
+        }
+    }
+
+    private var numberAndDuration: String {
+        var parts: [String] = []
+        if let number = train.trainNumber { parts.append("N° \(number)") }
+        if let duration = train.duration { parts.append("\(Int(duration / 60)) min") }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// The dashed segment between a departure and its arrival.
+private struct DashConnector: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: size.height / 2))
+            path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
+            context.stroke(path, with: .color(.inkSecondary), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+        }
+        .frame(width: 22, height: 2)
+    }
+}
+
+private extension View {
+    /// The standard Tableau card: surface fill, hairline border, generous radius.
+    func cardSurface() -> some View {
+        background(Color.surface, in: RoundedRectangle(cornerRadius: 24))
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+    }
+}
+
+/// Minutes-from-now as "2 min" / "1 h 18", the words shared by the radar and the journey rows.
+func relativeTime(_ date: Date, from now: Date) -> String {
+    let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
+    if minutes < 1 { return "now" }
+    if minutes < 60 { return "\(minutes) min" }
+    return "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+}
+
+/// "in 2 min" / "leaving now" for the flap card's single next train.
+func leavesIn(_ train: TrainDeparture, now: Date) -> String {
+    let minutes = max(0, Int(train.expectedDeparture.timeIntervalSince(now) / 60))
+    return minutes < 1 ? "leaving now" : "in \(relativeTime(train.expectedDeparture, from: now))"
+}
+
+/// A minute-count as "HH:MM", for the automatic switch time.
+func clock(_ minuteOfDay: Int) -> String {
+    String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
+}
+
 extension TrainServiceError {
     /// `missingToken`'s own wording tells you to open the app, which is where a reader of this
     /// screen already is; everything else reads the same here as in a widget.
@@ -194,78 +637,133 @@ extension TrainServiceError {
     }
 }
 
-/// A row of the app's board. The widget has its own, shaped for a panel a few centimetres wide;
-/// this one has a whole screen and says more.
-struct TrainRow: View {
+// MARK: - Full trip
+
+/// A tapped departure, carried into the full-trip sheet.
+struct TripRequest: Identifiable {
+    let id = UUID()
     let train: TrainDeparture
+    /// The station you would board at, highlighted in the list. nil on the radar before a fix.
+    let boarding: String?
+}
+
+/// Every stop of one train's run, fetched on demand from the vehicle_journey id the tapped row
+/// carried. A calling-points list: a rail of dots, the boarding stop picked out in amber, stops the
+/// train passes without serving struck through.
+struct TripSheet: View {
+    let train: TrainDeparture
+    let boarding: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var stops: [TripStop]?
+    @State private var failed = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
-                    .font(.title3.weight(.semibold).monospacedDigit())
-                    .strikethrough(train.isCancelled)
-                if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text(train.expectedDeparture, format: .dateTime.hour().minute())
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(tint)
+        NavigationStack {
+            Group {
+                if let stops { stopList(stops) }
+                else if failed { failure }
+                else { loadingView }
+            }
+            .background(Color.ground.ignoresSafeArea())
+            .navigationTitle("Full trip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+            .task { await loadTrip() }
+        }
+    }
+
+    private func loadTrip() async {
+        guard let id = train.vehicleJourneyID else { failed = true; return }
+        let client = SNCFClient(token: SharedSettings.token)
+        do { stops = try await client.trip(vehicleJourneyID: id) }
+        catch { failed = true }
+    }
+
+    private func stopList(_ stops: [TripStop]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                tripHeader
+                ForEach(Array(stops.enumerated()), id: \.offset) { idx, stop in
+                    stopRow(stop, first: idx == 0, last: idx == stops.count - 1)
                 }
             }
-            .frame(width: 58, alignment: .leading)
+            .padding(20)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 3) {
-                // A journey knows how long it takes; a station board knows where the train goes.
-                if let direction = train.direction {
-                    Text(direction).lineLimit(1)
-                } else if let duration = train.duration {
-                    Text("\(Int(duration / 60)) min")
-                }
-                HStack(spacing: 6) {
-                    if let mode = train.mode {
-                        Text(mode)
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
-                    }
-                    if let number = train.trainNumber {
-                        Text(number).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-                    }
+    private var tripHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let direction = train.direction {
+                Text(direction).font(.system(size: 22, weight: .bold)).foregroundStyle(Color.ink).lineLimit(2)
+            }
+            HStack(spacing: 8) {
+                if let mode = train.mode { ModeChip(mode) }
+                if let number = train.trainNumber {
+                    Text("N° \(number)").font(.mono(13, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
-
-            Spacer(minLength: 4)
-            badge
         }
-        .opacity(train.isCancelled ? 0.75 : 1)
+        .padding(.bottom, 16)
     }
 
-    @ViewBuilder private var badge: some View {
-        switch train.status {
-        case .onTime:
-            if let delay = train.delayMinutes, delay > 0 { label("+\(delay)", .secondary) }
-        case .delayed, .severelyDelayed:
-            label("+\(train.delayMinutes ?? 0)", tint)
-        case .cancelled:
-            label("CANCELLED", tint)
-        case .unknown:
-            label("delay ?", tint)
+    private func stopRow(_ stop: TripStop, first: Bool, last: Bool) -> some View {
+        let here = boarding.map { stop.name.localizedCaseInsensitiveContains($0) } ?? false
+        return HStack(alignment: .center, spacing: 14) {
+            Text(stop.time)
+                .font(.mono(15, weight: here ? .bold : .medium))
+                .foregroundStyle(stop.isSkipped ? Color.inkSecondary : (here ? Color.amber : Color.ink))
+                .strikethrough(stop.isSkipped)
+                .frame(width: 52, alignment: .leading)
+            rail(first: first, last: last, here: here, skipped: stop.isSkipped)
+                .frame(width: 16)
+            Text(stop.name)
+                .font(.system(size: 16, weight: here ? .semibold : .regular))
+                .foregroundStyle(stop.isSkipped ? Color.inkSecondary : Color.ink)
+                .strikethrough(stop.isSkipped)
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 42)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(stop.name), \(stop.isSkipped ? "passed without stopping, " : "")\(stop.time)")
+    }
+
+    /// The vertical line with this stop's dot: no line above the first stop, none below the last,
+    /// the boarding stop a filled amber dot and a skipped one hollow and faded.
+    private func rail(first: Bool, last: Bool, here: Bool, skipped: Bool) -> some View {
+        // A GeometryReader here collapsed to zero height inside the row's HStack, so the dot landed
+        // off-screen. Two greedy half-height rectangles draw the line and split at the centre, where
+        // the dot sits — the segment above the first stop and below the last is simply left clear.
+        let lineColor = Color.inkSecondary.opacity(0.4)
+        return ZStack {
+            VStack(spacing: 0) {
+                Rectangle().fill(first ? Color.clear : lineColor)
+                Rectangle().fill(last ? Color.clear : lineColor)
+            }
+            .frame(width: 2)
+            Circle()
+                .fill(here ? Color.amber : (skipped ? Color.ground : Color.surface))
+                .overlay(Circle().stroke(here ? Color.amber : Color.inkSecondary.opacity(skipped ? 0.4 : 0.8), lineWidth: 2))
+                .frame(width: here ? 14 : 10, height: here ? 14 : 10)
         }
     }
 
-    private func label(_ text: String, _ color: Color) -> some View {
-        Text(text)
-            .font(.subheadline.weight(.bold).monospacedDigit())
-            .foregroundStyle(color)
-            .fixedSize()
+    private var loadingView: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+            Text("Loading the trip…").foregroundStyle(Color.inkSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var tint: Color {
-        switch train.status {
-        case .onTime: .secondary
-        case .delayed, .unknown: .orange
-        case .severelyDelayed, .cancelled: .red
+    private var failure: some View {
+        VStack(spacing: 8) {
+            Text("Trip unavailable").font(.headline).foregroundStyle(Color.ink)
+            Text("Could not load the stops. Close this and try again.")
+                .font(.subheadline).foregroundStyle(Color.inkSecondary).multilineTextAlignment(.center)
         }
+        .padding(30).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 #endif

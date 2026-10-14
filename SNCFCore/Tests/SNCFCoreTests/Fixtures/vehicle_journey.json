@@ -1,0 +1,221 @@
+{
+ "vehicle_journeys": [
+  {
+   "id": "vehicle_journey:SNCF:2026-10-15:96601:1187:Train",
+   "name": "96601",
+   "stop_times": [
+    {
+     "arrival_time": "051200",
+     "utc_arrival_time": "031200",
+     "departure_time": "051200",
+     "utc_departure_time": "031200",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87747006:Train",
+      "name": "Grenoble",
+      "label": "Grenoble (Grenoble)",
+      "coord": {
+       "lon": "5.714548",
+       "lat": "45.191491"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": false,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "052000",
+     "utc_arrival_time": "032000",
+     "departure_time": "052200",
+     "utc_departure_time": "032200",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87747402:Train",
+      "name": "Grenoble Universités - Gières",
+      "label": "Grenoble Universités - Gières (Gières)",
+      "coord": {
+       "lon": "5.784731",
+       "lat": "45.184971"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "054100",
+     "utc_arrival_time": "034100",
+     "departure_time": "054200",
+     "utc_departure_time": "034200",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87747493:Train",
+      "name": "Pontcharra sur Bréda - Allevard",
+      "label": "Pontcharra sur Bréda - Allevard (Pontcharra)",
+      "coord": {
+       "lon": "6.007859",
+       "lat": "45.434091"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "054800",
+     "utc_arrival_time": "034800",
+     "departure_time": "055000",
+     "utc_departure_time": "035000",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87741181:Train",
+      "name": "Montmélian",
+      "label": "Montmélian (Montmélian)",
+      "coord": {
+       "lon": "6.043175",
+       "lat": "45.503082"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "055900",
+     "utc_arrival_time": "035900",
+     "departure_time": "060200",
+     "utc_departure_time": "040200",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87741009:Train",
+      "name": "Chambéry - Challes-les-Eaux",
+      "label": "Chambéry - Challes-les-Eaux (Chambéry)",
+      "coord": {
+       "lon": "5.919547",
+       "lat": "45.571302"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "061300",
+     "utc_arrival_time": "041300",
+     "departure_time": "061500",
+     "utc_departure_time": "041500",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87741132:Train",
+      "name": "Aix-les-Bains - Le Revard",
+      "label": "Aix-les-Bains - Le Revard (Aix-les-Bains)",
+      "coord": {
+       "lon": "5.909371",
+       "lat": "45.688161"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "063200",
+     "utc_arrival_time": "043200",
+     "departure_time": "063900",
+     "utc_departure_time": "043900",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87741074:Train",
+      "name": "Culoz",
+      "label": "Culoz (Culoz)",
+      "coord": {
+       "lon": "5.778728",
+       "lat": "45.843278"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "064900",
+     "utc_arrival_time": "044900",
+     "departure_time": "065100",
+     "utc_departure_time": "045100",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87745828:Train",
+      "name": "Seyssel - Corbonod",
+      "label": "Seyssel - Corbonod (Corbonod)",
+      "coord": {
+       "lon": "5.831503",
+       "lat": "45.963074"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "070500",
+     "utc_arrival_time": "050500",
+     "departure_time": "070700",
+     "utc_departure_time": "050700",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:87745000:Train",
+      "name": "Bellegarde-sur-Valserine Gare",
+      "label": "Bellegarde-sur-Valserine Gare (Valserhône)",
+      "coord": {
+       "lon": "5.825958",
+       "lat": "46.110904"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": true,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    },
+    {
+     "arrival_time": "074000",
+     "utc_arrival_time": "054000",
+     "departure_time": "074000",
+     "utc_departure_time": "054000",
+     "headsign": "96601",
+     "stop_point": {
+      "id": "stop_point:SNCF:85010082:Train",
+      "name": "Genève Cornavin",
+      "label": "Genève Cornavin (Genève)",
+      "coord": {
+       "lon": "6.14244",
+       "lat": "46.21022"
+      },
+      "links": [],
+      "equipments": []
+     },
+     "pickup_allowed": false,
+     "drop_off_allowed": true,
+     "skipped_stop": false
+    }
+   ]
+  }
+ ],
+ "disruptions": []
+}

@@ -109,8 +109,27 @@ public enum NavitiaParser {
             mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: stop, significantDelays: linked.contains { $0.severity?.effect == "SIGNIFICANT_DELAYS" }),
             isCancelled: isCancelled(linked, at: stop),
-            trainNumber: info?.tripShortName ?? info?.headsign
+            trainNumber: info?.tripShortName ?? info?.headsign,
+            vehicleJourneyID: board.links?.first { $0.type == "vehicle_journey" }?.id
         )
+    }
+
+    /// Decodes a `/vehicle_journeys/{id}` response into the train's full stopping pattern.
+    public static func tripStops(from data: Data) throws(TrainServiceError) -> [TripStop] {
+        let response: VehicleJourneysResponse
+        do {
+            response = try decoder.decode(VehicleJourneysResponse.self, from: data)
+        } catch {
+            throw .malformedResponse
+        }
+        if response.error != nil { throw .malformedResponse }
+        guard let stops = response.vehicleJourneys?.first?.stopTimes else { throw .malformedResponse }
+        return stops.compactMap { stop in
+            guard let name = stop.stopPoint?.name else { return nil }
+            // The terminus only arrives, the origin only departs; otherwise the two times match.
+            let time = (stop.departureTime?.isEmpty == false ? stop.departureTime : stop.arrivalTime) ?? stop.arrivalTime
+            return TripStop(name: name, time: hourMinute(time), isSkipped: stop.skippedStop ?? false)
+        }
     }
 
     /// SNCF answers with the commercial brand, which is a regional code for every TER
@@ -169,6 +188,12 @@ public enum NavitiaParser {
         return (value / 10000) * 3600 + (value / 100 % 100) * 60 + value % 100
     }
 
+    /// A Navitia "HHMMSS" time of day as "HH:MM"; empty when the field is missing or malformed.
+    static func hourMinute(_ hhmmss: String?) -> String {
+        guard let s = hhmmss, s.count == 6 else { return "" }
+        return "\(s.prefix(2)):\(s.dropFirst(2).prefix(2))"
+    }
+
     /// Navitia datetimes are naive local times of the coverage (Europe/Paris for SNCF).
     static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -222,6 +247,7 @@ struct Place: Decodable {
 
 struct StopPoint: Decodable {
     let id: String
+    let name: String?
     let stopArea: StopArea?
 }
 
@@ -283,6 +309,8 @@ struct BoardDeparture: Decodable {
     let stopDateTime: StopDateTime?
     let displayInformations: DisplayInformations?
     let stopPoint: StopPoint?
+    /// Top-level links carry the `vehicle_journey` id used to fetch the train's full run.
+    let links: [Link]?
 }
 
 struct StopDateTime: Decodable {
@@ -301,4 +329,20 @@ struct PlacesNearbyResponse: Decodable {
 struct PlaceResult: Decodable {
     let name: String?
     let stopArea: StopArea?
+}
+
+struct VehicleJourneysResponse: Decodable {
+    let vehicleJourneys: [VehicleJourney]?
+    let error: APIError?
+}
+
+struct VehicleJourney: Decodable {
+    let stopTimes: [StopTime]?
+}
+
+struct StopTime: Decodable {
+    let arrivalTime: String?
+    let departureTime: String?
+    let skippedStop: Bool?
+    let stopPoint: StopPoint?
 }

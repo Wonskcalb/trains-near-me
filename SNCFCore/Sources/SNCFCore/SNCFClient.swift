@@ -44,6 +44,13 @@ public struct SNCFClient {
         return try NavitiaParser.stopDepartures(from: data)
     }
 
+    /// Every stop of one train's run, for the full-trip sheet. The id comes from a board row's
+    /// `vehicleJourneyID`, which the parser lifts from the departure's links.
+    public func trip(vehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop] {
+        let data = try await get("vehicle_journeys/\(id)", ["disable_geojson": "true"])
+        return try NavitiaParser.tripStops(from: data)
+    }
+
     /// The station closest to a position. Coordinates are rounded to three decimals
     /// (~100 m) before they reach SNCF, which is plenty to pick the right station.
     public func nearestStation(latitude: Double, longitude: Double) async throws(TrainServiceError) -> Station? {

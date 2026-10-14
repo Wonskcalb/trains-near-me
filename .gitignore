@@ -6,3 +6,8 @@ DerivedData/
 Config/Local.xcconfig
 build/
 Design/Screenshots/Sources/Screenshots/Widget/
+
+# xcodebuild output from manual CLI builds
+build-ios/
+build-shots/
+build-widget/

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>No service</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC23D;text-decoration:none}a:hover{color:#FFD470}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; box-sizing: border-box; background: #0E0F11; color: #F2EFE8; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+
+  <!-- hazard band, full bleed -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 286px; background: repeating-linear-gradient(-45deg, {{stripe}} 0 22px, #0E0F11 22px 44px); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 34px; box-sizing: border-box">
+    <div style="background: #0E0F11; border-radius: 16px; padding: 16px 24px 14px; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+      <span style="font: 800 30px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 3px">NO SERVICE</span>
+      <span style="font-size: 14px; color: #B5B2AA">Every train of the day is cancelled</span>
+    </div>
+  </div>
+
+  <!-- toolbar over the band -->
+  <div style="position: absolute; top: 54px; left: 16px; right: 16px; height: 44px; display: flex; align-items: center">
+    <a href="Journeys.dc.html" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.12); background: rgba(14,15,17,0.82); color: #F2EFE8; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px)" aria-label="Back to Journeys">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+  </div>
+
+  <div style="position: absolute; top: 306px; left: 0; right: 0; padding: 0 20px; display: flex; flex-direction: column; gap: 16px">
+
+    <div style="display: flex; gap: 14px; align-items: stretch">
+      <div style="width: 14px; display: flex; flex-direction: column; align-items: center; padding: 6px 0 9px" aria-hidden="true">
+        <div style="width: 10px; height: 10px; border-radius: 6px; border: 2.5px solid #8F8D86; box-sizing: border-box"></div>
+        <div style="flex: 1; width: 2.5px; background: #8F8D86; margin: 2px 0"></div>
+        <div style="width: 13px; height: 13px; border-radius: 7px; background: #6E6C66"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1px">
+        <span style="font-size: 16px; font-weight: 500; color: #B5B2AA">Grenoble</span>
+        <h1 style="margin: 0; font-size: 30px; font-weight: 700">Voiron</h1>
+      </div>
+    </div>
+
+    <div style="background: #17191C; border-radius: 22px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <span style="font: 600 18px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">17:42</span>
+        <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F">CANCELLED</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <span style="font: 600 18px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">18:12</span>
+        <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F">CANCELLED</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <span style="font: 600 18px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">18:42</span>
+        <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F">CANCELLED</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px">
+        <span style="font: 600 18px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">19:12</span>
+        <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F">CANCELLED</span>
+      </div>
+    </div>
+
+    <a href="https://www.sncf-connect.com" style="height: 52px; border-radius: 16px; background: {{stripe}}; color: #0E0F11; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700">
+      Find another way in SNCF Connect
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"></path><path d="M8 7h9v9"></path></svg>
+    </a>
+    <span style="font-size: 11.5px; line-height: 1.45; color: #8F8D86; text-align: center; padding: 0 12px">Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API.</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"stripe":{"editor":"color","default":"#FFC23D","options":["#FFC23D","#FF6B5F","#F2EFE8"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { stripe: this.props.stripe ?? '#FFC23D' };
+  }
+}
+</script>
+</body>
+</html>

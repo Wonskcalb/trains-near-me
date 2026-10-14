@@ -49,7 +49,8 @@ struct DeparturesView: View {
     private var compact: Bool { family == .systemSmall }
 
     private var rowLimit: Int {
-        let rows = family == .systemLarge ? 8 : 3
+        // The large widget lists more and closes with a track-rule footer; the others stay at three.
+        let rows = family == .systemLarge ? 7 : 3
         // The location warning takes the height of one row.
         return entry.locationIssue == nil ? rows : rows - 1
     }
@@ -65,10 +66,18 @@ struct DeparturesView: View {
         }
     }
 
+    /// The hazard and night backdrops are fixed dark whatever the system scheme, so text on them must
+    /// stay permanently light. Only the standard backdrop uses the scheme-adapting tokens.
+    private var onDark: Bool { backdrop != .standard }
+    private var secondaryColor: Color { onDark ? Color.white.opacity(0.7) : .inkSecondary }
+
     var body: some View {
         #if os(iOS)
         switch family {
-        case .accessoryCircular, .accessoryRectangular: AccessoryBoard(entry: entry)
+        case .accessoryCircular, .accessoryRectangular:
+            // iOS 17+ refuses to render a widget that doesn't adopt containerBackground — without it
+            // the Lock Screen shows "Please adopt containerBackground API" instead of the board.
+            AccessoryBoard(entry: entry).containerBackground(.clear, for: .widget)
         default: panel
         }
         #else
@@ -89,24 +98,28 @@ struct DeparturesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
             switch backdrop {
-            case .standard: Rectangle().fill(.background)
-            case .hazard: HazardStripes()
+            case .standard: Color.ground
+            case .hazard: HazardBackground(variant: .widget)
             case .night: LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)], startPoint: .top, endPoint: .bottom)
             }
         }
-        .foregroundStyle(backdrop == .standard ? AnyShapeStyle(.primary) : AnyShapeStyle(Color.white))
+        .foregroundStyle(backdrop == .standard ? AnyShapeStyle(Color.ink) : AnyShapeStyle(Color.white))
     }
 
     @ViewBuilder private func header(_ board: Board) -> some View {
         HStack(alignment: .top, spacing: 7) {
             switch board {
             case .trip(let leg):
-                JourneyPins(compact: compact)
+                // Fixed line length: the header is a fixed height, so the glyph doesn't stretch.
+                RoutePins(lineColor: secondaryColor, destination: .solid(.amber),
+                          originDiameter: 7, destinationDiameter: 9, lineWidth: 1.5,
+                          lineLength: compact ? 9 : 10)
+                    .padding(.top, 3)
                 titles(leg.from.name, leg.to.name, label: "\(leg.from.name) to \(leg.to.name)")
             case .radar(let station):
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .font(.system(size: compact ? 13 : 15))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(secondaryColor)
                     .padding(.top, 2)
                     .accessibilityHidden(true)
                 titles("Nearest station", station?.name ?? "Looking around…", label: "Departures from \(station?.name ?? "the nearest station")")
@@ -115,17 +128,17 @@ struct DeparturesView: View {
             if entry.isRefreshing {
                 Text(compact ? "…" : "Updating…")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(secondaryColor)
                     .lineLimit(1)
             } else if !compact || entry.isStale {
                 // How old the delays are. Shown once stale even on the small widget, where there
-                // is otherwise no room for it.
+                // is otherwise no room for it. Stale turns it amber (via the caution text colour).
                 HStack(spacing: 2) {
                     if entry.isStale { Image(systemName: "clock.badge.exclamationmark") }
                     Text(entry.fetchedAt, style: .time)
                 }
-                .font(.caption2)
-                .foregroundStyle(entry.isStale ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                .font(.mono(10, weight: .medium))
+                .foregroundStyle(entry.isStale ? AnyShapeStyle(Color.caution) : AnyShapeStyle(secondaryColor))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(date: .omitted, time: .shortened))")
             }
@@ -135,7 +148,7 @@ struct DeparturesView: View {
         if let issue = entry.locationIssue {
             Text(issue == .notAuthorized ? "Location not allowed: open Trains near me" : "No location: click to refresh")
                 .font(.caption2)
-                .foregroundStyle(.orange)
+                .foregroundStyle(onDark ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.caution))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -143,9 +156,10 @@ struct DeparturesView: View {
 
     private func titles(_ top: String, _ bottom: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Station names and titles stay SF Pro — only times and numbers are monospaced.
             Text(top)
                 .font(.system(size: compact ? 11 : 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(secondaryColor)
             Text(bottom)
                 .font(.system(size: compact ? 16 : 18, weight: .bold))
         }
@@ -166,6 +180,8 @@ struct DeparturesView: View {
             } else {
                 ForEach(Array(upcoming), id: \.self) { DepartureRow(train: $0, compact: compact) }
                 Spacer(minLength: 0)
+                // The large widget has the height to carry the attribution the others cannot.
+                if family == .systemLarge { largeFooter(trains: Array(upcoming)) }
             }
         case .noTrains:
             message("No trains", detail: "No departure found for now.")
@@ -175,13 +191,14 @@ struct DeparturesView: View {
             Spacer(minLength: 0)
         case .noService:
             Spacer(minLength: 0)
+            // The plate stays dark and its text light: the hazard backdrop is fixed dark either scheme.
             VStack(spacing: 2) {
-                Text("NO SERVICE").font(.system(size: compact ? 16 : 20, weight: .heavy)).tracking(1)
-                Text("All trains cancelled").font(.caption).foregroundStyle(.secondary)
+                Text("NO SERVICE").font(.mono(compact ? 15 : 20, weight: .heavy)).tracking(compact ? 1.5 : 2).foregroundStyle(.white)
+                Text("All trains cancelled").font(.caption).foregroundStyle(Color.white.opacity(0.7))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 8))
+            .background(.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 9))
             .frame(maxWidth: .infinity)
             Spacer(minLength: 0)
         case .unavailable(let error):
@@ -193,9 +210,21 @@ struct DeparturesView: View {
         VStack(alignment: .leading, spacing: 2) {
             Spacer(minLength: 0)
             Text(title).font(.system(size: 13, weight: .semibold))
-            Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+            Text(detail).font(.caption).foregroundStyle(secondaryColor).lineLimit(3)
             Spacer(minLength: 0)
         }
+    }
+
+    /// The large widget's foot: the next trains as dots on a length of track, then the attribution the
+    /// smaller sizes omit.
+    private func largeFooter(trains: [TrainDeparture]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            TimeTrack(trains: trains)
+            Text("Data © SNCF · not affiliated")
+                .font(.mono(9.5))
+                .foregroundStyle(secondaryColor)
+        }
+        .padding(.horizontal, 6)
     }
 }
 
@@ -216,19 +245,6 @@ struct RefreshButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Refresh")
-    }
-}
-
-struct JourneyPins: View {
-    let compact: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Circle().strokeBorder(.secondary, lineWidth: 1.5).frame(width: 7, height: 7).padding(.top, 4)
-            Rectangle().fill(.secondary).frame(width: 1.5, height: compact ? 9 : 10)
-            Circle().fill(.primary).frame(width: 9, height: 9)
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -258,7 +274,7 @@ struct AccessoryBoard: View {
                         Text("--:--")
                     }
                 }
-                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .font(.mono(13, weight: .semibold))
             }
             .accessibilityLabel(entry.upcoming.first.map { "Next train at \($0.expectedDeparture.formatted(date: .omitted, time: .shortened))" } ?? entry.shortStatus)
         } else {
@@ -281,12 +297,12 @@ struct AccessoryRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(train.scheduledDeparture, format: .dateTime.hour().minute())
-                .font(.caption.monospacedDigit())
+                .font(.mono(12, weight: .semibold))
                 .strikethrough(train.isCancelled)
             switch train.status {
             case .cancelled: Text("canc.").font(.caption2)
-            case .unknown: Text("+?").font(.caption2)
-            case .delayed, .severelyDelayed: Text("+\(train.delayMinutes ?? 0)").font(.caption2.monospacedDigit())
+            case .unknown: Text("+?").font(.mono(11))
+            case .delayed, .severelyDelayed: Text("+\(train.delayMinutes ?? 0)").font(.mono(11))
             case .onTime: EmptyView()
             }
             if let direction = train.direction {
@@ -297,25 +313,6 @@ struct AccessoryRow: View {
     }
 }
 #endif
-
-struct HazardStripes: View {
-    var body: some View {
-        Canvas { context, size in
-            let width: CGFloat = 14
-            var x = -size.height
-            while x < size.width {
-                var stripe = Path()
-                stripe.move(to: CGPoint(x: x, y: size.height))
-                stripe.addLine(to: CGPoint(x: x + width, y: size.height))
-                stripe.addLine(to: CGPoint(x: x + width + size.height * 0.7, y: 0))
-                stripe.addLine(to: CGPoint(x: x + size.height * 0.7, y: 0))
-                context.fill(stripe, with: .color(.orange.opacity(0.22)))
-                x += width * 2
-            }
-        }
-        .background(Color.black)
-    }
-}
 
 struct EndOfService: View {
     let firstTrain: Date
@@ -328,15 +325,20 @@ struct EndOfService: View {
     }
 
     var body: some View {
+        // Always on the fixed-dark night gradient, so text stays permanently light and the first
+        // train time carries the amber accent.
         HStack(spacing: 10) {
             if !compact {
-                Image(systemName: "moon.zzz.fill").font(.system(size: 26)).foregroundStyle(.secondary)
+                Image(systemName: "moon.zzz.fill").font(.system(size: 26)).foregroundStyle(Color.white.opacity(0.8))
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text("End of service").font(.system(size: compact ? 14 : 15, weight: .semibold))
-                Text("First train \(day) at \(Text(firstTrain, format: .dateTime.hour().minute()).bold())")
+                Text("End of service").font(.system(size: compact ? 14 : 15, weight: .semibold)).foregroundStyle(.white)
+                (Text("First train ") + day + Text(" at ")
+                    + Text(firstTrain, format: .dateTime.hour().minute())
+                        .font(.mono(compact ? 12 : 13, weight: .bold))
+                        .foregroundStyle(Color.amber))
                     .font(.system(size: compact ? 12 : 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.white.opacity(0.75))
             }
         }
     }
@@ -351,33 +353,28 @@ struct DepartureRow: View {
         // onto a second line, so the middle column shrinks rather than wraps.
         HStack(spacing: compact ? 4 : 6) {
             Text(train.scheduledDeparture, format: .dateTime.hour().minute())
-                .font(.system(size: compact ? 14 : 15, weight: .semibold).monospacedDigit())
+                .font(.mono(compact ? 14 : 15, weight: .semibold))
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : .ink)
                 .strikethrough(train.isCancelled)
                 .fixedSize()
             // Which service runs it: the same journey can be a TER one hour and a TGV the next.
             // Only where there is room for it; the small widget needs its width for the times.
             if !compact, let mode = train.mode {
-                Text(mode)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                ModeChip(mode)
             }
             if !compact || !train.isCancelled {
                 // A journey knows how long it takes; a station board knows where the train goes.
+                // The duration is a number (mono); the direction is a station name (SF Pro).
                 if let duration = train.duration {
                     Text("\(Int(duration / 60)) min")
-                        .font(.system(size: compact ? 11 : 12).monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .font(.mono(compact ? 11 : 12))
+                        .foregroundStyle(Color.inkSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                 } else if let direction = train.direction {
                     Text(direction)
                         .font(.system(size: compact ? 11 : 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.inkSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                         .truncationMode(.tail)
@@ -386,38 +383,32 @@ struct DepartureRow: View {
             Spacer(minLength: 2)
             badge
         }
-        .padding(.horizontal, compact ? 3 : 5)
-        .padding(.vertical, compact ? 1 : 2)
-        .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 5))
+        .padding(.horizontal, compact ? 4 : 6)
+        .padding(.vertical, compact ? 2 : 3)
+        // The row fill encodes the status (transparent when on time); the badge repeats it as text.
+        .background(train.status.tableauFill, in: RoundedRectangle(cornerRadius: 6))
         .opacity(train.isCancelled ? 0.75 : 1)
     }
 
     @ViewBuilder private var badge: some View {
         switch train.status {
         case .onTime:
-            if let delay = train.delayMinutes, delay > 0 { label("+\(delay)", .secondary) }
+            if let delay = train.delayMinutes, delay > 0 { label("+\(delay)", .inkSecondary) }
         case .delayed, .severelyDelayed:
-            label("+\(train.delayMinutes ?? 0)", tint)
+            label("+\(train.delayMinutes ?? 0)", train.status.tableauInk)
         case .cancelled:
-            label(compact ? "CANC." : "CANCELLED", tint)
+            label(compact ? "CANC." : "CANCELLED", train.status.tableauInk)
         case .unknown:
-            label("delay ?", tint)
+            label("delay ?", train.status.tableauInk)
         }
     }
 
     private func label(_ text: String, _ color: Color) -> some View {
         Text(text)
-            .font(.system(size: compact ? 11 : 12, weight: .bold).monospacedDigit())
+            .font(.mono(compact ? 11 : 12, weight: .bold))
+            .tracking(text.count > 5 ? 0.6 : 0)
             .foregroundStyle(color)
             .lineLimit(1)
             .fixedSize()
-    }
-
-    private var tint: Color {
-        switch train.status {
-        case .onTime: .clear
-        case .delayed, .unknown: .orange
-        case .severelyDelayed, .cancelled: .red
-        }
     }
 }

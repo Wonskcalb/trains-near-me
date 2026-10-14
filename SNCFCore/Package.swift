@@ -6,7 +6,13 @@ let package = Package(
     platforms: [.macOS(.v15), .iOS(.v18)],
     products: [.library(name: "SNCFCore", targets: ["SNCFCore"])],
     targets: [
-        .target(name: "SNCFCore"),
+        .target(
+            name: "SNCFCore",
+            resources: [
+                .process("Theme/Tableau.xcassets"),
+                .process("Theme/Fonts"),
+            ]
+        ),
         .testTarget(
             name: "SNCFCoreTests",
             dependencies: ["SNCFCore"],

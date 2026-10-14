@@ -5,29 +5,62 @@ import SwiftUI
 /// The app proper on iPhone and iPad: the radar, the saved journeys, and the settings that used to
 /// be the whole app. On macOS the widgets are still the product, so there it stays one window.
 struct RootView: View {
+    // Read from the same App Group suite the Settings picker writes to, so flipping the appearance
+    // there re-tints the whole app at once rather than only the tab that changed it.
+    @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
+
+    // Selection-based so the screenshot script can open a specific tab; defaults to the first tab,
+    // which is the plain behaviour in Release.
+    #if DEBUG
+    @State private var selection = ScreenshotSupport.initialTab
+    #else
+    @State private var selection = 0
+    #endif
+
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
             NavigationStack { BoardView(journey: nil) }
                 .tabItem { Label("Near me", systemImage: "antenna.radiowaves.left.and.right") }
+                .tag(0)
             NavigationStack { JourneysView() }
-                .tabItem { Label("Journeys", systemImage: "star") }
-            NavigationStack { SettingsView().navigationTitle("Settings") }
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { Label("Journeys", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
+                .tag(1)
+            NavigationStack { SettingsView() }
+                .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+                .tag(2)
         }
+        .tint(.amber)
+        .preferredColorScheme(appearance.colorScheme)
+        #if DEBUG
+        .task { ScreenshotSupport.seedIfNeeded() }
+        #endif
     }
 }
 
 /// Two stations and how to read them — the same choices the Trip widget offers in its own
-/// settings, because a saved journey is meant to end up in one.
+/// settings, because a saved journey is meant to end up in one. Serves both creating a journey and
+/// editing one in place: `existing` pre-fills the fields, and `save` either appends or replaces.
 struct EditJourneyView: View {
+    let existing: JourneyConfiguration?
     let save: (JourneyConfiguration) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var stationA: Station?
     @State private var stationB: Station?
-    @State private var direction = DirectionMode.forward
-    @State private var switchTime = Calendar.current.date(from: DateComponents(hour: 13, minute: 0)) ?? .now
-    @State private var nearestStation = false
+    @State private var direction: DirectionMode
+    @State private var switchTime: Date
+    @State private var nearestStation: Bool
+
+    init(existing: JourneyConfiguration? = nil, save: @escaping (JourneyConfiguration) -> Void) {
+        self.existing = existing
+        self.save = save
+        _stationA = State(initialValue: existing?.stationA)
+        _stationB = State(initialValue: existing?.stationB)
+        _direction = State(initialValue: existing?.direction ?? .forward)
+        let minute = existing?.switchMinute ?? 13 * 60
+        _switchTime = State(initialValue: Calendar.current.date(from: DateComponents(hour: minute / 60, minute: minute % 60)) ?? .now)
+        _nearestStation = State(initialValue: existing?.nearestStationAsDeparture ?? false)
+    }
 
     var body: some View {
         NavigationStack {
@@ -50,7 +83,7 @@ struct EditJourneyView: View {
                     Text("Automatic shows the trains back after the switch time. Nearest station compares the two on the device and overrides the direction.")
                 }
             }
-            .navigationTitle("New journey")
+            .navigationTitle(existing == nil ? "New journey" : "Edit journey")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

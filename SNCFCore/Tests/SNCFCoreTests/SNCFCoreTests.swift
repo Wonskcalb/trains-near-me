@@ -144,6 +144,23 @@ func fixture(_ name: String) throws -> Data {
         #expect(board[3].status == .unknown)
     }
 
+    @Test func stationBoardCarriesTheVehicleJourneyID() throws {
+        let board = try NavitiaParser.stopDepartures(from: fixture("stop_departures"))
+        #expect(board[0].vehicleJourneyID == "vehicle_journey:SNCF:2026-10-15:96601:1187:Train")
+        // Only the rows whose links carried one; the rest stay nil and are not tappable.
+        #expect(board[1].vehicleJourneyID == nil)
+    }
+
+    @Test func tripStopsListEveryCallingPoint() throws {
+        let stops = try NavitiaParser.tripStops(from: fixture("vehicle_journey"))
+        #expect(stops.count == 10)
+        #expect(stops.first?.name == "Grenoble")
+        #expect(stops.first?.time == "05:12")
+        #expect(stops.last?.name == "Genève Cornavin")
+        #expect(stops.last?.time == "07:40")
+        #expect(stops.allSatisfy { !$0.isSkipped })
+    }
+
     /// SNCF names every TER after its region ("REGIONAURA"), so the brand alone is unreadable
     /// and the physical mode has to finish the job.
     @Test func serviceNamesAreReadable() throws {
@@ -166,6 +183,14 @@ func fixture(_ name: String) throws -> Data {
     /// Regression: station search used to surface "SNCFCore.TrainServiceError error 0".
     @Test func errorsAreReadable() {
         #expect(TrainServiceError.missingToken.localizedDescription == "Add your SNCF API token in the Trains near me app.")
+    }
+
+    /// A Lock Screen complication clips a full sentence, so every error has a terse form that fits.
+    @Test func errorsHaveATerseFormForComplications() {
+        for error in [TrainServiceError.missingToken, .unauthorized, .quotaExceeded, .offline,
+                      .serverUnavailable, .malformedResponse, .noLocation, .noStationNearby] {
+            #expect(error.terse.count <= 16)
+        }
     }
 
     /// The refresh button redraws this while the new trains are fetched, so it has to survive
@@ -270,5 +295,31 @@ func fixture(_ name: String) throws -> Data {
                                            switchMinute: 17 * 60 + 45, nearestStationAsDeparture: true)
         let data = try JSONEncoder().encode([journey])
         #expect(try JSONDecoder().decode([JourneyConfiguration].self, from: data) == [journey])
+    }
+}
+
+/// The large widget plots the next trains as dots along a track: the window runs from the first to the
+/// hour after the last, and each time maps to a fraction across it. Hours fall where the labels go.
+@Suite struct TimeTrack {
+    @Test func windowRunsToTheHourAfterTheLastTrain() {
+        let layout = TimeTrackLayout(times: [at(17, 42), at(18, 12), at(20, 42)], calendar: paris)
+        #expect(layout.start == at(17, 42))
+        #expect(layout.end == at(21, 0))               // 20:42 rounded up to the next whole hour
+        #expect(layout.hours == [at(18, 0), at(19, 0), at(20, 0), at(21, 0)])
+    }
+
+    @Test func fractionIsLinearAndClamped() {
+        let layout = TimeTrackLayout(times: [at(17, 42), at(20, 42)], calendar: paris)
+        #expect(layout.fraction(of: at(17, 42)) == 0)
+        #expect(layout.fraction(of: at(21, 0)) == 1)
+        #expect(abs(layout.fraction(of: at(18, 0)) - 18.0 / 198.0) < 0.0001)   // 198 min window
+        #expect(layout.fraction(of: at(17, 0)) == 0)   // before the start clamps to 0
+        #expect(layout.fraction(of: at(22, 0)) == 1)   // after the end clamps to 1
+    }
+
+    @Test func aSingleTrainStillGivesAWindow() {
+        let layout = TimeTrackLayout(times: [at(18, 20)], calendar: paris)
+        #expect(layout.end > layout.start)
+        #expect(layout.fraction(of: at(18, 20)) == 0)
     }
 }

@@ -40,7 +40,7 @@ struct DeparturesEntry: TimelineEntry {
         case .noTrains: return "No trains"
         case .endOfService: return "End of service"
         case .noService: return "All cancelled"
-        case .unavailable(let error): return error.localizedDescription
+        case .unavailable(let error): return error.terse
         }
     }
 }

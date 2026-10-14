@@ -5,48 +5,54 @@ import SwiftUI
 
 /// Every saved journey at once: one card each, its next departures sliding sideways inside it, and
 /// an icon on its title as soon as something is wrong with it. The boards refresh themselves; the
-/// button is there for when you do not want to wait for that.
+/// button is there for when you do not want to wait for that. An Edit mode collapses the cards into a
+/// plain list for deleting, reordering by hand, and editing a journey in place.
 struct JourneysView: View {
     @State private var journeys = SharedSettings.favorites
     @State private var boards = JourneyBoards()
     @State private var now = Date.now
     @State private var adding = false
+    @State private var editing = false
+    @State private var editTarget: JourneyConfiguration?
 
     var body: some View {
         Group {
             if journeys.isEmpty {
                 ContentUnavailableView {
-                    Label("No saved journey", systemImage: "star")
+                    Label("No saved journey", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                 } description: {
                     Text("Save one to see its next direct trains here, and to have its stations offered when you configure a Trip widget.")
                 } actions: {
                     Button("Add a journey") { adding = true }
                 }
+            } else if editing {
+                editList
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        updatedAt
-                        ForEach(journeys, id: \.self) { journey in
-                            JourneyCard(journey: journey, board: boards.boards[journey], now: now)
-                                .contextMenu {
-                                    Button("Delete", systemImage: "trash", role: .destructive) { delete(journey) }
-                                }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 24)
-                }
+                cards
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.ground.ignoresSafeArea())
         .navigationTitle("Journeys")
         .toolbar {
+            // The toggle only earns its place once there is something to manage.
+            if !journeys.isEmpty {
+                Button(editing ? "Done" : "Edit") { editing.toggle() }
+            }
             Button("Add a journey", systemImage: "plus") { adding = true }
         }
+        .tint(.amber)
         .refreshable { await boards.load(journeys) }
         .sheet(isPresented: $adding) {
             EditJourneyView { journey in
                 journeys.append(journey)
+                SharedSettings.favorites = journeys
+            }
+        }
+        // Editing a journey replaces it in place by its old identity, so its board simply reloads on
+        // the next tick rather than needing the dict hand-patched.
+        .sheet(item: $editTarget) { target in
+            EditJourneyView(existing: target) { updated in
+                if let i = journeys.firstIndex(of: target) { journeys[i] = updated }
                 SharedSettings.favorites = journeys
             }
         }
@@ -61,26 +67,91 @@ struct JourneysView: View {
         }
     }
 
+    private var cards: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                updatedAt
+                ForEach(journeys, id: \.self) { journey in
+                    JourneyCard(journey: journey, board: boards.boards[journey], now: now)
+                        .contextMenu {
+                            Button("Edit", systemImage: "pencil") { editTarget = journey }
+                            Button("Delete", systemImage: "trash", role: .destructive) { delete(journey) }
+                        }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+    }
+
+    // A List buys swipe-to-delete for free; tapping a row edits it in place.
+    private var editList: some View {
+        List {
+            ForEach(journeys, id: \.self) { journey in
+                Button { editTarget = journey } label: {
+                    CompactJourneyRow(journey: journey)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color.surface)
+            }
+            .onDelete(perform: deleteAt)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+    }
+
     @ViewBuilder private var updatedAt: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 7) {
             if boards.loading {
                 ProgressView().controlSize(.mini)
-                Text("Updating…")
+                Text("Updating…").font(.mono(12)).foregroundStyle(Color.inkSecondary)
             } else if let fetchedAt = boards.fetchedAt {
                 let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
-                if stale { Image(systemName: "clock.badge.exclamationmark") }
+                Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
                 Text("\(stale ? "Delays last checked at" : "Updated at") \(fetchedAt.formatted(date: .omitted, time: .shortened))")
-                    .foregroundStyle(stale ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                    .font(.mono(12)).foregroundStyle(stale ? Color.caution : Color.inkSecondary)
             }
             Spacer()
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
     }
 
     private func delete(_ journey: JourneyConfiguration) {
         journeys.removeAll { $0 == journey }
         SharedSettings.favorites = journeys
+        if journeys.isEmpty { editing = false }
+    }
+
+    private func deleteAt(_ offsets: IndexSet) {
+        journeys.remove(atOffsets: offsets)
+        SharedSettings.favorites = journeys
+        if journeys.isEmpty { editing = false }
+    }
+}
+
+// `.sheet(item:)` needs Identifiable; a journey is already its own identity (Hashable).
+extension JourneyConfiguration: @retroactive Identifiable {
+    public var id: Self { self }
+}
+
+/// A journey as a plain row, for the edit list: just where it goes and how it is read, no live board.
+struct CompactJourneyRow: View {
+    let journey: JourneyConfiguration
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoutePins(destination: .ring(core: .ink, ring: .amber), originDiameter: 9, destinationDiameter: 12)
+                .frame(width: 12)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(journey.stationA.name).font(.system(size: 13)).foregroundStyle(Color.inkSecondary).lineLimit(1)
+                Text(journey.stationB.name).font(.system(size: 18, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            DirectionRule(journey: journey)
+        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -95,55 +166,47 @@ struct JourneyCard: View {
             NavigationLink {
                 BoardView(journey: journey)
             } label: {
-                HStack(spacing: 6) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 5) {
-                            Text(title).font(.headline).lineLimit(1)
+                HStack(spacing: 12) {
+                    RoutePins(destination: .ring(core: .ink, ring: .amber), originDiameter: 9, destinationDiameter: 12)
+                        .frame(width: 12)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(origin).font(.system(size: 13)).foregroundStyle(Color.inkSecondary).lineLimit(1)
+                        HStack(spacing: 7) {
+                            Text(destination).font(.system(size: 20, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
                             if let trouble = board?.trouble(at: now) {
                                 Image(systemName: trouble.symbol)
                                     .font(.footnote)
-                                    .foregroundStyle(trouble.tint)
+                                    .foregroundStyle(tableauTint(trouble.tint))
                                     .accessibilityLabel(trouble.label)
                             }
                         }
-                        Text(rule).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                    Spacer(minLength: 6)
+                    DirectionRule(journey: journey)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.inkSecondary.opacity(0.7))
                 }
                 // SwiftUI only hit-tests what is drawn, so the gap between the title and the
                 // chevron — most of the row — was not tappable. The tiles stay out of it: they
                 // are a sibling of this link, not part of its label.
                 .contentShape(.rect)
                 // The card's own padding, taken by the link instead, so the target reaches the
-                // card's edges rather than stopping 14 points short of them.
-                .padding(14)
+                // card's edges rather than stopping short of them.
+                .padding(16)
             }
             .buttonStyle(.plain)
 
             tiles
-                .padding([.horizontal, .bottom], 14)
+                .padding([.horizontal, .bottom], 16)
         }
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.06), lineWidth: 1))
     }
 
     /// The leg actually being shown once it is known: an automatic journey past its switch time, or
     /// one that follows you, does not run in the order it was saved in.
-    private var title: String {
-        let leg = board.map { ($0.leg.from.name, $0.leg.to.name) } ?? (journey.stationA.name, journey.stationB.name)
-        return "\(leg.0) → \(leg.1)"
-    }
-
-    private var rule: String {
-        // Following you means the journey has no fixed departure, so naming one would be a lie:
-        // the pair with a two-way arrow says what the title alone cannot.
-        if journey.nearestStationAsDeparture { return "\(journey.stationA.name) ↔ \(journey.stationB.name)" }
-        switch journey.direction {
-        case .forward: return "Always in this direction"
-        case .reverse: return "Always the other way round"
-        case .automatic: return "Reverses at \(String(format: "%02d:%02d", journey.switchMinute / 60, journey.switchMinute % 60))"
-        }
-    }
+    private var origin: String { board?.leg.from.name ?? journey.stationA.name }
+    private var destination: String { board?.leg.to.name ?? journey.stationB.name }
 
     @ViewBuilder private var tiles: some View {
         switch board?.state {
@@ -163,13 +226,20 @@ struct JourneyCard: View {
                 .scrollTargetBehavior(.viewAligned)
                 .scrollIndicators(.hidden)
                 // The tiles run to both edges of the card, which is what says they slide.
-                .padding(.horizontal, -14)
-                .contentMargins(.horizontal, 14, for: .scrollContent)
+                .padding(.horizontal, -16)
+                .contentMargins(.horizontal, 16, for: .scrollContent)
             }
         case .noTrains:
             note("No departure found for now.")
         case .endOfService(let firstTrain):
-            note("End of service. First train at \(firstTrain.formatted(date: .omitted, time: .shortened)).")
+            HStack {
+                Text("End of service").font(.system(size: 14)).foregroundStyle(Color.ink.opacity(0.8))
+                Spacer()
+                Text("First train \(firstTrain.formatted(date: .omitted, time: .shortened))")
+                    .font(.mono(13, weight: .semibold)).foregroundStyle(Color.ink)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(Color.raised, in: RoundedRectangle(cornerRadius: 14))
         case .noService:
             note("Every train of the day is cancelled.")
         case .unavailable(let error):
@@ -180,9 +250,41 @@ struct JourneyCard: View {
     private func note(_ text: String) -> some View {
         Text(text)
             .font(.footnote)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.inkSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 10)
+    }
+
+    /// Trouble carries a system tint (orange/red/secondary); remap it to the Tableau palette so the
+    /// icon reads the same as the rest of the app in both schemes.
+    private func tableauTint(_ color: Color) -> Color {
+        if color == .red { return .stop }
+        if color == .orange { return .caution }
+        return .inkSecondary
+    }
+}
+
+/// How a journey is read, as a mono-caps rule: the direction, or that it follows you.
+struct DirectionRule: View {
+    let journey: JourneyConfiguration
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if journey.nearestStationAsDeparture {
+                Image(systemName: "location.fill").font(.system(size: 9))
+            }
+            Text(text).font(.mono(10.5, weight: .semibold)).tracking(1)
+        }
+        .foregroundStyle(Color.inkSecondary)
+    }
+
+    private var text: String {
+        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        switch journey.direction {
+        case .forward: return "ALWAYS THIS WAY"
+        case .reverse: return "ALWAYS REVERSED"
+        case .automatic: return "REVERSES \(clock(journey.switchMinute))"
+        }
     }
 }
 
@@ -193,39 +295,34 @@ struct DepartureTile: View {
     let now: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(train.scheduledDeparture, format: .dateTime.hour().minute())
-                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .font(.mono(20, weight: .bold))
+                    .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.ink)
                     .strikethrough(train.isCancelled)
                 if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text("+\(delay)").font(.footnote.weight(.bold).monospacedDigit()).foregroundStyle(tint)
+                    Text("+\(delay)").font(.mono(13, weight: .bold)).foregroundStyle(train.status.tableauInk)
                 }
             }
             Text(caption)
-                .font(.caption2.weight(train.isCancelled ? .bold : .regular))
-                .foregroundStyle(train.isCancelled ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+                .font(.mono(11.5, weight: train.isCancelled ? .bold : .medium))
+                .foregroundStyle(captionColor)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            HStack(spacing: 4) {
-                if let mode = train.mode {
-                    Text(mode)
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
-                }
+            HStack(spacing: 6) {
+                if let mode = train.mode { ModeChip(mode) }
                 if let duration = train.duration {
-                    Text("\(Int(duration / 60)) min").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                    Text("\(Int(duration / 60)) min").font(.mono(11, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
         }
         .frame(width: 112, height: 78, alignment: .topLeading)
         .padding(10)
-        // The tint sits on the tile's own grey, so a delayed train is readable without a label.
-        .background(tint.opacity(train.status == .onTime ? 0 : 0.18), in: RoundedRectangle(cornerRadius: 12))
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-        .opacity(train.isCancelled ? 0.8 : 1)
+        // The status fill is the tile's own colour: a delayed train is readable without a label.
+        .background(train.status == .onTime ? Color.raised : train.status.tableauFill,
+                    in: RoundedRectangle(cornerRadius: 14))
+        .opacity(train.isCancelled ? 0.85 : 1)
     }
 
     /// The headline of the tile's second line: why it is worth looking at, or when it leaves.
@@ -235,15 +332,17 @@ struct DepartureTile: View {
         case .unknown: return "Delay unknown"
         default:
             let minutes = Int(train.expectedDeparture.timeIntervalSince(now) / 60)
-            return minutes < 1 ? "Leaving now" : "in \(minutes) min"
+            return minutes < 1 ? "Leaving now" : "in \(relativeTime(train.expectedDeparture, from: now))"
         }
     }
 
-    private var tint: Color {
+    private var captionColor: Color {
         switch train.status {
-        case .onTime: .secondary
-        case .delayed, .unknown: .orange
-        case .severelyDelayed, .cancelled: .red
+        case .severelyDelayed, .cancelled: return .stop
+        case .delayed, .unknown: return .caution
+        case .onTime:
+            let minutes = Int(train.expectedDeparture.timeIntervalSince(now) / 60)
+            return minutes <= 5 ? .soon : .inkSecondary
         }
     }
 }

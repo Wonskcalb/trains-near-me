@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tableau design language</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC23D}a:hover{color:#FFD470}
+</style>
+</helmet>
+<div style="width: 1330px; height: 820px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+
+  <!-- BOARD (dark) -->
+  <section style="background: #0E0F11; color: #F2EFE8; padding: 44px; display: flex; flex-direction: column; gap: 30px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.6px; color: #8F8D86">MODE 01 · DARK</span>
+      <h2 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.3px">Board</h2>
+      <span style="font-size: 15px; color: #B5B2AA">The station departure board: black ground, amber times.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #0E0F11; border: 1px solid rgba(255,255,255,0.14)"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">ground</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#0E0F11</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #17191C; border: 1px solid rgba(255,255,255,0.06)"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">surface</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#17191C</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #23262B"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">flap</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#23262B</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #F2EFE8"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">ink</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#F2EFE8</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #8F8D86"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">ink.2</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#8F8D86</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #FFC23D"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">amber</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#FFC23D</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #46C27A"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">clear</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#46C27A</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #FF9A55"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">caution</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#FF9A55</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #FF6B5F"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">stop</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">#FF6B5F</span></div>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 28px">
+      <div style="display: flex; align-items: center; gap: 4px" aria-label="17:42">
+        <div style="width: 40px; height: 58px; border-radius: 8px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 38px 'JetBrains Mono', ui-monospace, monospace; color: #FFC23D">1<div style="position: absolute; left: 0; right: 0; top: 28.5px; height: 1px; background: #0E0F11"></div></div>
+        <div style="width: 40px; height: 58px; border-radius: 8px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 38px 'JetBrains Mono', ui-monospace, monospace; color: #FFC23D">7<div style="position: absolute; left: 0; right: 0; top: 28.5px; height: 1px; background: #0E0F11"></div></div>
+        <div style="width: 12px; text-align: center; font: 700 30px 'JetBrains Mono', ui-monospace, monospace; color: #FFC23D">:</div>
+        <div style="width: 40px; height: 58px; border-radius: 8px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 38px 'JetBrains Mono', ui-monospace, monospace; color: #FFC23D">4<div style="position: absolute; left: 0; right: 0; top: 28.5px; height: 1px; background: #0E0F11"></div></div>
+        <div style="width: 40px; height: 58px; border-radius: 8px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 38px 'JetBrains Mono', ui-monospace, monospace; color: #FFC23D">2<div style="position: absolute; left: 0; right: 0; top: 28.5px; height: 1px; background: #0E0F11"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">SPLIT-FLAP · NEXT TRAIN ONLY</span>
+        <span style="font-size: 14px; color: #B5B2AA">One hero per screen. Everything else is a plain row.</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+      <span style="font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #46C27A; padding: 5px 0">in 2 min</span>
+      <span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55; background: rgba(255,138,61,0.16); padding: 5px 9px; border-radius: 9px">+12</span>
+      <span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF6B5F; background: rgba(255,90,78,0.16); padding: 5px 9px; border-radius: 9px">+24</span>
+      <span style="font: 700 11.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F; background: rgba(255,90,78,0.16); padding: 6px 9px; border-radius: 9px">CANCELLED</span>
+      <span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55; background: rgba(255,138,61,0.16); padding: 5px 9px; border-radius: 9px">delay ?</span>
+      <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span>
+      <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TGV</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">TRACK RULE</span>
+      <div style="flex: 1; height: 14px; position: relative; background: repeating-linear-gradient(90deg, #3A3631 0 4px, transparent 4px 13px)" aria-hidden="true"><div style="position: absolute; left: 0; right: 0; top: 3px; height: 2px; border-radius: 1px; background: #9C9A93"></div><div style="position: absolute; left: 0; right: 0; bottom: 3px; height: 2px; border-radius: 1px; background: #9C9A93"></div></div>
+    </div>
+
+    <div style="display: flex; gap: 14px; align-items: stretch">
+      <div style="flex: 1; height: 84px; border-radius: 16px; background: repeating-linear-gradient(-45deg, #FFC23D 0 14px, #0E0F11 14px 28px); display: flex; align-items: center; justify-content: center">
+        <div style="background: #0E0F11; border-radius: 10px; padding: 8px 14px; display: flex; flex-direction: column; align-items: center; gap: 2px">
+          <span style="font: 800 18px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 2px">NO SERVICE</span>
+          <span style="font-size: 12px; color: #B5B2AA">All trains cancelled</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 170px">
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">HAZARD</span>
+        <span style="font-size: 13px; color: #B5B2AA; line-height: 1.4">Only when nothing runs. Never for a single cancelled train.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+        <div style="width: 46px; height: 52px; border-radius: 9px; border: 1.5px dashed #6E6C66; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+          <span style="font: 600 9px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #8F8D86">VOIE</span>
+          <span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">—</span>
+        </div>
+        <span style="font-size: 12px; color: #8F8D86; width: 92px; line-height: 1.4">Platform slot, if a source ever provides it</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMETABLE (light) -->
+  <section style="background: #F2EFE8; color: #16171A; padding: 44px; display: flex; flex-direction: column; gap: 30px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.6px; color: #66645E">MODE 02 · LIGHT</span>
+      <h2 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.3px">Timetable</h2>
+      <span style="font-size: 15px; color: #47463F">The printed timetable leaflet: warm paper, black ink, amber only as a fill.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #F2EFE8; border: 1px solid rgba(22,23,26,0.14)"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">paper</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#F2EFE8</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #FBFAF7; border: 1px solid rgba(22,23,26,0.08)"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">card</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#FBFAF7</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #ECE8DF; border: 1px solid rgba(22,23,26,0.06)"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">tile</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#ECE8DF</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #16171A"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">ink</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#16171A</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #66645E"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">ink.2</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#66645E</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #FFC23D"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">amber</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#FFC23D</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #2B7F4C"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">clear</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#2B7F4C</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #9A4808"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">caution</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#9A4808</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 12px; background: #A3231A"></div><span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace">stop</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">#A3231A</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font: 700 44px 'JetBrains Mono', ui-monospace, monospace; line-height: 1">17:42</span>
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #66645E">JETBRAINS MONO · TIMES, NUMBERS, LABELS</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 40px; font-weight: 700; line-height: 1.1">Voiron</span>
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #66645E">SF PRO · STATIONS, TITLES, PROSE</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: stretch">
+      <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #ECE8DF; display: flex; flex-direction: column; gap: 3px">
+        <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">17:42</span>
+        <span style="font: 600 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #2B7F4C">in 2 min</span>
+        <div style="flex: 1"></div>
+        <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">25 min</span></div>
+      </div>
+      <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #F2DFC6; display: flex; flex-direction: column; gap: 3px">
+        <div style="display: flex; align-items: baseline; gap: 6px"><span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace">18:12</span><span style="font: 700 13px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808">+12</span></div>
+        <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #6B4A2A">in 42 min</span>
+        <div style="flex: 1"></div>
+        <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6B4A2A">24 min</span></div>
+      </div>
+      <div style="flex: 0 0 auto; width: 112px; height: 78px; padding: 10px; border-radius: 14px; background: #F1D5CF; display: flex; flex-direction: column; gap: 3px">
+        <span style="font: 700 20px 'JetBrains Mono', ui-monospace, monospace; color: #7A6A66; text-decoration: line-through">18:42</span>
+        <span style="font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #A3231A">CANCELLED</span>
+        <div style="flex: 1"></div>
+        <div style="display: flex; align-items: center; gap: 6px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(22,23,26,0.22)">TER</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E5550">26 min</span></div>
+      </div>
+      <div style="flex: 1; display: flex; align-items: center; gap: 14px; padding-left: 12px">
+        <div style="width: 14px; height: 70px; display: flex; flex-direction: column; align-items: center" aria-hidden="true">
+          <div style="width: 10px; height: 10px; border-radius: 5px; border: 2px solid #8C8A83; box-sizing: border-box"></div>
+          <div style="flex: 1; width: 2px; background: #8C8A83; margin: 2px 0"></div>
+          <div style="width: 12px; height: 12px; border-radius: 6px; background: #16171A; box-shadow: 0 0 0 3px #FFC23D"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #66645E">ROUTE GLYPH</span>
+          <span style="font-size: 14px; color: #47463F">Same as the Trip widget: hollow from, solid to.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1330,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

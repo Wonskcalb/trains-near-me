@@ -4,15 +4,22 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-14
+
 ### Added
+- The **large widget** now lists more departures and closes with a **time track**: the trains it lists drawn as dots along a length of rail at the time each one leaves — the soonest in amber, a delay sliding its dot to the amended time with a dashed arc back to the scheduled one, a cancellation crossed out — then the SNCF attribution. Instead of being the medium widget with extra rows and empty space.
 - **An app on iOS**, instead of a window that only held the token. Three tabs: **Near me**, the radar board full-screen; **Journeys**, every saved journey at once; and **Settings**, the former window. macOS is unchanged — the widgets are still the product there.
 - Each saved journey is a card carrying its next departures as tiles that slide sideways, and an icon on its title as soon as something is wrong with it: a cancellation, a delay, the end of the service, or data that could not be fetched. The title names the leg actually being shown, so an automatic journey past its switch time reads the way it runs; one that departs from the nearest station names its pair with a two-way arrow instead, because it has no fixed departure to name.
 - Both screens refresh themselves — a minute's tick drops the trains that have left, and the boards are fetched again once the delays go stale — say when they were last updated, and pull to refresh when you would rather not wait.
 - Near me carries the radar symbol next to its title, and the dish sweeps while a position is being found.
 - **Find me!** on Near me, which refuses the system's cached fix and waits for a live one. Everything else takes whatever position the system already has, which is right for a screen that reloads on its own and wrong for someone who has just got off a train.
 - Saved journeys are stored in the App Group, so the Trip widget's station picker now suggests their stations instead of offering nothing until you type.
+- **A split-flap look**, "Tableau", across the iOS app and both widgets: a departure-board palette in JetBrains Mono, with flap tiles for the next time, a route drawn as pins on a line, delays and cancellations carried by a station-board colour code, and hazard stripes under the NO SERVICE state. The theme — colours, font and the shared pieces — lives in `SNCFCore` so the app and the widget read one source and never drift apart. The widgets follow the system light or dark setting, as a widget must.
+- **Light / Dark / System** picker in Settings on iOS. Every colour has a light and a dark value, and the whole app switches as one — the two are never mixed on screen. The widgets cannot be forced per-app, so they keep following the system.
+- **Managing saved journeys**: an Edit button on Journeys collapses the cards to a plain list, where a journey swipes away to delete and taps to open its configuration pre-filled. The same journey screen now both creates and edits, replacing the one you changed in place.
 
 ### Fixed
+- The Lock Screen complications showed "Please adopt containerBackground API" instead of a board: the accessory views never called `.containerBackground`, which iOS 17+ requires of every widget. Error states there also spelled out the full sentence, which the complication clipped unreadably — each error now has a terse two-word form that fits.
 - Signing for an iPhone failed with a paid team: the App Group was spelled `$(TeamIdentifierPrefix)$(BUNDLE_ID_PREFIX)`, which is the macOS shape. That variable only exists at signing time, and a paid team makes Xcode register the group on the developer portal, which rejects it — taking provisioning profile creation down with it. `SNCF_APP_GROUP` now resolves to the team prefix on macOS and to `group.<bundle prefix>` on iOS, which is the shape iOS requires.
 
 ### Changed
@@ -56,6 +63,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Host app to store the API token and request location permission.
 - `scripts/install.sh` to build and install with a free Apple account, and a step-by-step install guide.
 
-[Unreleased]: https://github.com/Wonskcalb/trains-near-me/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Wonskcalb/trains-near-me/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Wonskcalb/trains-near-me/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Wonskcalb/trains-near-me/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Wonskcalb/trains-near-me/releases/tag/v1.0.0

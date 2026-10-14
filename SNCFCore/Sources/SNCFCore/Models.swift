@@ -47,8 +47,11 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     public let delayMinutes: Int?
     public let isCancelled: Bool
     public let trainNumber: String?
+    /// The train's Navitia vehicle_journey id, carried by a station board so its full list of stops
+    /// can be fetched on tap. nil on a journey row, and on boards cached by an older build.
+    public let vehicleJourneyID: String?
 
-    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?) {
+    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?, vehicleJourneyID: String? = nil) {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
         self.direction = direction
@@ -56,6 +59,7 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
         self.delayMinutes = delayMinutes
         self.isCancelled = isCancelled
         self.trainNumber = trainNumber
+        self.vehicleJourneyID = vehicleJourneyID
     }
 
     public var expectedDeparture: Date {
@@ -65,6 +69,22 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     public var duration: TimeInterval? { scheduledArrival?.timeIntervalSince(scheduledDeparture) }
 
     public var status: DepartureStatus { .from(delayMinutes: delayMinutes, cancelled: isCancelled) }
+}
+
+/// One stop of a train's run, for the full-trip sheet. The time is already the local "HH:MM": the
+/// vehicle_journeys endpoint answers with times of day, not full datetimes.
+public struct TripStop: Hashable, Codable, Sendable {
+    public let name: String
+    /// When the train calls here, "HH:MM".
+    public let time: String
+    /// Served but not boardable (Navitia `skipped_stop`): shown struck through.
+    public let isSkipped: Bool
+
+    public init(name: String, time: String, isSkipped: Bool) {
+        self.name = name
+        self.time = time
+        self.isSkipped = isSkipped
+    }
 }
 
 public enum BoardState: Equatable, Sendable {
@@ -117,6 +137,20 @@ extension TrainServiceError: LocalizedError {
         case .malformedResponse: "Unexpected response from the SNCF API."
         case .noLocation: "No location: allow it in Trains near me."
         case .noStationNearby: "No station within \(SNCFClient.searchRadiusKilometres) km."
+        }
+    }
+
+    /// A couple of words, for a Lock Screen complication where `errorDescription` never fits.
+    public var terse: String {
+        switch self {
+        case .missingToken: "No token"
+        case .unauthorized: "Token refused"
+        case .quotaExceeded: "Quota reached"
+        case .offline: "Offline"
+        case .serverUnavailable: "SNCF down"
+        case .malformedResponse: "Data error"
+        case .noLocation: "No location"
+        case .noStationNearby: "No station near"
         }
     }
 }
