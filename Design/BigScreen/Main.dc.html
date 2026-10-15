@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Station hall</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC23D;text-decoration:none}a:hover{color:#FFD470}
+</style>
+</helmet>
+<div style="width: 1376px; height: 1032px; display: grid; grid-template-columns: 280px minmax(0, 1fr) 360px; overflow: hidden; box-sizing: border-box; background: #0E0F11; color: #F2EFE8; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="background: #121316; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; padding: 28px 14px 20px; gap: 22px; box-sizing: border-box; min-height: 0">
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+      <div style="width: 30px; height: 30px; border-radius: 8px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 18px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}" aria-hidden="true">T<div style="position: absolute; left: 0; right: 0; top: 14.5px; height: 1px; background: #0E0F11"></div></div>
+      <span style="font-size: 17px; font-weight: 700">Trains near me</span>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px; border-radius: 11px; background: #1D2024; border: 1px solid rgba(255,255,255,0.06); color: #8F8D86; font-size: 14px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <input type="text" placeholder="Go to station" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #F2EFE8; font: inherit">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86; border: 1px solid rgba(255,255,255,0.14); border-radius: 5px; padding: 1px 5px">⌘K</span>
+    </label>
+
+    <!-- near me -->
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86; padding: 0 10px">NEAR ME</span>
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; color: #F2EFE8">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="1.6" fill="{{accent}}"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49"></path><path d="M7.76 16.24a6 6 0 0 1 0-8.49"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14" opacity="0.55"></path><path d="M4.93 19.07a10 10 0 0 1 0-14.14" opacity="0.55"></path></svg>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 600">Grenoble</span>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">400 m · every direction</span>
+        </span>
+        <span style="font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">17:42</span>
+      </a>
+    </div>
+
+    <!-- journeys -->
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 10px">
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">JOURNEYS</span>
+        <button style="width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: #C9C6BE; display: flex; align-items: center; justify-content: center" aria-label="New journey"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+      </div>
+
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; background: #1F2226; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); color: #F2EFE8" aria-current="page">
+        <span style="width: 12px; height: 34px; display: flex; flex-direction: column; align-items: center" aria-hidden="true"><span style="width: 8px; height: 8px; border-radius: 5px; border: 2px solid #8F8D86; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #8F8D86; margin: 1px 0"></span><span style="width: 10px; height: 10px; border-radius: 5px; background: {{accent}}"></span></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Grenoble → Voiron</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #8F8D86">REVERSES 13:00</span>
+        </span>
+        <span style="font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">17:42</span>
+      </a>
+
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; color: #F2EFE8">
+        <span style="width: 12px; height: 34px; display: flex; flex-direction: column; align-items: center" aria-hidden="true"><span style="width: 8px; height: 8px; border-radius: 5px; border: 2px solid #8F8D86; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #8F8D86; margin: 1px 0"></span><span style="width: 10px; height: 10px; border-radius: 5px; background: #8F8D86"></span></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Grenoble → Lyon Part-Dieu</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #8F8D86">ALWAYS THIS WAY</span>
+        </span>
+        <span style="display: flex; align-items: center; gap: 6px; font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-label="Delayed" role="img"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2"></path></svg>17:47</span>
+      </a>
+
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; color: #F2EFE8">
+        <span style="width: 12px; height: 34px; display: flex; flex-direction: column; align-items: center" aria-hidden="true"><span style="width: 8px; height: 8px; border-radius: 5px; border: 2px solid #8F8D86; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #8F8D86; margin: 1px 0"></span><span style="width: 10px; height: 10px; border-radius: 5px; background: #8F8D86"></span></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Grenoble → Chambéry</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #8F8D86">ALWAYS THIS WAY</span>
+        </span>
+        <span style="font: 700 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F; background: rgba(255,90,78,0.16); padding: 4px 6px; border-radius: 6px">NO SERVICE</span>
+      </a>
+
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; color: #F2EFE8">
+        <span style="width: 12px; height: 34px; display: flex; align-items: center; justify-content: center; color: #8F8D86" aria-hidden="true"><svg width="12" height="22" viewBox="0 0 12 22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v18M9 2v18M1 6l2-3 2 3M7 16l2 3 2-3"></path></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Voiron ⇄ Valence Ville</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #8F8D86">FOLLOWS YOU</span>
+        </span>
+        <span style="font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">18:16</span>
+      </a>
+    </div>
+
+    <!-- views -->
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86; padding: 0 10px 4px">VIEWS</span>
+      <a href="Lanes.dc.html" style="display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 12px; color: #D9D6CE; font-size: 15px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M3 6h7M14 6h7M3 12h3M10 12h11M3 18h10M17 18h4"></path></svg>
+        Lanes
+        <span style="margin-left: auto; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66">⌘2</span>
+      </a>
+      <a href="Wall.dc.html" style="display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 12px; color: #D9D6CE; font-size: 15px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4M7 9h4M13 9h4M7 12.5h4M13 12.5h4"></path></svg>
+        Wall mode
+        <span style="margin-left: auto; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66">⌘3</span>
+      </a>
+      <a href="Duo.dc.html" style="display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 12px; color: #D9D6CE; font-size: 15px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"></path></svg>
+        Round trip
+        <span style="margin-left: auto; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66">⌘4</span>
+      </a>
+    </div>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <a href="#" style="display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 12px; color: #D9D6CE; font-size: 15px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg>
+        Settings
+      </a>
+      <span style="display: flex; align-items: center; gap: 7px; font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86; padding: 0 10px"><span style="width: 7px; height: 7px; border-radius: 4px; background: #46C27A"></span>Updated 17:40 · ⌘R</span>
+    </div>
+  </aside>
+
+  <!-- ============ CENTER: JOURNEY BOARD ============ -->
+  <main style="min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 28px 32px 24px; box-sizing: border-box">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+      <div style="display: flex; gap: 14px; align-items: stretch">
+        <div style="width: 14px; display: flex; flex-direction: column; align-items: center; padding: 6px 0 9px" aria-hidden="true">
+          <div style="width: 10px; height: 10px; border-radius: 6px; border: 2.5px solid #8F8D86; box-sizing: border-box"></div>
+          <div style="flex: 1; width: 2.5px; background: #8F8D86; margin: 2px 0"></div>
+          <div style="width: 14px; height: 14px; border-radius: 7px; background: {{accent}}"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 17px; font-weight: 500; color: #B5B2AA">Grenoble</span>
+          <h1 style="margin: 0; font-size: 38px; font-weight: 700; letter-spacing: 0.2px">Voiron</h1>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px">
+        <div style="display: flex; padding: 3px; border-radius: 12px; background: #1D2024; border: 1px solid rgba(255,255,255,0.06)" role="tablist" aria-label="View">
+          <button role="tab" aria-selected="true" style="height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: #2A2D33; color: #F2EFE8; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif">Board</button>
+          <a href="Lanes.dc.html" role="tab" aria-selected="false" style="height: 34px; padding: 0 14px; border-radius: 9px; color: #B5B2AA; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; display: flex; align-items: center">Lanes</a>
+        </div>
+        <button style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.10); background: rgba(38,41,46,0.72); color: #F2EFE8; display: flex; align-items: center; justify-content: center" aria-label="Swap direction"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"></path></svg></button>
+        <a href="Wall.dc.html" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.10); background: rgba(38,41,46,0.72); color: #F2EFE8; display: flex; align-items: center; justify-content: center" aria-label="Open in Wall mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></a>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.1px; color: #D9D6CE; padding: 6px 10px; border-radius: 9px; background: #1D2024">DIRECT ONLY</span>
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.1px; color: #D9D6CE; padding: 6px 10px; border-radius: 9px; background: #1D2024">REVERSES AT 13:00</span>
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.1px; color: #FF9A55; padding: 6px 10px; border-radius: 9px; background: rgba(255,138,61,0.12)">2 DISRUPTED TONIGHT</span>
+    </div>
+
+    <!-- hero: flap + time track -->
+    <section style="background: #17191C; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); padding: 20px 22px 14px; display: flex; flex-direction: column; gap: 16px" aria-label="Next train">
+      <div style="display: flex; align-items: center; gap: 22px">
+        <div style="display: flex; align-items: center; gap: 5px" aria-label="17:42">
+          <div style="width: 46px; height: 66px; border-radius: 9px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 44px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">1<div style="position: absolute; left: 0; right: 0; top: 32.5px; height: 1px; background: #0E0F11"></div></div>
+          <div style="width: 46px; height: 66px; border-radius: 9px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 44px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">7<div style="position: absolute; left: 0; right: 0; top: 32.5px; height: 1px; background: #0E0F11"></div></div>
+          <div style="width: 12px; text-align: center; font: 700 34px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">:</div>
+          <div style="width: 46px; height: 66px; border-radius: 9px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 44px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">4<div style="position: absolute; left: 0; right: 0; top: 32.5px; height: 1px; background: #0E0F11"></div></div>
+          <div style="width: 46px; height: 66px; border-radius: 9px; background: #23262B; position: relative; display: flex; align-items: center; justify-content: center; font: 700 44px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">2<div style="position: absolute; left: 0; right: 0; top: 32.5px; height: 1px; background: #0E0F11"></div></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0">
+          <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">NEXT TRAIN · ARRIVES 18:07</span>
+          <div style="display: flex; align-items: center; gap: 8px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17653 · 25 min</span></div>
+          <span style="font: 600 15px 'JetBrains Mono', ui-monospace, monospace; color: #46C27A">in 2 min · run</span>
+        </div>
+        <button style="height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.10); background: #23262B; color: #F2EFE8; display: flex; align-items: center; gap: 8px; font: 600 14px -apple-system, BlinkMacSystemFont, system-ui, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>Remind me</button>
+      </div>
+
+      <!-- time track, 17:40 → 21:00, 3.36 px/min -->
+      <svg width="684" height="62" viewBox="0 0 684 62" style="display: block; max-width: 100%" role="img" aria-label="Tonight on this line: 17:42 next train; 18:12 running 12 minutes late, leaves 18:24; 18:42 cancelled; 19:12 on time; 19:42 running 24 minutes late, leaves 20:06; 20:42 on time.">
+        <defs><pattern id="slp" x="4" y="0" width="33.6" height="62" patternUnits="userSpaceOnUse"><rect x="0" y="12" width="4" height="20" rx="1.2" fill="#3A3631"></rect></pattern></defs>
+        <g transform="translate(6,0)">
+          <rect x="-2" y="0" width="680" height="62" fill="url(#slp)"></rect>
+          <rect x="65.2" y="8" width="4" height="28" rx="1.2" fill="#4A453E"></rect>
+          <rect x="266.8" y="8" width="4" height="28" rx="1.2" fill="#4A453E"></rect>
+          <rect x="468.4" y="8" width="4" height="28" rx="1.2" fill="#4A453E"></rect>
+          <rect x="670" y="8" width="4" height="28" rx="1.2" fill="#4A453E"></rect>
+          <rect x="0" y="16" width="672" height="2" rx="1" fill="#9C9A93"></rect>
+          <rect x="0" y="26" width="672" height="2" rx="1" fill="#9C9A93"></rect>
+          <text x="67.2" y="54" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#8F8D86">18h</text>
+          <text x="268.8" y="54" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#8F8D86">19h</text>
+          <text x="470.4" y="54" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#8F8D86">20h</text>
+          <text x="672" y="54" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#8F8D86">21h</text>
+          <path d="M107.5 22 Q127.7 2 147.8 22" fill="none" stroke="#FF9A55" stroke-width="1.6" stroke-dasharray="3 3"></path>
+          <circle cx="107.5" cy="22" r="4.6" fill="#17191C" stroke="#FF9A55" stroke-width="1.8"></circle>
+          <circle cx="147.8" cy="22" r="7" fill="#FF9A55"></circle>
+          <circle cx="208.3" cy="22" r="6.4" fill="#17191C" stroke="#FF6B5F" stroke-width="2"></circle>
+          <path d="M205.3 19l6 6M211.3 19l-6 6" stroke="#FF6B5F" stroke-width="1.8" stroke-linecap="round"></path>
+          <circle cx="309.1" cy="22" r="7" fill="#F2EFE8"></circle>
+          <path d="M409.9 22 Q450.2 -6 490.6 22" fill="none" stroke="#FF6B5F" stroke-width="1.6" stroke-dasharray="3 3"></path>
+          <circle cx="409.9" cy="22" r="4.6" fill="#17191C" stroke="#FF6B5F" stroke-width="1.8"></circle>
+          <circle cx="490.6" cy="22" r="7" fill="#FF6B5F"></circle>
+          <circle cx="611.5" cy="22" r="7" fill="#F2EFE8"></circle>
+          <circle cx="6.7" cy="22" r="8" fill="{{accent}}" stroke="#F2EFE8" stroke-width="2.5"></circle>
+        </g>
+      </svg>
+    </section>
+
+    <!-- full board -->
+    <section style="background: #17191C; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; overflow: hidden" aria-label="Departures">
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.3px; color: #8F8D86">
+        <span>DEPART → ARRIVE</span><span>TRAIN</span><span>TIME ON BOARD</span><span style="text-align: right">STATUS</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">17:42</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">18:07</span></div>
+        <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17653</span></div>
+        <div style="display: flex; align-items: center; gap: 10px"><span style="width: 100px; height: 4px; border-radius: 2px; background: #3A3631; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 2px; background: #9C9A93"></span></span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">25 min</span></div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px"><span style="font: 700 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #0E0F11; background: {{accent}}; padding: 3px 6px; border-radius: 5px">NEXT</span><span style="font: 600 13px 'JetBrains Mono', ui-monospace, monospace; color: #46C27A">2 min</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(255,194,61,0.07); box-shadow: inset 0 0 0 1.5px rgba(255,194,61,0.45)" aria-selected="true">
+        <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">18:12</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">18:36</span></div>
+        <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17655</span></div>
+        <div style="display: flex; align-items: center; gap: 10px"><span style="width: 100px; height: 4px; border-radius: 2px; background: #3A3631; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 96%; border-radius: 2px; background: #9C9A93"></span></span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">24 min</span></div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55; background: rgba(255,138,61,0.16); padding: 4px 9px; border-radius: 9px">+12</span><span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">leaves 18:24</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <div style="display: flex; align-items: baseline; gap: 9px; opacity: 0.6"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86; text-decoration: line-through">18:42</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86; text-decoration: line-through">19:08</span></div>
+        <div style="display: flex; align-items: center; gap: 7px; opacity: 0.6"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17657</span></div>
+        <span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66">—</span>
+        <div style="display: flex; justify-content: flex-end"><span style="font: 700 11.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #FF6B5F; background: rgba(255,90,78,0.16); padding: 6px 9px; border-radius: 9px">CANCELLED</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">19:12</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">19:37</span></div>
+        <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17659</span></div>
+        <div style="display: flex; align-items: center; gap: 10px"><span style="width: 100px; height: 4px; border-radius: 2px; background: #3A3631; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 2px; background: #9C9A93"></span></span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">25 min</span></div>
+        <span style="text-align: right; font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">1 h 32</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">19:42</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">20:07</span></div>
+        <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17661</span></div>
+        <div style="display: flex; align-items: center; gap: 10px"><span style="width: 100px; height: 4px; border-radius: 2px; background: #3A3631; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 2px; background: #9C9A93"></span></span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">25 min</span></div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF6B5F; background: rgba(255,90,78,0.16); padding: 4px 9px; border-radius: 9px">+24</span><span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #FF6B5F">leaves 20:06</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 172px 150px minmax(0, 1fr) 128px; column-gap: 14px; align-items: center; padding: 14px 20px">
+        <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">20:42</span><span style="flex: 0 0 16px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 15px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">21:07</span></div>
+        <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">N° 17663</span></div>
+        <div style="display: flex; align-items: center; gap: 10px"><span style="width: 100px; height: 4px; border-radius: 2px; background: #3A3631; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 2px; background: #9C9A93"></span></span><span style="font: 500 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">25 min</span></div>
+        <span style="text-align: right; font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">3 h 02</span>
+      </div>
+    </section>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86; padding: 0 4px">
+      <span>LAST TRAIN TONIGHT 22:42 · FIRST TOMORROW 05:42</span>
+      <span>↑↓ to pick a train · Space to pin</span>
+    </div>
+  </main>
+
+  <!-- ============ INSPECTOR: ONE TRAIN ============ -->
+  <aside style="background: #121316; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; padding: 28px 22px 22px; gap: 18px; box-sizing: border-box; min-height: 0" aria-label="Train N° 17655">
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">TRAIN</span>
+        <button style="width: 32px; height: 32px; border-radius: 16px; border: 0; background: #1D2024; color: #B5B2AA; display: flex; align-items: center; justify-content: center" aria-label="Close inspector"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="font: 700 28px 'JetBrains Mono', ui-monospace, monospace">N° 17655</span>
+        <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.20); color: #D9D6CE">TER</span>
+      </div>
+      <span style="font-size: 15px; color: #B5B2AA">to Lyon Part-Dieu</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="background: #1A1C20; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #8F8D86">LEAVES</span><span style="font: 700 18px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:24</span></div>
+      <div style="background: #1A1C20; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #8F8D86">YOU ARRIVE</span><span style="font: 700 18px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:48</span></div>
+      <div style="background: rgba(255,138,61,0.14); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px"><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #FF9A55">DELAY</span><span style="font: 700 18px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">+12</span></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #8F8D86">STOPS</span>
+      <div style="flex: 1; height: 14px; position: relative; background: repeating-linear-gradient(90deg, #3A3631 0 4px, transparent 4px 13px)" aria-hidden="true"><div style="position: absolute; left: 0; right: 0; top: 3px; height: 2px; border-radius: 1px; background: #9C9A93"></div><div style="position: absolute; left: 0; right: 0; bottom: 3px; height: 2px; border-radius: 1px; background: #9C9A93"></div></div>
+    </div>
+
+    <!-- stopping pattern: your leg is solid, the rest of the run dashed and dim -->
+    <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 46px">
+        <span style="display: flex; flex-direction: column; padding-top: 1px"><span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:24</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">18:12</span></span>
+        <span style="display: flex; flex-direction: column; align-items: center" aria-hidden="true"><span style="width: 13px; height: 13px; border-radius: 7px; border: 3px solid #F2EFE8; box-sizing: border-box; margin-top: 3px"></span><span style="flex: 1; width: 3px; background: #F2EFE8"></span></span>
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 700">Grenoble</span><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #8F8D86">YOU BOARD</span></span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 36px">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:31</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; bottom: 0; width: 3px; background: #F2EFE8"></span><span style="width: 9px; height: 9px; border-radius: 5px; background: #121316; border: 2px solid #F2EFE8; box-sizing: border-box; margin-top: 4px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #D9D6CE">Saint-Égrève–St-Robert</span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 36px">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:40</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; bottom: 0; width: 3px; background: #F2EFE8"></span><span style="width: 9px; height: 9px; border-radius: 5px; background: #121316; border: 2px solid #F2EFE8; box-sizing: border-box; margin-top: 4px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #D9D6CE">Moirans</span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 50px">
+        <span style="display: flex; flex-direction: column; padding-top: 1px"><span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55">18:48</span><span style="font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #6E6C66; text-decoration: line-through">18:36</span></span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; height: 6px; width: 3px; background: #F2EFE8"></span><span style="position: absolute; top: 20px; bottom: 0; width: 0; border-left: 2px dashed #4A453E"></span><span style="width: 16px; height: 16px; border-radius: 8px; background: {{accent}}; margin-top: 2px; position: relative"></span></span>
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 700">Voiron</span><span style="font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: {{accent}}">YOU GET OFF · 24 MIN</span></span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 32px; opacity: 0.5">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">18:54</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #4A453E"></span><span style="width: 7px; height: 7px; border-radius: 4px; background: #6E6C66; margin-top: 5px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #B5B2AA">Rives</span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 32px; opacity: 0.5">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">19:14</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #4A453E"></span><span style="width: 7px; height: 7px; border-radius: 4px; background: #6E6C66; margin-top: 5px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #B5B2AA">La Tour-du-Pin</span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 32px; opacity: 0.5">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">19:25</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #4A453E"></span><span style="width: 7px; height: 7px; border-radius: 4px; background: #6E6C66; margin-top: 5px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #B5B2AA">Bourgoin-Jallieu</span>
+      </li>
+      <li style="display: grid; grid-template-columns: 54px 22px minmax(0, 1fr); column-gap: 10px; min-height: 26px; opacity: 0.5">
+        <span style="font: 500 13px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">19:53</span>
+        <span style="display: flex; flex-direction: column; align-items: center; position: relative" aria-hidden="true"><span style="position: absolute; top: 0; height: 5px; width: 0; border-left: 2px dashed #4A453E"></span><span style="width: 9px; height: 9px; border-radius: 5px; background: #6E6C66; margin-top: 4px; position: relative"></span></span>
+        <span style="font-size: 14px; color: #B5B2AA">Lyon Part-Dieu</span>
+      </li>
+    </ol>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <button style="height: 46px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background: #1D2024; color: #F2EFE8; display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 14px -apple-system, BlinkMacSystemFont, system-ui, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>Watch train</button>
+        <button style="height: 46px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background: #1D2024; color: #F2EFE8; display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 14px -apple-system, BlinkMacSystemFont, system-ui, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>Share ETA</button>
+      </div>
+      <a href="https://www.sncf-connect.com" style="height: 46px; border-radius: 14px; background: #1D2024; border: 1px solid rgba(255,255,255,0.08); color: #F2EFE8; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600">Tickets &amp; details in SNCF Connect<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"></path><path d="M8 7h9v9"></path></svg></a>
+      <span style="font-size: 11px; line-height: 1.45; color: #8F8D86; text-align: center">Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API.</span>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FFC23D","options":["#FFC23D","#F5E6C8","#7CC4FF","#46C27A"]},"$preview":{"width":1376,"height":1032}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FFC23D' };
+  }
+}
+</script>
+</body>
+</html>

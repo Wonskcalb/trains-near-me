@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Extra tall widget</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC23D;text-decoration:none}a:hover{color:#FFD470}
+</style>
+</helmet>
+<div style="width: 888px; height: 940px; box-sizing: border-box; padding: 70px 60px; background: #D9D5CC; display: flex; gap: 40px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+  <!-- extra tall: large width, two large heights; the time track turns vertical -->
+  <section style="width: 364px; height: 800px; flex: 0 0 364px; border-radius: 34px; background: {{t.bg}}; color: {{t.ink}}; box-sizing: border-box; padding: 20px 20px 16px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 40px rgba(22,23,26,0.22)" aria-label="{{t.label}}">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between">
+      <div style="display: flex; gap: 10px; align-items: stretch">
+        <span style="width: 12px; display: flex; flex-direction: column; align-items: center; padding: 4px 0 5px" aria-hidden="true"><span style="width: 8px; height: 8px; border-radius: 4px; border: 2px solid {{t.ink2}}; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: {{t.ink2}}; margin: 1px 0"></span><span style="width: 11px; height: 11px; border-radius: 6px; background: {{accent}}; box-shadow: inset 0 0 0 1.5px {{t.destRing}}"></span></span>
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13px; color: {{t.ink2}}">Grenoble</span><span style="font-size: 21px; font-weight: 700">Voiron</span></span>
+      </div>
+      <button style="width: 32px; height: 32px; border-radius: 16px; border: 0; background: {{t.raised}}; color: {{t.ink2}}; display: flex; align-items: center; justify-content: center" aria-label="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"></path><path d="M20 4v7h-7"></path></svg></button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 3px" role="img" aria-label="17:42">
+        <span style="width: 34px; height: 50px; border-radius: 7px; background: {{t.tile}}; position: relative; display: flex; align-items: center; justify-content: center; font: 700 33px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">1<span style="position: absolute; left: 0; right: 0; top: 24.5px; height: 1px; background: {{t.bg}}"></span></span>
+        <span style="width: 34px; height: 50px; border-radius: 7px; background: {{t.tile}}; position: relative; display: flex; align-items: center; justify-content: center; font: 700 33px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">7<span style="position: absolute; left: 0; right: 0; top: 24.5px; height: 1px; background: {{t.bg}}"></span></span>
+        <span style="width: 9px; text-align: center; font: 700 24px 'JetBrains Mono', ui-monospace, monospace; color: {{t.colon}}">:</span>
+        <span style="width: 34px; height: 50px; border-radius: 7px; background: {{t.tile}}; position: relative; display: flex; align-items: center; justify-content: center; font: 700 33px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">4<span style="position: absolute; left: 0; right: 0; top: 24.5px; height: 1px; background: {{t.bg}}"></span></span>
+        <span style="width: 34px; height: 50px; border-radius: 7px; background: {{t.tile}}; position: relative; display: flex; align-items: center; justify-content: center; font: 700 33px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">2<span style="position: absolute; left: 0; right: 0; top: 24.5px; height: 1px; background: {{t.bg}}"></span></span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px">
+        <span style="font: 700 15px 'JetBrains Mono', ui-monospace, monospace; color: {{t.clear}}">in 2 min</span>
+        <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">TER 17653</span>
+        <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">arr. 18:07</span>
+      </div>
+    </div>
+
+    <!-- vertical time track: 17:40 at the top, 21:00 at the bottom, 2.6 pt a minute -->
+    <div style="position: relative; height: 540px">
+      <svg width="70" height="540" viewBox="0 0 70 540" style="position: absolute; left: 0; top: 0" role="img" aria-label="Tonight: 17:42 next; 18:12 twelve minutes late, leaves 18:24; 18:42 cancelled; 19:12 on time; 19:42 twenty-four minutes late, leaves 20:06; 20:42 on time.">
+        <defs><pattern id="{{t.pid}}" x="0" y="6.5" width="70" height="26" patternUnits="userSpaceOnUse"><rect x="38" y="0" width="20" height="3" rx="1" fill="{{t.sleeper}}"></rect></pattern></defs>
+        <rect x="0" y="4" width="70" height="528" fill="url(#{{t.pid}})"></rect>
+        <rect x="35" y="58.5" width="26" height="3" rx="1" fill="{{t.sleeperHr}}"></rect>
+        <rect x="35" y="214.5" width="26" height="3" rx="1" fill="{{t.sleeperHr}}"></rect>
+        <rect x="35" y="370.5" width="26" height="3" rx="1" fill="{{t.sleeperHr}}"></rect>
+        <rect x="35" y="526.5" width="26" height="3" rx="1" fill="{{t.sleeperHr}}"></rect>
+        <rect x="42.6" y="4" width="1.8" height="528" fill="{{t.rail}}"></rect>
+        <rect x="51.6" y="4" width="1.8" height="528" fill="{{t.rail}}"></rect>
+        <text x="0" y="64" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="{{t.ink2}}">18h</text>
+        <text x="0" y="220" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="{{t.ink2}}">19h</text>
+        <text x="0" y="376" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="{{t.ink2}}">20h</text>
+        <text x="0" y="532" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="{{t.ink2}}">21h</text>
+
+        <path d="M48 91.2 Q64 106.8 48 122.4" fill="none" stroke="{{t.caution}}" stroke-width="1.3" stroke-dasharray="2 2"></path>
+        <circle cx="48" cy="91.2" r="3.2" fill="{{t.bg}}" stroke="{{t.caution}}" stroke-width="1.3"></circle>
+        <circle cx="48" cy="122.4" r="5" fill="{{t.cautionMark}}"></circle>
+        <circle cx="48" cy="169.2" r="4.6" fill="{{t.bg}}" stroke="{{t.stop}}" stroke-width="1.6"></circle>
+        <path d="M46 167.2l4 4M50 167.2l-4 4" stroke="{{t.stop}}" stroke-width="1.4" stroke-linecap="round"></path>
+        <circle cx="48" cy="247.2" r="5" fill="{{t.onTime}}"></circle>
+        <path d="M48 325.2 Q68 356.4 48 387.6" fill="none" stroke="{{t.stop}}" stroke-width="1.3" stroke-dasharray="2 2"></path>
+        <circle cx="48" cy="325.2" r="3.2" fill="{{t.bg}}" stroke="{{t.stop}}" stroke-width="1.3"></circle>
+        <circle cx="48" cy="387.6" r="5" fill="{{t.stopMark}}"></circle>
+        <circle cx="48" cy="481.2" r="5" fill="{{t.onTime}}"></circle>
+        <circle cx="48" cy="13.2" r="5.5" fill="{{accent}}" stroke="{{t.ink}}" stroke-width="2"></circle>
+      </svg>
+
+      <div style="position: absolute; left: 78px; right: 0; top: -7px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-radius: 10px; background: {{t.nextBg}}">
+        <span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.timeInk}}">17:42</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">→ 18:07</span></span>
+        <span style="font: 700 9.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #0E0F11; background: {{accent}}; padding: 3px 5px; border-radius: 4px">NEXT</span>
+      </div>
+      <div style="position: absolute; left: 78px; right: 0; top: 102px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.caution}}">18:24</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">→ 18:48</span></span><span style="font: 500 10.5px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">was 18:12 · TER 17655</span></span>
+        <span style="font: 700 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.caution}}; background: {{t.cautionBg}}; padding: 3px 7px; border-radius: 7px">+12</span>
+      </div>
+      <div style="position: absolute; left: 78px; right: 0; top: 149px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+        <span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.cancel}}; text-decoration: line-through">18:42</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.cancel}}">TER 17657</span></span>
+        <span style="font: 700 9.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: {{t.stop}}; background: {{t.stopBg}}; padding: 4px 6px; border-radius: 6px">CANCELLED</span>
+      </div>
+      <div style="position: absolute; left: 78px; right: 0; top: 227px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+        <span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.timeInk}}">19:12</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">→ 19:37</span></span>
+        <span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">1 h 32</span>
+      </div>
+      <div style="position: absolute; left: 78px; right: 0; top: 368px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.stop}}">20:06</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">→ 20:31</span></span><span style="font: 500 10.5px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">was 19:42 · TER 17661</span></span>
+        <span style="font: 700 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.stop}}; background: {{t.stopBg}}; padding: 3px 7px; border-radius: 7px">+24</span>
+      </div>
+      <div style="position: absolute; left: 78px; right: 0; top: 461px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+        <span style="display: flex; align-items: baseline; gap: 8px"><span style="font: 700 17px 'JetBrains Mono', ui-monospace, monospace; color: {{t.timeInk}}">20:42</span><span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">→ 21:07</span></span>
+        <span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">3 h 02</span>
+      </div>
+    </div>
+
+    <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; font: 500 10.5px 'JetBrains Mono', ui-monospace, monospace; color: {{t.ink2}}">
+      <span>LAST 22:42 · Data © SNCF</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{t.clear}}"></span>17:40</span>
+    </div>
+  </section>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FFC23D","options":["#FFC23D","#F5E6C8","#7CC4FF","#46C27A"]},"$preview":{"width":888,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = {
+      label: 'Extra tall widget, dark', pid: 'xt-dark',
+      bg: '#17191C', ink: '#F2EFE8', ink2: '#8F8D86', raised: '#23262B', tile: '#23262B', colon: this.props.accent ?? '#FFC23D',
+      destRing: 'transparent', nextBg: 'rgba(255,194,61,0.08)', timeInk: this.props.accent ?? '#FFC23D',
+      sleeper: '#3A3631', sleeperHr: '#4A453E', rail: '#9C9A93', onTime: '#F2EFE8',
+      caution: '#FF9A55', cautionBg: 'rgba(255,138,61,0.16)', cautionMark: '#FF9A55',
+      stop: '#FF6B5F', stopBg: 'rgba(255,90,78,0.16)', stopMark: '#FF6B5F',
+      clear: '#46C27A', cancel: '#6E6C66'
+    };
+    const light = {
+      label: 'Extra tall widget, light', pid: 'xt-light',
+      bg: '#FBFAF7', ink: '#16171A', ink2: '#66645E', raised: '#ECE8DF', tile: '#16171A', colon: '#16171A',
+      destRing: '#16171A', nextBg: 'rgba(255,194,61,0.22)', timeInk: '#16171A',
+      sleeper: '#E2DDD2', sleeperHr: '#C9C2B4', rail: '#A9A69E', onTime: '#16171A',
+      caution: '#9A4808', cautionBg: '#FBE3CC', cautionMark: '#D9771A',
+      stop: '#A3231A', stopBg: '#F8D9D4', stopMark: '#C42B1C',
+      clear: '#2B7F4C', cancel: '#8C877D'
+    };
+    return { accent: this.props.accent ?? '#FFC23D', themes: [dark, light] };
+  }
+}
+</script>
+</body>
+</html>

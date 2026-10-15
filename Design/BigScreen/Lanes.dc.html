@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lanes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16171A;text-decoration:none}a:hover{color:#66645E}
+</style>
+</helmet>
+<div style="width: 1376px; height: 1032px; overflow: hidden; box-sizing: border-box; padding: 26px 58px 30px; background: #F2EFE8; color: #16171A; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; gap: 20px">
+
+  <!-- toolbar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <a href="Main.dc.html" style="width: 44px; height: 44px; border-radius: 22px; background: #FBFAF7; border: 1px solid rgba(22,23,26,0.10); display: flex; align-items: center; justify-content: center" aria-label="Show sidebar"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16"></path></svg></a>
+      <div style="display: flex; padding: 3px; border-radius: 12px; background: #ECE8DF" role="tablist" aria-label="View">
+        <a href="Main.dc.html" role="tab" aria-selected="false" style="height: 34px; padding: 0 14px; border-radius: 9px; color: #66645E; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; display: flex; align-items: center">Board</a>
+        <button role="tab" aria-selected="true" style="height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: #FBFAF7; box-shadow: 0 1px 2px rgba(22,23,26,0.12); color: #16171A; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif">Lanes</button>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="display: flex; padding: 3px; border-radius: 12px; background: #ECE8DF" role="radiogroup" aria-label="Time range">
+        <button role="radio" aria-checked="true" style="height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: #16171A; color: #F2EFE8; font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px">NEXT 4 H</button>
+        <button role="radio" aria-checked="false" style="height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #66645E; font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px">TONIGHT</button>
+        <button role="radio" aria-checked="false" style="height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #66645E; font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px">TOMORROW AM</button>
+      </div>
+      <span style="display: flex; align-items: center; gap: 7px; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E; padding-left: 6px"><span style="width: 7px; height: 7px; border-radius: 4px; background: #2B7F4C"></span>Updated 17:40</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: 0.2px">Lanes</h1>
+      <span style="font-size: 16px; color: #66645E">Every saved journey on one track. A bar runs from departure to arrival.</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px; font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #66645E" aria-label="Legend">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; background: {{accent}}; box-shadow: inset 0 0 0 1px rgba(22,23,26,0.25)"></span>next</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; background: #16171A"></span>on time</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; background: #FBE3CC; box-shadow: inset 0 0 0 1.5px #9A4808"></span>+11–19</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; background: #F8D9D4; box-shadow: inset 0 0 0 1.5px #A3231A"></span>+20</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; border: 1.5px dashed #A3231A; box-sizing: border-box; background: repeating-linear-gradient(-45deg, #F1D5CF 0 3px, transparent 3px 6px)"></span>cancelled</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 3px; border: 1.5px dashed #8C877D; box-sizing: border-box"></span>timetabled slot</span>
+    </div>
+  </div>
+
+  <!-- axis: 17:20 → 21:20, 4 px a minute -->
+  <div style="display: grid; grid-template-columns: 260px 960px; column-gap: 20px; padding-left: 20px; margin-bottom: -8px">
+    <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #66645E; align-self: end">JOURNEY</span>
+    <div style="position: relative; height: 28px">
+      <span style="position: absolute; left: 80px; top: 0; transform: translateX(-50%); font: 700 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.8px; color: #16171A; background: {{accent}}; padding: 4px 7px; border-radius: 6px">NOW 17:40</span>
+      <span style="position: absolute; left: 160px; bottom: 2px; transform: translateX(-50%); font: 600 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">18:00</span>
+      <span style="position: absolute; left: 400px; bottom: 2px; transform: translateX(-50%); font: 600 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">19:00</span>
+      <span style="position: absolute; left: 640px; bottom: 2px; transform: translateX(-50%); font: 600 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">20:00</span>
+      <span style="position: absolute; left: 880px; bottom: 2px; transform: translateX(-50%); font: 600 12px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">21:00</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+
+    <!-- lane 1 : Grenoble → Voiron -->
+    <section style="position: relative; z-index: 3; background: #FBFAF7; border-radius: 18px; border: 1px solid rgba(22,23,26,0.07); display: grid; grid-template-columns: 260px 960px; column-gap: 20px; padding: 16px 0 16px 20px; box-sizing: border-box" aria-label="Grenoble to Voiron">
+      <div style="display: flex; gap: 12px; align-items: stretch">
+        <span style="width: 12px; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true"><span style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #66645E; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #66645E; margin: 1px 0"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: {{accent}}; box-shadow: inset 0 0 0 1.5px #16171A"></span></span>
+        <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Grenoble</span>
+          <span style="font-size: 19px; font-weight: 700">Voiron</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #9A4808">2 DISRUPTED · 25 MIN</span>
+        </div>
+      </div>
+      <div style="position: relative; height: 66px">
+        <div style="position: absolute; left: 0; top: -16px; bottom: -16px; width: 80px; background: rgba(22,23,26,0.035)" aria-hidden="true"></div>
+        <div style="position: absolute; left: 160px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 400px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 640px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 880px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+
+        <div style="position: absolute; left: 88px; top: 0; width: 100px; height: 30px; border-radius: 8px; background: {{accent}}; box-shadow: inset 0 0 0 1.5px #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #16171A">17:42<span style="font-size: 9.5px; letter-spacing: 1px">NEXT</span></div>
+
+        <div style="position: absolute; left: 208px; top: 36px; width: 96px; height: 30px; border-radius: 8px; border: 1.5px dashed #9A4808; box-sizing: border-box; opacity: 0.55; padding: 0 7px; display: flex; align-items: center; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808; text-decoration: line-through">18:12</div>
+        <div style="position: absolute; left: 256px; top: 36px; width: 96px; height: 30px; border-radius: 8px; background: #FBE3CC; box-shadow: inset 0 0 0 2px #9A4808, 0 0 0 3px rgba(22,23,26,0.85); display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808">18:24<span style="font-size: 11px">+12</span></div>
+
+        <div style="position: absolute; left: 328px; top: 0; width: 104px; height: 30px; border-radius: 8px; border: 1.5px dashed #A3231A; box-sizing: border-box; background: repeating-linear-gradient(-45deg, #F1D5CF 0 5px, transparent 5px 10px); display: flex; align-items: center; justify-content: space-between; padding: 0 7px; font: 700 12px 'JetBrains Mono', ui-monospace, monospace; color: #A3231A"><span style="text-decoration: line-through">18:42</span><span style="font-size: 9.5px; letter-spacing: 0.8px">CANC.</span></div>
+
+        <div style="position: absolute; left: 448px; top: 36px; width: 100px; height: 30px; border-radius: 8px; background: #16171A; display: flex; align-items: center; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">19:12</div>
+
+        <div style="position: absolute; left: 568px; top: 0; width: 100px; height: 30px; border-radius: 8px; border: 1.5px dashed #A3231A; box-sizing: border-box; opacity: 0.55; padding: 0 7px; display: flex; align-items: center; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #A3231A; text-decoration: line-through">19:42</div>
+        <div style="position: absolute; left: 664px; top: 0; width: 100px; height: 30px; border-radius: 8px; background: #F8D9D4; box-shadow: inset 0 0 0 1.5px #A3231A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #A3231A">20:06<span style="font-size: 11px">+24</span></div>
+
+        <div style="position: absolute; left: 808px; top: 36px; width: 100px; height: 30px; border-radius: 8px; background: #16171A; display: flex; align-items: center; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">20:42</div>
+
+        <div style="position: absolute; left: 79px; top: -16px; bottom: -16px; width: 2px; background: #16171A" aria-hidden="true"></div>
+
+        <!-- hover card on the selected train -->
+        <div style="position: absolute; left: 236px; top: 78px; width: 268px; background: #16171A; color: #F2EFE8; border-radius: 16px; padding: 14px 16px; box-sizing: border-box; box-shadow: 0 18px 40px rgba(22,23,26,0.28); display: flex; flex-direction: column; gap: 10px">
+          <div style="position: absolute; left: 60px; top: -6px; width: 12px; height: 12px; background: #16171A; transform: rotate(45deg)" aria-hidden="true"></div>
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <div style="display: flex; align-items: center; gap: 7px"><span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.6px; padding: 1px 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.22); color: #D9D6CE">TER</span><span style="font: 600 13px 'JetBrains Mono', ui-monospace, monospace">N° 17655</span></div>
+            <span style="font: 700 13px 'JetBrains Mono', ui-monospace, monospace; color: #FF9A55; background: rgba(255,138,61,0.16); padding: 3px 8px; border-radius: 7px">+12</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 9px"><span style="font: 700 22px 'JetBrains Mono', ui-monospace, monospace; color: {{accent}}">18:24</span><span style="flex: 0 0 18px; border-top: 1.5px dashed #6E6C66; align-self: center"></span><span style="font: 500 16px 'JetBrains Mono', ui-monospace, monospace; color: #D9D6CE">18:48</span><span style="font-size: 13px; color: #8F8D86; margin-left: auto">Voiron</span></div>
+          <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #8F8D86">was 18:12 · 3 stops · to Lyon Part-Dieu</span>
+          <div style="display: flex; gap: 8px">
+            <button style="flex: 1; height: 36px; border-radius: 10px; border: 0; background: #2A2D33; color: #F2EFE8; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif">Watch</button>
+            <a href="Main.dc.html" style="flex: 1; height: 36px; border-radius: 10px; background: #2A2D33; color: #F2EFE8; font: 600 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; display: flex; align-items: center; justify-content: center">Stops</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- lane 2 : Grenoble → Lyon Part-Dieu -->
+    <section style="position: relative; z-index: 1; background: #FBFAF7; border-radius: 18px; border: 1px solid rgba(22,23,26,0.07); display: grid; grid-template-columns: 260px 960px; column-gap: 20px; padding: 16px 0 16px 20px; box-sizing: border-box" aria-label="Grenoble to Lyon Part-Dieu">
+      <div style="display: flex; gap: 12px; align-items: stretch">
+        <span style="width: 12px; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true"><span style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #66645E; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #66645E; margin: 1px 0"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #66645E"></span></span>
+        <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Grenoble</span>
+          <span style="font-size: 19px; font-weight: 700">Lyon Part-Dieu</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #66645E">1 DELAYED · 1 H 17</span>
+        </div>
+      </div>
+      <div style="position: relative; height: 66px">
+        <div style="position: absolute; left: 0; top: -16px; bottom: -16px; width: 80px; background: rgba(22,23,26,0.035)" aria-hidden="true"></div>
+        <div style="position: absolute; left: 160px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 400px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 640px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 880px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+
+        <div style="position: absolute; left: 108px; top: 0; width: 308px; height: 30px; border-radius: 8px; background: {{accent}}; box-shadow: inset 0 0 0 1.5px #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #16171A">17:47<span style="font-weight: 500; font-size: 11.5px">TER 17614 · 19:04</span></div>
+        <div style="position: absolute; left: 348px; top: 36px; width: 308px; height: 30px; border-radius: 8px; border: 1.5px dashed #9A4808; box-sizing: border-box; opacity: 0.55; padding: 0 7px; display: flex; align-items: center; font: 600 11px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808; text-decoration: line-through">18:47</div>
+        <div style="position: absolute; left: 408px; top: 36px; width: 308px; height: 30px; border-radius: 8px; background: #FBE3CC; box-shadow: inset 0 0 0 1.5px #9A4808; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #9A4808">19:02<span style="font-size: 11px">+15 · 20:19</span></div>
+        <div style="position: absolute; left: 588px; top: 0; width: 308px; height: 30px; border-radius: 8px; background: #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">19:47<span style="font-weight: 500; font-size: 11.5px; color: #B5B2AA">TER 17618 · 21:04</span></div>
+        <div style="position: absolute; left: 828px; top: 36px; width: 132px; height: 30px; border-radius: 8px 0 0 8px; background: #16171A; display: flex; align-items: center; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">20:47 →</div>
+
+        <div style="position: absolute; left: 79px; top: -16px; bottom: -16px; width: 2px; background: #16171A" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- lane 3 : Grenoble → Chambéry, nothing runs -->
+    <section style="position: relative; z-index: 1; background: #FBFAF7; border-radius: 18px; border: 1px solid rgba(22,23,26,0.07); display: grid; grid-template-columns: 260px 960px; column-gap: 20px; padding: 16px 0 16px 20px; box-sizing: border-box" aria-label="Grenoble to Chambéry: no service">
+      <div style="display: flex; gap: 12px; align-items: stretch">
+        <span style="width: 12px; display: flex; flex-direction: column; align-items: center; padding: 5px 0 6px" aria-hidden="true"><span style="width: 9px; height: 9px; border-radius: 5px; border: 2px solid #66645E; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: #66645E; margin: 1px 0"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #66645E"></span></span>
+        <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Grenoble</span>
+          <span style="font-size: 19px; font-weight: 700">Chambéry</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #A3231A">EVERY TRAIN CANCELLED</span>
+        </div>
+      </div>
+      <div style="position: relative; height: 66px">
+        <div style="position: absolute; left: 80px; right: 0; top: 4px; bottom: 4px; border-radius: 10px 0 0 10px; background: repeating-linear-gradient(-45deg, rgba(255,194,61,0.55) 0 12px, rgba(22,23,26,0.07) 12px 24px)" aria-hidden="true"></div>
+        <div style="position: absolute; left: 0; top: -16px; bottom: -16px; width: 80px; background: rgba(22,23,26,0.035)" aria-hidden="true"></div>
+        <div style="position: absolute; left: 340px; top: 15px; height: 36px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-radius: 9px; background: #16171A; color: #F2EFE8">
+          <span style="font: 700 14px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 2px; color: {{accent}}">NO SERVICE</span>
+          <span style="font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #B5B2AA">6 trains cancelled until 21:20</span>
+        </div>
+        <div style="position: absolute; left: 79px; top: -16px; bottom: -16px; width: 2px; background: #16171A" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- lane 4 : Voiron ⇄ Valence Ville -->
+    <section style="position: relative; z-index: 1; background: #FBFAF7; border-radius: 18px; border: 1px solid rgba(22,23,26,0.07); display: grid; grid-template-columns: 260px 960px; column-gap: 20px; padding: 16px 0 16px 20px; box-sizing: border-box" aria-label="Voiron to Valence Ville">
+      <div style="display: flex; gap: 12px; align-items: stretch">
+        <span style="width: 12px; display: flex; align-items: center; justify-content: center; color: #66645E" aria-hidden="true"><svg width="12" height="30" viewBox="0 0 12 30" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v26M9 2v26M1 6l2-3 2 3M7 24l2 3 2-3"></path></svg></span>
+        <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span style="font-size: 13px; color: #66645E">Voiron</span>
+          <span style="font-size: 19px; font-weight: 700">Valence Ville</span>
+          <span style="font: 600 10.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; color: #66645E">FOLLOWS YOU · 1 H 10</span>
+        </div>
+      </div>
+      <div style="position: relative; height: 66px">
+        <div style="position: absolute; left: 0; top: -16px; bottom: -16px; width: 80px; background: rgba(22,23,26,0.035)" aria-hidden="true"></div>
+        <div style="position: absolute; left: 160px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 400px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 640px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+        <div style="position: absolute; left: 880px; top: -16px; bottom: -16px; width: 1px; background: #E6E1D6" aria-hidden="true"></div>
+
+        <div style="position: absolute; left: 224px; top: 0; width: 280px; height: 30px; border-radius: 8px; background: {{accent}}; box-shadow: inset 0 0 0 1.5px #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 700 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #16171A">18:16<span style="font-weight: 500; font-size: 11.5px">TER 17851 · 19:26</span></div>
+        <div style="position: absolute; left: 464px; top: 36px; width: 280px; height: 30px; border-radius: 8px; background: #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">19:16<span style="font-weight: 500; font-size: 11.5px; color: #B5B2AA">TER 17855 · 20:26</span></div>
+        <div style="position: absolute; left: 704px; top: 0; width: 256px; height: 30px; border-radius: 8px 0 0 8px; background: #16171A; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; font: 600 12.5px 'JetBrains Mono', ui-monospace, monospace; color: #F2EFE8">20:16<span style="font-weight: 500; font-size: 11.5px; color: #B5B2AA">TER 17859 →</span></div>
+
+        <div style="position: absolute; left: 79px; top: -16px; bottom: -16px; width: 2px; background: #16171A" aria-hidden="true"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- service-day minimap: the 4 h window in context -->
+  <section style="margin-top: auto; background: #FBFAF7; border-radius: 18px; border: 1px solid rgba(22,23,26,0.07); padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 10px" aria-label="Whole service day for Grenoble to Voiron">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.4px; color: #66645E">SERVICE DAY · GRENOBLE → VOIRON · TRAINS PER HOUR</span>
+      <span style="font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">drag the window · pinch to zoom</span>
+    </div>
+    <div style="position: relative; height: 64px; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); column-gap: 6px; align-items: end">
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 28px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 42px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 42px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 28px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 28px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 28px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 28px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 42px; background: #16171A; border-radius: 3px"></span>
+      <span style="height: 42px; background: #16171A; border-radius: 3px"></span>
+      <span style="height: 28px; background: #16171A; border-radius: 3px"></span>
+      <span style="height: 14px; background: #16171A; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 14px; background: #C9C2B4; border-radius: 3px"></span>
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <span style="height: 2px; background: #E2DDD2; border-radius: 2px"></span>
+      <div style="position: absolute; left: 59.7%; width: 16.7%; top: -4px; bottom: -4px; border-radius: 10px; box-shadow: inset 0 0 0 2px #16171A; background: rgba(255,194,61,0.22)" aria-label="Visible window 17:20 to 21:20"></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: #66645E">
+      <span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>00:00</span>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FFC23D","options":["#FFC23D","#F5E6C8","#7CC4FF","#46C27A"]},"$preview":{"width":1376,"height":1032}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FFC23D' };
+  }
+}
+</script>
+</body>
+</html>
