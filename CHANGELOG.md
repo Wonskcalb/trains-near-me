@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app is now iPhone-only and portrait-only, so it no longer claims iPad support.
+- Version and build number now come from `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` instead of a hard-coded 1.0 (1), which App Store Connect would have rejected on a second upload; declares no non-exempt encryption so TestFlight skips the export-compliance prompt.
+
 ## [1.2.0] - 2026-10-14
 
 ### Added

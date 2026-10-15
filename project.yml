@@ -38,15 +38,20 @@ targets:
       base:
         PRODUCT_NAME: Trains near me
         PRODUCT_MODULE_NAME: TrainsNearMe
-        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX)
         GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY[sdk=iphone*]: "1"
         CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: App/TrainsNearMe-iOS.entitlements
     info:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Trains near me
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.travel
         UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSLocationUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
         NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
         SNCFAppGroup: $(SNCF_APP_GROUP)
@@ -68,13 +73,16 @@ targets:
       - sdk: SwiftUI.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).mac.widget
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).widget
         GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY[sdk=iphone*]: "1"
         CODE_SIGN_ENTITLEMENTS[sdk=iphone*]: Widget/TrainsNearMeWidget-iOS.entitlements
     info:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Trains near me
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSWidgetWantsLocation: true
