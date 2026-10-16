@@ -43,29 +43,25 @@ public struct FlapTime: View {
 
     public var body: some View {
         HStack(spacing: 4) {
-            tile(digits[0])
-            tile(digits[1])
+            tile(digits, 0)
+            tile(digits, 1)
             Text(":")
                 .font(.monoFixed(tileHeight * 0.54, weight: .bold))
                 .foregroundStyle(colonColor ?? digitColor)
                 .frame(width: 10)
-            tile(digits[2])
-            tile(digits[3])
+            tile(digits, 2)
+            tile(digits, 3)
         }
         .accessibilityElement()
         .accessibilityLabel(date.formatted(date: .omitted, time: .shortened))
     }
 
-    private func tile(_ digit: Character) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: cornerRadius).fill(tileColor)
-            Text(String(digit))
-                .font(.monoFixed(tileHeight * 0.65, weight: .bold))
-                .foregroundStyle(digitColor)
-            // The 1px seam that makes a tile read as two flaps meeting.
-            seamColor.frame(height: 1)
-        }
-        .frame(width: tileWidth, height: tileHeight)
+    // ponytail: the stagger is per column (50 ms each), not per changed tile, so a lone minute flip
+    // starts 150 ms late; ranking only the changed tiles would need the previous time held here too.
+    private func tile(_ digits: [Character], _ column: Int) -> some View {
+        FlapTile(digit: digits[column], delay: .milliseconds(50 * column), digitColor: digitColor,
+                 tileWidth: tileWidth, tileHeight: tileHeight, tileColor: tileColor, seamColor: seamColor,
+                 cornerRadius: cornerRadius)
     }
 
     private static let formatter: DateFormatter = {
