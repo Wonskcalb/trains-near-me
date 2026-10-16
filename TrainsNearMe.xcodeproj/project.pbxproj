@@ -36,6 +36,7 @@
 		CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513970A98529F419C18FB0B7 /* RootView.swift */; };
 		D084F4AC32ACA4A4B0B5DECD /* RoundTripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417EF036C914F051F03F5857 /* RoundTripView.swift */; };
 		E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072468D7CF61AC0275D3A463 /* JourneyIntent.swift */; };
+		E992E42B6218ABFA47E7F1F7 /* DuoNearMe.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA47C5C299BF0029A409C97B /* DuoNearMe.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,6 +88,7 @@
 		9D5312ED0A2FD2363A7F3B77 /* TrainsNearMeWidget-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TrainsNearMeWidget-iOS.entitlements"; sourceTree = "<group>"; };
 		A858C01098D0D1C4E4F7C6CD /* StationHallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationHallView.swift; sourceTree = "<group>"; };
 		AEC7157EEB5104942A376232 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BA47C5C299BF0029A409C97B /* DuoNearMe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoNearMe.swift; sourceTree = "<group>"; };
 		C0750732F4C5EBA9F20C580C /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		C467AEF414ED203AB7778AB0 /* StationBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationBoardView.swift; sourceTree = "<group>"; };
 		C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 				7B9F1C9E57D931EFC0221F94 /* BackgroundRefresh.swift */,
 				95CE2524109D16225D1BB68B /* BoardView.swift */,
 				2AD3761BA5EE39050483808D /* DuoJourneys.swift */,
+				BA47C5C299BF0029A409C97B /* DuoNearMe.swift */,
 				7493B2EAAED743D0DB07E6B8 /* Info.plist */,
 				DC4F0B97D67C6F1BD31A860B /* JourneyEditor.swift */,
 				56EC3D71442832142A87AC2F /* JourneysView.swift */,
@@ -393,6 +396,7 @@
 				5C6E155583BC575E10B6F541 /* BigScreenRoot.swift in Sources */,
 				3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */,
 				01F632F370B0260E81B31F23 /* DuoJourneys.swift in Sources */,
+				E992E42B6218ABFA47E7F1F7 /* DuoNearMe.swift in Sources */,
 				C46364CC9B1BD3C163645F5D /* Fold.swift in Sources */,
 				C9768A59A75AEF411CAD1D35 /* JourneyEditor.swift in Sources */,
 				5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */,

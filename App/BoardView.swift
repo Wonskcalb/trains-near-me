@@ -10,7 +10,17 @@ import SwiftUI
 struct BoardView: View {
     /// nil is the radar, which finds its own station.
     let journey: JourneyConfiguration?
+    /// The radar's station, picked row and pushed screens, which outlive this view across a Duo fold.
+    @Binding private var nearMe: NearMeState
 
+    init(journey: JourneyConfiguration?, nearMe: Binding<NearMeState> = .constant(NearMeState())) {
+        self.journey = journey
+        _nearMe = nearMe
+    }
+
+    @Environment(\.spansFold) private var spansFold
+    @Environment(\.bigScreenData) private var data
+    @Environment(BigScreenModel.self) private var model
     @State private var origin: Station?
     /// nil on the radar, which has no destination.
     @State private var destination: Station?
@@ -19,12 +29,19 @@ struct BoardView: View {
     @State private var loading = false
     /// The departure a tap opened the full-trip sheet for, nil when closed.
     @State private var trip: TripRequest?
-    @State private var showingLines = false
     /// Swap shows the journey the other way round for this visit, without touching the saved one.
     @State private var swapped = false
+    @State private var added = false
 
     /// A fresh fix is only ever worth asking for where the position decides what is shown.
     private var followsYou: Bool { journey?.nearestStationAsDeparture ?? true }
+    /// The radar as the list column of the Duo's list | map split, where the map is always beside it.
+    private var isColumn: Bool { spansFold && journey == nil }
+    /// A journey a terminus of the line map opened, not among the saved ones until "Add to my journeys".
+    private var isUnsaved: Bool {
+        guard let journey, !added else { return false }
+        return !SharedSettings.favorites.contains { $0.stationA.id == journey.stationA.id && $0.stationB.id == journey.stationB.id }
+    }
 
     var body: some View {
         // Trains that have left have to drop off the list on their own: unlike a widget, a screen
@@ -56,20 +73,28 @@ struct BoardView: View {
                         .disabled(loading)
                 }
             }
-            if journey == nil {
+            if journey == nil, !isColumn {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lines", systemImage: "point.3.connected.trianglepath.dotted") { showingLines = true }
+                    Button("Lines", systemImage: "point.3.connected.trianglepath.dotted") { nearMe.path.append(.lines) }
                         .disabled(origin == nil)
                 }
             }
+            if isUnsaved, let journey {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Add to my journeys", systemImage: "star") {
+                        SavedJourneys.save(SharedSettings.favorites + [journey], data: data, model: model)
+                        added = true
+                    }
+                }
+            }
         }
-        .modifier(JourneyToolbar(isEnabled: journey != nil, swap: {
+        // Round trip and Wall read the saved journeys, so an unsaved one gets them once it is added.
+        .modifier(JourneyToolbar(isEnabled: journey != nil && !isUnsaved, swap: {
             swapped.toggle()
             Task { await load() }
         }))
-        .navigationDestination(isPresented: $showingLines) {
-            if let origin { StationBoardView(station: origin) }
-        }
+        // The line map's Refresh lands here too, so the list beside it is never older than the map.
+        .onChange(of: model.refreshTick) { Task { await load() } }
         .sheet(item: $trip) { request in
             TripSheet(train: request.train, boarding: request.boarding)
         }
@@ -210,8 +235,13 @@ struct BoardView: View {
                     ForEach(rows, id: \.element) { idx, train in
                         RadarRow(train: train, now: now)
                             .padding(.horizontal, 16).padding(.vertical, 13)
+                            .selectedRowBackground(isColumn && nearMe.selected == train)
                             .contentShape(Rectangle())
-                            .onTapGesture { showTrip(train) }
+                            // Beside the map a tap picks the row; tapping the picked row again opens its trip.
+                            .onTapGesture {
+                                if isColumn, nearMe.selected != train { nearMe.selected = train } else { showTrip(train) }
+                            }
+                            .accessibilityAddTraits(isColumn && nearMe.selected == train ? .isSelected : [])
                         if idx < rows.count - 1 { rowDivider }
                     }
                 }
@@ -254,37 +284,49 @@ struct BoardView: View {
                         .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
-            HStack(alignment: .center, spacing: 16) {
-                FlapTime(date: next.expectedDeparture)
-                VStack(alignment: .leading, spacing: 4) {
-                    if let direction = next.direction {
-                        Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink)
-                            .lineLimit(2).minimumScaleFactor(0.85)
-                    }
-                    HStack(spacing: 7) {
-                        if let mode = next.mode { ModeChip(mode) }
-                        if let number = next.trainNumber {
-                            Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    Text(leavesIn(next, now: now))
-                        .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+            if isColumn {
+                // Half a portrait Duo is 334 pt: the flaps shrink before the destination breaks mid-word.
+                ViewThatFits(in: .horizontal) {
+                    heroRow(next: next, now: now, tile: 36)
+                    heroRow(next: next, now: now, tile: 26)
                 }
-                // At 362 pt (an iPhone 17 Pro, the folded Duo) the flaps took their share first and the
-                // destination truncated to "Grenob…"; the words are what the card is read for.
-                .layoutPriority(1)
-                Spacer(minLength: 0)
-                if next.vehicleJourneyID != nil {
-                    Image(systemName: "chevron.right")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
-                }
+            } else {
+                heroRow(next: next, now: now, tile: 36)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
+    }
+
+    private func heroRow(next: TrainDeparture, now: Date, tile: CGFloat) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            FlapTime(date: next.expectedDeparture, tileWidth: tile, tileHeight: tile * 52 / 36)
+            VStack(alignment: .leading, spacing: 4) {
+                if let direction = next.direction {
+                    Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink)
+                        .lineLimit(2).minimumScaleFactor(0.85)
+                }
+                HStack(spacing: 7) {
+                    if let mode = next.mode { ModeChip(mode) }
+                    if let number = next.trainNumber {
+                        Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                Text(leavesIn(next, now: now))
+                    .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+            }
+            // At 362 pt (an iPhone 17 Pro, the folded Duo) the flaps took their share first and the
+            // destination truncated to "Grenob…"; the words are what the card is read for.
+            .layoutPriority(1)
+            Spacer(minLength: 0)
+            if next.vehicleJourneyID != nil {
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.inkSecondary.opacity(0.6))
+            }
+        }
     }
 
     private var loadingCard: some View {
@@ -474,6 +516,7 @@ struct BoardView: View {
                     return
                 }
                 origin = station
+                nearMe.station = station
                 destination = nil
                 let departures = try await client.departures(from: station, at: now)
                 state = .from(departures, now: now)

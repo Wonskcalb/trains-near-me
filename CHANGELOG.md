@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Extra-tall widget**: the time track turned vertical with a written label beside each marker, on the `.systemExtraLargePortrait` family where iOS / macOS 27 offers it.
 - iPhone Duo: the app follows the system's vertical bars when folded, and opens a journey into board | train on the inner display.
 - iPhone Duo: Round trip opens across both halves, outbound and way back, tied across the fold without putting anything on it.
+- iPhone Duo: Near me opens into the list and the nearest station's line map side by side.
 - **A macOS menu-bar extra**: a window-style popover (journey switcher, next train, compact track, the next three trains, journey chips, Open / Wall-mode actions) and a bar label with the amber flap and the next time.
 - **Live data behind all of it**: concurrent journey boards and a cached service-day summary, the round-trip planner, the leave-by countdown (per-station walk time, pinned station, optional MapKit walking ETA), watching a train (a reminder before it leaves and a delay-band / cancellation alert, re-evaluated in the foreground and in iOS background app refresh — never by spending the widget reload budget), and Share ETA.
 - **Go to station** (⌘K) on the big screen searches every SNCF station, accents and case ignored, with ↑↓ / Return / Esc; a pick opens that station's departure board, which can be **pinned for Wall mode**.
@@ -30,6 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
 
 ### Fixed
+- Tapping a terminus on the line map opens its journey inside the iPhone tabs too.
 - After the last train, a cancelled first train tomorrow no longer reads as "no service": the board shows the end of service and names the first train that runs.
 
 - Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
