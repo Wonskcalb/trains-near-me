@@ -330,7 +330,10 @@ public struct TimeTrack: View {
     }()
 
     @ViewBuilder public var body: some View {
-        footer
+        // nil anchor is the legacy widget footer (frozen geometry); a now-anchored call draws the
+        // big-screen rail along its axis. Without this dispatch every big-screen track fell back to
+        // the horizontal footer.
+        if let anchor { anchoredRail(now: anchor) } else { footer }
     }
 
     // The large widget's foot. Geometry unchanged — do not touch without re-checking the screenshots.

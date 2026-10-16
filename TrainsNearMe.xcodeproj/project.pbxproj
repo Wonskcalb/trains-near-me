@@ -11,6 +11,7 @@
 		0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */; };
 		0E09B59E51EE388D934CAD68 /* LanesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4A03F254F9F4280823B075 /* LanesView.swift */; };
 		1AFB944E672A5436A5501754 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFF2E10643CEC9A8ED29159F /* Assets.xcassets */; };
+		3917E249038109FB6C4773A5 /* TrainInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF543829EDC66D19229FE0DE /* TrainInspector.swift */; };
 		3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CE2524109D16225D1BB68B /* BoardView.swift */; };
 		5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EC3D71442832142A87AC2F /* JourneysView.swift */; };
 		5C6E155583BC575E10B6F541 /* BigScreenRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */; };
@@ -80,6 +81,7 @@
 		AEC7157EEB5104942A376232 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C0750732F4C5EBA9F20C580C /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		CF543829EDC66D19229FE0DE /* TrainInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainInspector.swift; sourceTree = "<group>"; };
 		DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrainsNearMe.entitlements; sourceTree = "<group>"; };
 		DFF2E10643CEC9A8ED29159F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigScreenRoot.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 			isa = PBXGroup;
 			children = (
 				A858C01098D0D1C4E4F7C6CD /* StationHallView.swift */,
+				CF543829EDC66D19229FE0DE /* TrainInspector.swift */,
 			);
 			path = StationHall;
 			sourceTree = "<group>";
@@ -372,6 +375,7 @@
 				D084F4AC32ACA4A4B0B5DECD /* RoundTripView.swift in Sources */,
 				6FDEF5E33F16A652529A0246 /* ScreenshotSupport.swift in Sources */,
 				78CBC52AA86417B60E543CD9 /* StationHallView.swift in Sources */,
+				3917E249038109FB6C4773A5 /* TrainInspector.swift in Sources */,
 				7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */,
 				02EC6B751B663B843A49F232 /* WallModeView.swift in Sources */,
 			);
