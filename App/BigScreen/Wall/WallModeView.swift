@@ -272,9 +272,9 @@ struct WallModeView: View {
 
     private func rightColumn(liveNow: Date) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let leave, let leaveLeg {
-                leaveCard(leave, to: leaveLeg.to.name, liveNow: liveNow)
-            }
+            // Always there, even with no train left to catch: a card that came and went shoved the whole
+            // column up and down on every journey switch. Its tiles spin to "--" instead.
+            leaveCard(leave, to: leaveLeg?.to.name, liveNow: liveNow)
             Text("YOUR JOURNEYS")
                 .font(.mono(11, weight: .semibold)).tracking(1.6)
                 .foregroundStyle(Color.inkSecondary).padding(.horizontal, 6).padding(.top, 4)
@@ -301,23 +301,38 @@ struct WallModeView: View {
         }
     }
 
-    private func leaveCard(_ leave: LeaveBy, to destination: String, liveNow: Date) -> some View {
+    private func leaveCaption(_ leave: LeaveBy?, to destination: String?) -> String {
+        if let leave, let destination {
+            return "for the \(WallFormat.time.string(from: leave.train.expectedDeparture)) to \(destination).\n\(leave.walkMinutes) min walk to the platform."
+        }
+        guard let destination else { return "Save a journey to count down\nto its next train." }
+        if case .endOfService(let first)? = journeys.first(where: { $0.leg == leaveLeg })?.state {
+            return "No train left to \(destination) tonight.\nFirst tomorrow at \(WallFormat.time.string(from: first))."
+        }
+        return "No train you can still make\nto \(destination) right now."
+    }
+
+    private func leaveCard(_ leave: LeaveBy?, to destination: String?, liveNow: Date) -> some View {
         // The hero is a countdown of whole minutes until you must walk out, not a clock time, so it is two
-        // bare flap tiles rather than a `FlapTime` (which only renders HH:MM). Clamped 0–99: a door-leave
-        // window never runs to hours.
-        let minutes = min(99, max(0, Int(leave.leaveAt.timeIntervalSince(liveNow) / 60)))
+        // bare `FlapTile`s rather than a `FlapTime` (which renders HH:MM) — the same tile, so it flips the
+        // same way each minute. Clamped 0–99: a door-leave window never runs to hours.
+        let digits = leave.map { String(format: "%02d", min(99, max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60)))) } ?? "--"
         return VStack(alignment: .leading, spacing: 14) {
             Text("LEAVE HOME IN").font(.mono(12, weight: .bold)).tracking(2)
             HStack(alignment: .bottom, spacing: 12) {
                 HStack(spacing: 5) {
-                    ForEach(Array(String(format: "%02d", minutes).enumerated()), id: \.offset) { _, digit in
-                        WallFlapTile(digit: digit)
+                    ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
+                        // A dark tile on the amber card, with the amber seam the mockup draws.
+                        FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
+                                 tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
                     }
                 }
                 Text("MIN").font(.mono(26, weight: .bold)).padding(.bottom, 8)
             }
-            Text("for the \(WallFormat.time.string(from: leave.train.expectedDeparture)) to \(destination).\n\(leave.walkMinutes) min walk to the platform.")
+            // Two lines in every case, so the card keeps its height when a journey runs out of trains.
+            Text(leaveCaption(leave, to: destination))
                 .font(.system(size: 16, weight: .semibold)).lineSpacing(3)
+                .lineLimit(2, reservesSpace: true)
         }
         .foregroundStyle(Color.onAmber)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -568,24 +583,6 @@ private struct WallStationCard: View {
             Text("every departure").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
         }
         .wallCard(selected: selected) { Color.wallPanel }
-    }
-}
-
-// MARK: - Flap tile (countdown)
-
-/// One flap tile for the leave-by countdown: the digit on a dark tile, an amber seam across the middle.
-/// `FlapTime`'s own tile is private and locked to a four-tile HH:MM, so the bare-digit pair is its own.
-private struct WallFlapTile: View {
-    let digit: Character
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 11).fill(Color.ground)
-            // Sized from the tile height like `FlapTime`'s digits (88 × 0.65 ≈ 57 pt; the mockup draws 62).
-            Text(String(digit)).font(.monoFixed(88 * 0.65, weight: .bold)).foregroundStyle(Color.amber)
-            Color.amber.opacity(0.35).frame(height: 1.5)
-        }
-        .frame(width: 62, height: 88)
     }
 }
 

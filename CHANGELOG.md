@@ -16,7 +16,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Go to station** (⌘K) on the big screen searches every SNCF station, accents and case ignored, with ↑↓ / Return / Esc; a pick opens that station's departure board, which can be **pinned for Wall mode**.
 - **Saved journeys can be added, edited, reordered and deleted on the Mac and iPad**: a + in the sidebar's JOURNEYS header, Edit / Move / Delete on each journey, and a Journeys section in Settings.
 - **Settings is a pane of the main window** on the big screen, in the Tableau style, with the same sections on the Mac's Settings window (⌘,).
-- Split-flap times flip, tile by tile, when they change (off with Reduce Motion).
+- Split-flap times flip, tile by tile, when they change (off with Reduce Motion). A jump of more than one step
+  spins the drum forward through every character in between, as a station board does when it changes journey;
+  the Wall's LEAVE HOME IN minutes use the same tile.
+- Wall mode keeps the LEAVE HOME IN card when a journey has no train left: its tiles spin to "--" and it says
+  why, instead of disappearing and shifting the column.
 
 ### Fixed
 

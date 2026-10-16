@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// One tile of a `FlapTime`. At rest it draws exactly the static tile; only when `digit` changes while
-/// on screen does it split into two halves and flip, the way a station board does.
-struct FlapTile: View {
+/// One split-flap tile. At rest it draws exactly the static tile; only when `digit` changes while on
+/// screen does it split into two halves and flip, the way a station board does. `FlapTime` is four of
+/// these around a colon; anything else that counts on flaps (the Wall's leave-by minutes) uses the tile
+/// directly, so every flap on screen turns the same way instead of a lookalike that never moves.
+public struct FlapTile: View {
     let digit: Character
     /// The stagger before this tile starts, so 17:59 → 18:00 ripples left to right like a real board.
     let delay: Duration
@@ -25,9 +27,32 @@ struct FlapTile: View {
     // Old top folds down with an ease-in, new bottom falls into place with an ease-out: 0.40 s a tile.
     private static let foldDown = 0.18
     private static let fallIn = 0.22
+    // A multi-step change (switching journeys, 4 → 2) runs through every character in between, the way
+    // a Solari board spins to its next value; each step is quick so a full turn stays around a second.
+    private static let fastFold = 0.045
+    private static let fastFall = 0.055
 
-    init(digit: Character, delay: Duration, digitColor: Color, tileWidth: CGFloat, tileHeight: CGFloat,
-         tileColor: Color, seamColor: Color, cornerRadius: CGFloat) {
+    /// The order a flap's drum holds its characters. A real board only turns forward, so going from 4 to 2
+    /// passes 5…9, the blank and 0, 1.
+    static let drum = Array("-0123456789")
+
+    /// The characters shown on the way from one value to another, ending on `to`. A character the drum
+    /// doesn't hold just swaps in one step.
+    static func path(from: Character, to: Character) -> [Character] {
+        guard from != to else { return [] }
+        guard let start = drum.firstIndex(of: from), let end = drum.firstIndex(of: to) else { return [to] }
+        var steps: [Character] = []
+        var index = start
+        repeat {
+            index = (index + 1) % drum.count
+            steps.append(drum[index])
+        } while index != end
+        return steps
+    }
+
+    public init(digit: Character, delay: Duration = .zero, digitColor: Color = .amber, tileWidth: CGFloat = 36,
+                tileHeight: CGFloat = 52, tileColor: Color = .flapTile, seamColor: Color = .ground,
+                cornerRadius: CGFloat = 7) {
         self.digit = digit
         self.delay = delay
         self.digitColor = digitColor
@@ -39,7 +64,7 @@ struct FlapTile: View {
         _displayed = State(initialValue: digit)
     }
 
-    var body: some View {
+    public var body: some View {
         ZStack {
             if let incoming {
                 VStack(spacing: 0) {
@@ -66,24 +91,31 @@ struct FlapTile: View {
     }
 
     private func flip(to new: Character) async {
-        // A flip cut short by a newer change (or by going off screen) snaps to the digit it was revealing.
+        // A flip cut short by a newer change (or by going off screen) snaps to the character it was
+        // revealing, and the drum carries on from there.
         if let pending = incoming { displayed = pending; incoming = nil }
         guard new != displayed else { return }
         guard !reduceMotion else { displayed = new; return }
 
-        topAngle = 0
-        bottomAngle = 90
-        incoming = new
+        let steps = Self.path(from: displayed, to: new)
+        let fast = steps.count > 1
+        let fold = fast ? Self.fastFold : Self.foldDown
+        let fall = fast ? Self.fastFall : Self.fallIn
         try? await Task.sleep(for: delay)
-        guard !Task.isCancelled else { return }
-        withAnimation(.easeIn(duration: Self.foldDown)) { topAngle = -90 }
-        try? await Task.sleep(for: .seconds(Self.foldDown))
-        guard !Task.isCancelled else { return }
-        withAnimation(.easeOut(duration: Self.fallIn)) { bottomAngle = 0 }
-        try? await Task.sleep(for: .seconds(Self.fallIn))
-        guard !Task.isCancelled else { return }
-        displayed = new
-        incoming = nil
+        for step in steps {
+            guard !Task.isCancelled else { return }
+            topAngle = 0
+            bottomAngle = 90
+            incoming = step
+            withAnimation(.easeIn(duration: fold)) { topAngle = -90 }
+            try? await Task.sleep(for: .seconds(fold))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: fall)) { bottomAngle = 0 }
+            try? await Task.sleep(for: .seconds(fall))
+            guard !Task.isCancelled else { return }
+            displayed = step
+            incoming = nil
+        }
     }
 
     private func face(_ d: Character) -> some View {
