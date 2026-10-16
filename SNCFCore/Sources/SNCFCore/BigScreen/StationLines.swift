@@ -25,7 +25,9 @@ public enum StationLines {
 
     /// Groups the trains leaving after `now` by terminus. Beyond `maxLanes` the termini with the fewest
     /// trains share one "Other destinations" lane, because a lane under ~56 pt no longer holds its labels.
-    /// Ordered by the soonest train, "Other" last.
+    /// Ordered by terminus name, "Other" last: never by the soonest train, which changes every time one
+    /// leaves. The map places termini with coordinates by bearing, but the rest keep this order, and a lane
+    /// that swapped rows on each departure both jumped and cancelled the departure animation.
     public static func lanes(from trains: [TrainDeparture], now: Date, maxLanes: Int = 8) -> [StationLane] {
         var order: [String] = []
         var groups: [String: [TrainDeparture]] = [:]
@@ -34,6 +36,8 @@ public enum StationLines {
             if groups[key] == nil { order.append(key) }
             groups[key, default: []].append(train)
         }
+        func name(_ key: String) -> String { groups[key]![0].terminus?.name ?? groups[key]![0].direction ?? "—" }
+        order.sort { (name($0), $0) < (name($1), $1) }
         func lane(_ key: String) -> StationLane {
             let first = groups[key]![0]
             return StationLane(id: key, name: first.terminus?.name ?? first.direction ?? "—",
@@ -41,7 +45,7 @@ public enum StationLines {
         }
         guard order.count > maxLanes else { return order.map(lane) }
 
-        // The biggest keep their lane; ties go to the sooner one, which `order` already lists first.
+        // The biggest keep their lane; ties go by name, the order `order` already has.
         let kept = Set(order.enumerated()
             .sorted { groups[$0.element]!.count != groups[$1.element]!.count
                 ? groups[$0.element]!.count > groups[$1.element]!.count : $0.offset < $1.offset }

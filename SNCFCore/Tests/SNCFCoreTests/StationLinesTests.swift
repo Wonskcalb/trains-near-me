@@ -47,7 +47,7 @@ import Testing
 
     // MARK: Grouping
 
-    @Test func groupsByTerminusSoonestFirstAndSkipsDepartedTrains() {
+    @Test func groupsByTerminusByNameAndSkipsDepartedTrains() {
         let trains = [
             train(17, 30, to: Self.lyon),                       // already left
             train(17, 47, to: Self.lyon),
@@ -57,12 +57,26 @@ import Testing
             train(19, 0, to: nil, headsign: "Rives (Rives)"),
         ]
         let lanes = StationLines.lanes(from: trains, now: at(17, 40))
-        #expect(lanes.map(\.name) == ["Lyon Part Dieu", "Chambéry", "Rives (Rives)"])
-        #expect(lanes[0].trains.map(\.scheduledDeparture) == [at(17, 47), at(18, 47)])
+        #expect(lanes.map(\.name) == ["Chambéry", "Lyon Part Dieu", "Rives (Rives)"])
+        #expect(lanes[1].trains.map(\.scheduledDeparture) == [at(17, 47), at(18, 47)])
         // The cancelled 17:52 stays listed but is never the next one.
-        #expect(lanes[1].trains.count == 2)
-        #expect(lanes[1].next?.scheduledDeparture == at(18, 22))
+        #expect(lanes[0].trains.count == 2)
+        #expect(lanes[0].next?.scheduledDeparture == at(18, 22))
         #expect(lanes[2].terminus == nil)
+    }
+
+    /// A train leaving must not reorder the lanes: termini without coordinates keep this order on the map,
+    /// and a reshuffle on each departure both jumped the rows and cancelled the departure animation.
+    @Test func aDepartureKeepsTheLaneOrder() {
+        let trains = [
+            train(17, 45, to: nil, headsign: "Rives (Rives)"),
+            train(18, 30, to: nil, headsign: "Rives (Rives)"),
+            train(17, 55, to: nil, headsign: "Lyon Perrache (Lyon)"),
+            train(18, 10, to: nil, headsign: "Moirans (Moirans)"),
+        ]
+        let before = StationLines.lanes(from: trains, now: at(17, 40)).map(\.id)
+        let after = StationLines.lanes(from: trains, now: at(17, 46)).map(\.id)   // the 17:45 to Rives left
+        #expect(before == after)
     }
 
     @Test func aLaneWhoseTrainsAreAllCancelledHasNoNext() {
