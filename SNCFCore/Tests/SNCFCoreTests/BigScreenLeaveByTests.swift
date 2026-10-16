@@ -5,7 +5,10 @@ import Testing
 /// The live leave-by provider's catch-the-train logic and the two App-Group settings behind it, all from
 /// fixtures at the mockups' anchor (Thu 15 Oct 2026, 17:40 Europe/Paris). The board is injected, so no
 /// SNCF API; the walk time defaults to the stored setting, so no MapKit.
-@Suite struct BigScreenLeaveBy {
+// Serialized: the walk-minutes and pinned-station settings live under one App-Group/`.standard`
+// UserDefaults key each, read-modify-written. swift-testing runs a suite's tests in parallel by
+// default, so concurrent writers to the same key lose updates; serializing keeps them hermetic.
+@Suite(.serialized) struct BigScreenLeaveBy {
     let now = BigScreenFixtures.now
     let calendar = BigScreenFixtures.calendar
     let voiron = BigScreenFixtures.voiron
