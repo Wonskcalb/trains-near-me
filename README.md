@@ -50,7 +50,16 @@ A three-tab app, same data as the widgets, in the split-flap "Tableau" look — 
 </tr>
 </table>
 
-On macOS the app stays a single settings window — the widgets are the product there.
+## On iPad and Mac
+
+Wherever there is room — iPad, iPad split view, and the Mac, which is now a proper window with a menu-bar companion rather than only a settings pane — the app opens into a **big screen** layout: a sidebar and four screens, all keyboard-driven (⌘K search, ⌘R refresh, ⌘1–4 to switch, ↑↓ / Space on the board, Esc to leave Wall mode).
+
+- **Station hall** — the sidebar of your journeys and the nearest station, a journey board with a split-flap next-train hero and a full-width time track, and an inspector that draws the selected train's stopping pattern, with **Watch** and **Share ETA**.
+- **Lanes** — every saved journey on one time axis, each train a bar from departure to arrival, delays sliding off a dashed ghost, with a service-day minimap.
+- **Wall mode** — a full-screen, always-dark departure board for a pinned station, with a split-flap clock and a "leave home in" countdown, kept awake for a hallway display.
+- **Round trip** — the outbound and the way back side by side, with a minimum-stay stepper that finds the first return that fits and can watch both trains.
+
+A **menu-bar extra** on macOS keeps the next train in the bar and the full board a click away, and an **extra-tall widget** turns the time track vertical where iOS / macOS 27 offers the size.
 
 ## Highlights
 
@@ -68,7 +77,7 @@ On macOS the app stays a single settings window — the widgets are the product 
 SNCFCore/   Swift package: domain model, SNCF client + parser, direction/position logic,
             refresh plan, the shared Tableau theme (colours, font, components), and the tests
 Widget/     Widget extension: App Intent configuration, timeline provider, SwiftUI views
-App/        Host app: settings window on macOS; on iOS a three-tab app — radar, journeys, settings
+App/        Host app: big-screen window + menu bar on macOS and iPad, a three-tab app on iPhone, shared settings
 Config/     Shared build settings; Local.xcconfig (git-ignored) holds your team id
 Design/     App icon renderer, widget screenshot renderer and the rendered images
 scripts/    install.sh (build + install), render-screenshots.sh

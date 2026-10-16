@@ -427,7 +427,10 @@ struct BoardView: View {
             origin = leg.from
             destination = leg.to
             do {
-                state = .from(try await client.departures(from: leg.from, to: leg.to, at: now), now: now)
+                let departures = try await client.departures(from: leg.from, to: leg.to, at: now)
+                state = .from(departures, now: now)
+                // Foreground re-evaluation of watched trains: raw departures so cancellations survive.
+                await TrainWatcher().reevaluate(against: departures, to: leg)
             } catch {
                 state = .unavailable(error)
             }
@@ -446,7 +449,9 @@ struct BoardView: View {
                 }
                 origin = station
                 destination = nil
-                state = .from(try await client.departures(from: station, at: now), now: now)
+                let departures = try await client.departures(from: station, at: now)
+                state = .from(departures, now: now)
+                await TrainWatcher().reevaluate(against: departures)
             } catch {
                 state = .unavailable(error)
             }

@@ -17,8 +17,11 @@ struct StationHallView: View {
     @State private var pins: Set<TrainDeparture> = []
     @FocusState private var boardFocused: Bool
 
-    /// Thu 15 Oct 2026, 17:40 — the fixed fake world. One line to swap for `Date()` when live data lands.
-    private let now = BigScreenFixtures.now
+    /// The clock the board reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
+    /// from the `#Preview` and the screenshot build so the mockup lines up.
+    let now: Date
+
+    init(now: Date = Date()) { self.now = now }
 
     private var board: JourneyBoard? {
         guard !boards.isEmpty else { return nil }
@@ -534,7 +537,7 @@ enum HallFormat {
 
 #Preview("Station hall") {
     let model = BigScreenModel()
-    return StationHallView()
+    return StationHallView(now: BigScreenFixtures.now)
         .environment(model)
         .frame(width: 1376, height: 1032)
         .preferredColorScheme(.dark)
