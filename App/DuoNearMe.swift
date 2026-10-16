@@ -34,7 +34,7 @@ struct NearMeDestination: View {
 
     var body: some View {
         switch route {
-        case .lines: if let station = nearMe.station { NearMeMap(station: station) }
+        case .lines: if let station = nearMe.station { NearMeMap(station: station, highlighted: nearMe.selected) }
         case .journey(let journey): BoardView(journey: journey)
         }
     }
@@ -44,9 +44,11 @@ struct NearMeDestination: View {
 private struct NearMeMap: View {
     @Environment(BigScreenModel.self) private var model
     let station: Station
+    /// The row picked in the list beside it, ringed on the map.
+    let highlighted: TrainDeparture?
 
     var body: some View {
-        StationBoardView(station: station)
+        StationBoardView(station: station, highlighted: highlighted)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Refresh", systemImage: "arrow.clockwise") { model.refresh() }

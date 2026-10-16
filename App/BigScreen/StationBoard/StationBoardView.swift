@@ -8,11 +8,14 @@ import SwiftUI
 /// action that belongs to the station itself.
 struct StationBoardView: View {
     let station: Station
+    /// The train picked in a list beside the map (the Duo's Near me split): its stop is ringed.
+    let highlighted: TrainDeparture?
     /// A frozen anchor for the `#Preview`; nil follows the real clock.
     private let frozenNow: Date?
 
-    init(station: Station, now: Date? = nil) {
+    init(station: Station, now: Date? = nil, highlighted: TrainDeparture? = nil) {
         self.station = station
+        self.highlighted = highlighted
         frozenNow = now
     }
 
@@ -20,7 +23,7 @@ struct StationBoardView: View {
     // keyed on the station and ⌘R, not on the time, so a tick never costs a request.
     var body: some View {
         TimelineView(.everyMinute) { context in
-            StationLinesBoard(station: station, now: frozenNow ?? context.date)
+            StationLinesBoard(station: station, now: frozenNow ?? context.date, highlighted: highlighted)
         }
     }
 }
@@ -55,6 +58,7 @@ private struct StationLinesBoard: View {
     @Environment(BigScreenModel.self) private var model
     let station: Station
     let now: Date
+    let highlighted: TrainDeparture?
 
     @State private var board: StationDayBoard?
     @State private var fetchedAt: Date?
@@ -210,12 +214,19 @@ private struct StationLinesBoard: View {
 
     private var isPinned: Bool { pinned?.id == station.id }
 
+    /// ⌘R only where a keyboard is the rule; an iPhone refreshes from its toolbar.
+    #if os(macOS)
+    private static let refreshHint = " · ⌘R"
+    #else
+    private static let refreshHint = ""
+    #endif
+
     private var footer: some View {
         ViewThatFits(in: .horizontal) {
             HStack {
                 Text("Data © SNCF · Not affiliated with SNCF")
                 Spacer()
-                Text("Tap a time for its train, a terminus for its journey · ⌘R")
+                Text("Tap a time for its train, a terminus for its journey" + Self.refreshHint)
             }
             .fixedSize(horizontal: false, vertical: true)
             .lineLimit(1)
@@ -240,7 +251,8 @@ private struct StationLinesBoard: View {
                         Text("No service tonight · every remaining train is cancelled")
                             .font(.mono(12, weight: .semibold)).tracking(0.6).foregroundStyle(Color.stop)
                     }
-                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight), open: open)
+                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight),
+                            highlighted: highlighted, open: open)
                 }
             } else {
                 switch board.state {
@@ -524,6 +536,7 @@ private struct MapGeometry {
 /// view of `input`; nothing animates or schedules between departures, so an idle board costs nothing.
 private struct LineMap: View {
     let input: MapInput
+    let highlighted: TrainDeparture?
     let open: (Station?, String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -541,7 +554,8 @@ private struct LineMap: View {
             let map = MapGeometry(shown ?? input, viewport: geo.size)
             ScrollView([.horizontal, .vertical]) {
                 MapFrame(map: map, from: departedFrom.map { MapGeometry($0, viewport: geo.size) },
-                         elapsed: elapsed, reduceMotion: reduceMotion, scroll: scroll, selectedStop: $selectedStop, open: open)
+                         elapsed: elapsed, reduceMotion: reduceMotion, scroll: scroll, highlighted: highlighted,
+                         selectedStop: $selectedStop, open: open)
                     .frame(width: map.size.width, height: map.size.height, alignment: .topLeading)
             }
             .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
@@ -629,6 +643,7 @@ private struct MapFrame: View, Animatable {
     var elapsed: Double
     let reduceMotion: Bool
     let scroll: MapScroll
+    let highlighted: TrainDeparture?
     @Binding var selectedStop: String?
     let open: (Station?, String) -> Void
 
@@ -919,6 +934,14 @@ private struct MapFrame: View, Animatable {
 
     private func toggle(_ stop: MapGeometry.Stop) { selectedStop = selectedStop == stop.id ? nil : stop.id }
 
+    /// Matched on the vehicle journey, which a reload keeps, and on number and slot when a row has none:
+    /// the picked row comes from the radar's own fetch, never the very value this map holds.
+    private func isHighlighted(_ train: TrainDeparture) -> Bool {
+        guard let highlighted else { return false }
+        if let id = highlighted.vehicleJourneyID, train.vehicleJourneyID != nil { return id == train.vehicleJourneyID }
+        return highlighted.trainNumber == train.trainNumber && highlighted.scheduledDeparture == train.scheduledDeparture
+    }
+
     /// The dot, which carries the popover and speaks for its label too: the label is the same button for
     /// the finger, hidden from VoiceOver so a stop is one element.
     private func stopButton(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, blend: Blend, clock: DepartureClock?) -> some View {
@@ -932,10 +955,14 @@ private struct MapFrame: View, Animatable {
                 mark(stop, lane: lane)
                     .scaleEffect(pops ? clock?.pastilleScale ?? 1 : 1)
                     .opacity(pops ? clock?.pastilleOpacity ?? 1 : before?.kind == stop.kind ? 1 : blend.r)
+                if isHighlighted(stop.train) {
+                    Circle().stroke(Color.amber, lineWidth: 3).frame(width: 30, height: 30)
+                }
             }
             .frame(width: 36, height: 36).contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isHighlighted(stop.train) ? .isSelected : [])
         .popover(isPresented: Binding(get: { selectedStop == stop.id },
                                       set: { if !$0, selectedStop == stop.id { selectedStop = nil } })) {
             LaneTrainPopover(train: stop.train, leg: Leg(from: station, to: destination))
