@@ -23,6 +23,12 @@ struct MenuBarLabel: View {
         // never settles, so the app spun at launch. A plain state tick, set once a minute, is all it needs.
         HStack(spacing: 6) {
             FlapMark()
+            // Once tonight is over the label names the morning's first time, behind a moon instead of a
+            // countdown hours long.
+            if let next = MenuBarFormat.next(in: trains, after: now ?? clock),
+               BoardReading.isTomorrow(next, after: now ?? clock) {
+                Image(systemName: "moon.fill").font(.system(size: 10, weight: .semibold))
+            }
             Text(text(at: now ?? clock)).font(.mono(12.5, weight: .semibold))
         }
         // The minute tick recounts "2′" and moves on to the next train once one leaves, from the trains
@@ -42,12 +48,16 @@ struct MenuBarLabel: View {
 
     private func text(at clock: Date) -> String {
         guard let next = MenuBarFormat.next(in: trains, after: clock) else { return "—" }
-        return "\(MenuBarFormat.hm.string(from: next.expectedDeparture)) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: clock))′"
+        let time = MenuBarFormat.hm.string(from: next.expectedDeparture)
+        if BoardReading.isTomorrow(next, after: clock) { return time }
+        return "\(time) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: clock))′"
     }
 
-    /// The primary (first saved) journey's trains — the ones the bar always watches.
+    /// The primary (first saved) journey's trains — the ones the bar always watches — carried on into the
+    /// morning's first when the board holds them, so the label never goes blank after the last train.
     static func primaryTrains(from data: BigScreenData, at now: Date) async -> [TrainDeparture] {
-        BoardReading.departures(await data.journeyBoards.boards(at: now).first?.state)
+        let board = await data.journeyBoards.boards(at: now).first
+        return BoardReading.departures(board?.state) + (board?.tomorrow ?? [])
     }
 }
 
@@ -73,15 +83,21 @@ struct MenuBarExtraView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            // Trains that have left, or a cancelled first row, never become the hero.
-            let trains = BoardReading.departures(board?.state).filter { $0.expectedDeparture > now }
+            // Trains that have left, or a cancelled first row, never become the hero. Tonight's run on into
+            // the morning's first, so the popover carries on past the last train instead of going blank.
+            let trains = (BoardReading.departures(board?.state) + (board?.tomorrow ?? [])).filter { $0.expectedDeparture > now }
             if let next = MenuBarFormat.next(in: trains, after: now) {
                 let after = trains.filter { $0 != next && $0.expectedDeparture >= next.expectedDeparture }
-                hero(next)
+                let heroIsTomorrow = BoardReading.isTomorrow(next, after: now)
+                if heroIsTomorrow { split(rounded: true) }
+                hero(next, tomorrow: heroIsTomorrow)
                 // The hero already carries the imminent train, so the track and list show the ones after it.
-                TimeTrack(trains: after, now: now, axis: .horizontal,
-                          minutesSpan: 200, length: 324, metrics: .compact)
-                nextTrains(Array(after.prefix(3)))
+                // A morning hero has hours of empty rail before it, so it goes without the track.
+                if !heroIsTomorrow {
+                    TimeTrack(trains: after.filter { !BoardReading.isTomorrow($0, after: now) }, now: now, axis: .horizontal,
+                              minutesSpan: 200, length: 324, metrics: .compact)
+                }
+                nextTrains(Array(after.prefix(3)), splitBeforeTomorrow: !heroIsTomorrow)
             } else {
                 noDepartures
             }
@@ -145,14 +161,15 @@ struct MenuBarExtraView: View {
 
     // MARK: Hero
 
-    private func hero(_ next: TrainDeparture) -> some View {
+    private func hero(_ next: TrainDeparture, tomorrow: Bool) -> some View {
         HStack(spacing: 14) {
             FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 30, tileHeight: 44,
                      seamColor: .surface, cornerRadius: 6, colonColor: .amberText)
             VStack(alignment: .leading, spacing: 3) {
-                Text("in \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now)) min")
+                Text(tomorrow ? "tomorrow · in \(MenuBarFormat.duration(next.expectedDeparture.timeIntervalSince(now)))"
+                              : "in \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now)) min")
                     .font(.mono(14, weight: .semibold))
-                    .foregroundStyle(Color.soon)
+                    .foregroundStyle(tomorrow ? Color.inkSecondary : Color.soon)
                 Text(subtitle(next, arrival: true))
                     .font(.mono(11.5))
                     .foregroundStyle(Color.inkSecondary)
@@ -162,14 +179,28 @@ struct MenuBarExtraView: View {
 
     // MARK: Next three trains
 
-    private func nextTrains(_ trains: [TrainDeparture]) -> some View {
-        VStack(spacing: 0) {
+    /// The next three; when tonight's give way to the morning's partway down, the compact split sits
+    /// between them (once the hero itself is tomorrow's, the split is already above it).
+    private func nextTrains(_ trains: [TrainDeparture], splitBeforeTomorrow: Bool) -> some View {
+        let firstTomorrow = splitBeforeTomorrow ? trains.firstIndex { BoardReading.isTomorrow($0, after: now) } : nil
+        return VStack(spacing: 0) {
             ForEach(Array(trains.enumerated()), id: \.offset) { i, train in
-                if i > 0 { Divider().overlay(Color.ink.opacity(0.06)) }
+                if i == firstTomorrow {
+                    split(rounded: false)
+                } else if i > 0 {
+                    Divider().overlay(Color.ink.opacity(0.06))
+                }
                 row(train)
             }
         }
         .background(Color.raised, in: RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Rounded when it stands alone above a morning hero, square inside the list.
+    private func split(rounded: Bool) -> some View {
+        TomorrowSplit(lastTonight: BoardReading.lastTonight(board?.state), fontSize: 10, inset: 12)
+            .clipShape(RoundedRectangle(cornerRadius: rounded ? 8 : 0))
     }
 
     private func row(_ train: TrainDeparture) -> some View {
@@ -197,7 +228,7 @@ struct MenuBarExtraView: View {
         case .delayed, .severelyDelayed: StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
         case .unknown: StatusPill("delay ?", status: .unknown)
         case .onTime:
-            Text(MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
+            Text(BoardReading.isTomorrow(train, after: now) ? "tomorrow" : MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
                 .font(.mono(12)).foregroundStyle(Color.inkSecondary)
         }
     }
@@ -377,6 +408,11 @@ enum MenuBarFormat {
 
 #Preview("Popover") {
     MenuBarExtraView(now: BigScreenFixtures.now)
+}
+
+#Preview("Popover · late evening") {
+    MenuBarExtraView(now: BigScreenFixtures.lateNow)
+        .environment(\.bigScreenData, .fakeLateEvening)
 }
 
 #Preview("Label") {

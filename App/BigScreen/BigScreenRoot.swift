@@ -590,6 +590,16 @@ private struct SidebarJourneyRow: View {
         case .none:
             if let next = BoardReading.nextUpcoming(board.state, after: now) {
                 Text(HallFormat.hm(next.expectedDeparture)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amberText)
+            } else if let first = board.tomorrow.first(where: { !$0.isCancelled }) {
+                // Tonight is over: the morning's first, dimmed behind a moon so it never reads as the next
+                // train this evening.
+                HStack(spacing: 5) {
+                    Image(systemName: "moon.fill").font(.system(size: 10, weight: .semibold))
+                    Text(HallFormat.hm(first.expectedDeparture)).font(.mono(14, weight: .semibold))
+                }
+                .foregroundStyle(Color.inkSecondary)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("First train tomorrow \(HallFormat.hm(first.expectedDeparture))")
             }
         }
     }

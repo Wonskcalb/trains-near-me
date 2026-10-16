@@ -50,6 +50,11 @@ private struct StationHallBoard: View {
     }
 
     private var trains: [TrainDeparture] { BoardReading.departures(board?.state) }
+    private var tomorrow: [TrainDeparture] { board?.tomorrow ?? [] }
+    /// Every row the board lists, tonight's then tomorrow's: what ↑↓ walks.
+    private var rows: [TrainDeparture] { trains + tomorrow }
+    /// The train the hero and the NEXT tag point at: tonight's next, or tomorrow's first once tonight is over.
+    private var heroTrain: TrainDeparture? { BoardReading.nextUpcoming(board, after: now) }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -87,7 +92,7 @@ private struct StationHallBoard: View {
     /// Default to the next upcoming train; the inspector's full stopping pattern only exists for trains
     /// the fake carries stops for (17655 today), so others fall back to their via list.
     private func resetSelection() {
-        selected = BoardReading.nextUpcoming(board?.state, after: now) ?? trains.first
+        selected = heroTrain ?? rows.first
     }
 
     private func loadStops() async {
@@ -109,8 +114,16 @@ private struct StationHallBoard: View {
                     footer
                 case .noService:
                     noService
+                    // The dead night keeps its plate; the morning still runs, so it follows the split.
+                    if !tomorrow.isEmpty { boardTable }
                 case .endOfService(let first):
-                    EndOfServiceCard(first: first)
+                    if tomorrow.isEmpty {
+                        EndOfServiceCard(first: first)
+                    } else {
+                        hero
+                        boardTable
+                        footer
+                    }
                 case .unavailable(let error):
                     stateCard("Board unavailable", error.appDescription)
                 case .noTrains, nil:
@@ -243,24 +256,30 @@ private struct StationHallBoard: View {
     // MARK: Hero
 
     @ViewBuilder private var hero: some View {
-        if let next = BoardReading.nextUpcoming(board?.state, after: now) {
+        if let next = heroTrain {
+            let isTomorrow = BoardReading.isTomorrow(next, after: now)
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 22) {
                     FlapTime(date: next.expectedDeparture, tileWidth: 46, tileHeight: 66, cornerRadius: 9, colonColor: .amberText)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("NEXT TRAIN · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
+                        Text("\(isTomorrow ? "FIRST TRAIN TOMORROW" : "NEXT TRAIN") · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
                             .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
                         HStack(spacing: 8) {
                             if let mode = next.mode { ModeChip(mode) }
                             Text(HallFormat.numberAndDuration(next)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
                         }
-                        Text(HallFormat.inWords(next.expectedDeparture, from: now))
-                            .font(.mono(15, weight: .semibold)).foregroundStyle(Color.soon)
+                        Text(isTomorrow ? "tomorrow · \(HallFormat.inWords(next.expectedDeparture, from: now))"
+                                        : HallFormat.inWords(next.expectedDeparture, from: now))
+                            .font(.mono(15, weight: .semibold)).foregroundStyle(isTomorrow ? Color.inkSecondary : Color.soon)
                     }
                     Spacer(minLength: 0)
                     if let leg = board?.leg { RemindButton(train: next, leg: leg) }
                 }
-                TimeTrack(trains: trains, now: now, axis: .horizontal, minutesSpan: 200, length: 672, metrics: .board)
+                // Tonight over, the track stretches to the morning's first train rather than drawing hours of
+                // empty rail up to the 200-minute mark and stopping short of it.
+                TimeTrack(trains: isTomorrow ? tomorrow : trains, now: now, axis: .horizontal,
+                          minutesSpan: isTomorrow ? Int(next.expectedDeparture.timeIntervalSince(now) / 60) + 40 : 200,
+                          length: 672, metrics: .board)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 14)
@@ -272,24 +291,35 @@ private struct StationHallBoard: View {
     // MARK: Board table
 
     private var boardTable: some View {
-        let longest = trains.compactMap(\.duration).max() ?? 1
+        let longest = rows.compactMap(\.duration).max() ?? 1
+        let next = heroTrain
         return VStack(spacing: 0) {
             BoardTableHeader()
             ForEach(Array(trains.enumerated()), id: \.offset) { index, train in
-                Button { select(train) } label: {
-                    BoardRow(train: train, now: now, longestTrip: longest,
-                             isNext: train == BoardReading.nextUpcoming(board?.state, after: now),
-                             isSelected: train == selected, isPinned: pins.contains(train))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(train == selected ? .isSelected : [])
+                boardRow(train, next: next, longest: longest, tomorrow: false)
                 if index < trains.count - 1 { Divider().overlay(Color.ink.opacity(0.07)) }
+            }
+            if !tomorrow.isEmpty {
+                TomorrowSplit(lastTonight: BoardReading.lastTonight(board?.state) ?? summary?.lastTonight)
+                ForEach(Array(tomorrow.enumerated()), id: \.offset) { index, train in
+                    if index > 0 { Divider().overlay(Color.ink.opacity(0.07)) }
+                    boardRow(train, next: next, longest: longest, tomorrow: true)
+                }
             }
         }
         .background(Color.surface)
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+    }
+
+    private func boardRow(_ train: TrainDeparture, next: TrainDeparture?, longest: TimeInterval, tomorrow: Bool) -> some View {
+        Button { select(train) } label: {
+            BoardRow(train: train, now: now, longestTrip: longest, isNext: train == next,
+                     isSelected: train == selected, isPinned: pins.contains(train), isTomorrow: tomorrow)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(train == selected ? .isSelected : [])
     }
 
     private var footer: some View {
@@ -303,7 +333,7 @@ private struct StationHallBoard: View {
 
     private var noService: some View {
         HazardBackground(variant: .band)
-            .frame(height: 260)
+            .frame(height: tomorrow.isEmpty ? 260 : 160)
             .overlay {
                 VStack(spacing: 5) {
                     Text("NO SERVICE").font(.mono(30, weight: .heavy)).tracking(3).foregroundStyle(Color.ink)
@@ -348,10 +378,10 @@ private struct StationHallBoard: View {
     }
 
     private func move(_ delta: Int) {
-        guard !trains.isEmpty else { return }
-        let current = selected.flatMap { trains.firstIndex(of: $0) } ?? 0
-        let next = min(max(current + delta, 0), trains.count - 1)
-        select(trains[next])
+        guard !rows.isEmpty else { return }
+        let current = selected.flatMap { rows.firstIndex(of: $0) } ?? 0
+        let next = min(max(current + delta, 0), rows.count - 1)
+        select(rows[next])
     }
 
     private func togglePin() {
@@ -379,6 +409,38 @@ struct EndOfServiceCard: View {
         .background(LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
                                    startPoint: .top, endPoint: .bottom),
                     in: RoundedRectangle(cornerRadius: 24))
+    }
+}
+
+/// Where tonight's board stops and tomorrow's first trains begin, shared by every journey view. A thin
+/// band of the end-of-service navy rather than the whole night card, so the rows under it still read as
+/// the same board. The navy is fixed and the text on it light, so it holds on paper and on the dark board.
+struct TomorrowSplit: View {
+    let lastTonight: Date?
+    var fontSize: CGFloat = 11.5
+    /// Matches the host's row inset, so the moon lines up with the times under it.
+    var inset: CGFloat = 20
+
+    static let navy = Color(red: 0.10, green: 0.13, blue: 0.28)
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "moon.fill").foregroundStyle(Color.amber)
+            Text(text).tracking(1.4).foregroundStyle(Color.white.opacity(0.9))
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .font(.mono(fontSize, weight: .semibold))
+        .padding(.horizontal, inset).padding(.vertical, fontSize * 0.7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Self.navy)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("End of service" + (lastTonight.map { ", last train \(HallFormat.hm($0))" } ?? "") + ". Tomorrow:")
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var text: String {
+        guard let lastTonight else { return "END OF SERVICE · TOMORROW" }
+        return "END OF SERVICE · LAST \(HallFormat.hm(lastTonight)) · TOMORROW"
     }
 }
 
@@ -421,6 +483,8 @@ private struct BoardRow: View {
     let isNext: Bool
     let isSelected: Bool
     let isPinned: Bool
+    /// A morning row under the split: its countdown reads "tomorrow", hours away being no use.
+    var isTomorrow = false
     private let columns = BoardColumns()
 
     var body: some View {
@@ -442,7 +506,7 @@ private struct BoardRow: View {
         parts.append([train.mode, train.trainNumber].compactMap { $0 }.joined(separator: " "))
         if isPinned { parts.append("pinned") }
         switch train.status {
-        case .onTime: parts.append((isNext ? "next, " : "") + "in \(HallFormat.relative(train.expectedDeparture, from: now))")
+        case .onTime: parts.append((isNext ? "next, " : "") + (isTomorrow ? "tomorrow" : "in \(HallFormat.relative(train.expectedDeparture, from: now))"))
         case .delayed, .severelyDelayed: parts.append("plus \(train.delayMinutes ?? 0), leaves \(HallFormat.hm(train.expectedDeparture))")
         case .cancelled: parts.append("cancelled")
         case .unknown: parts.append("delay unknown")
@@ -499,15 +563,16 @@ private struct BoardRow: View {
     @ViewBuilder private var status: some View {
         switch train.status {
         case .onTime:
+            let relative = isTomorrow ? "tomorrow" : HallFormat.relative(train.expectedDeparture, from: now)
             if isNext {
                 HStack(spacing: 8) {
                     Text("NEXT").font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.onAmber)
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(Color.amber, in: RoundedRectangle(cornerRadius: 5))
-                    Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+                    Text(relative).font(.mono(13, weight: .semibold)).foregroundStyle(isTomorrow ? Color.inkSecondary : Color.soon)
                 }
             } else {
-                Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
+                Text(relative).font(.mono(13)).foregroundStyle(Color.inkSecondary)
             }
         case .delayed, .severelyDelayed:
             // One line, the amended time beside the pill: stacking "leaves 18:24" under it made a delayed row
@@ -586,6 +651,21 @@ enum BoardReading {
     /// sidebar times all point at.
     static func nextUpcoming(_ state: BoardState?, after now: Date) -> TrainDeparture? {
         departures(state).first { !$0.isCancelled && $0.expectedDeparture > now }
+    }
+
+    /// Tonight's next, or once tonight is over the morning's first: what a journey view leads with.
+    static func nextUpcoming(_ board: JourneyBoard?, after now: Date) -> TrainDeparture? {
+        nextUpcoming(board?.state, after: now) ?? board?.tomorrow.first { !$0.isCancelled && $0.expectedDeparture > now }
+    }
+
+    /// The last train still running tonight, for the split's "LAST 22:42"; nil once the board holds none.
+    static func lastTonight(_ state: BoardState?) -> Date? {
+        departures(state).last { !$0.isCancelled }?.scheduledDeparture
+    }
+
+    /// Whether a train belongs to the next 03:00 service day rather than tonight's.
+    static func isTomorrow(_ train: TrainDeparture, after now: Date) -> Bool {
+        BoardState.isLaterServiceDay(train.scheduledDeparture, than: now)
     }
 }
 
@@ -666,4 +746,11 @@ enum HallFormat {
         .environment(model)
         .frame(width: 1376, height: 1032)
         .preferredColorScheme(.dark)
+}
+
+#Preview("Station hall · late evening") {
+    StationHallView(now: BigScreenFixtures.lateNow)
+        .environment(BigScreenModel())
+        .environment(\.bigScreenData, .fakeLateEvening)
+        .frame(width: 1376, height: 1032)
 }

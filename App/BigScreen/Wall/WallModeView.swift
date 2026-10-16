@@ -196,6 +196,7 @@ struct WallModeView: View {
     // MARK: Board
 
     @ViewBuilder private func boardPanel(liveNow: Date) -> some View {
+        let tomorrow = current?.tomorrow ?? []
         VStack(spacing: 0) {
             boardHeaderRow
             switch shownState {
@@ -203,8 +204,13 @@ struct WallModeView: View {
                 ScrollView { boardRows(trains, liveNow: liveNow) }
             case .noService:
                 noServicePlate
+                if !tomorrow.isEmpty { ScrollView { boardRows([], liveNow: liveNow) }.frame(maxHeight: .infinity) }
             case .endOfService(let first):
-                boardNote("moon.stars", "Last train gone · first tomorrow \(WallFormat.time.string(from: first))")
+                if tomorrow.isEmpty {
+                    boardNote("moon.stars", "Last train gone · first tomorrow \(WallFormat.time.string(from: first))")
+                } else {
+                    ScrollView { boardRows([], liveNow: liveNow) }
+                }
             case .noTrains:
                 boardNote("tram", "No departures")
             case .unavailable(let error):
@@ -255,16 +261,30 @@ struct WallModeView: View {
 
     private func boardRows(_ trains: [TrainDeparture], liveNow: Date) -> some View {
         // Rows drop off as their train leaves, without waiting for the next fetch. The soonest one still to
-        // run is the "next" — a cancelled row is never it — with the amber tint and a green countdown.
+        // run is the "next" — a cancelled row is never it — with the amber tint and a green countdown; once
+        // tonight is over that is the morning's first, under the split.
         let upcoming = trains.filter { $0.expectedDeparture > liveNow }
-        let next = upcoming.first { !$0.isCancelled }
+        let tomorrow = current?.tomorrow ?? []
+        let next = upcoming.first { !$0.isCancelled } ?? tomorrow.first { !$0.isCancelled }
         return VStack(spacing: 0) {
             ForEach(Array(upcoming.enumerated()), id: \.offset) { _, train in
-                WallBoardRow(train: train, isNext: train == next,
-                             fallbackDestination: current?.leg.to.name ?? station?.name,
-                             showsArrival: current != nil, liveNow: liveNow)
-                Color.white.opacity(0.06).frame(height: 1)
+                row(train, isNext: train == next, isTomorrow: false, liveNow: liveNow)
             }
+            if !tomorrow.isEmpty {
+                TomorrowSplit(lastTonight: BoardReading.lastTonight(shownState), fontSize: 13, inset: 22)
+                ForEach(Array(tomorrow.enumerated()), id: \.offset) { _, train in
+                    row(train, isNext: train == next, isTomorrow: true, liveNow: liveNow)
+                }
+            }
+        }
+    }
+
+    private func row(_ train: TrainDeparture, isNext: Bool, isTomorrow: Bool, liveNow: Date) -> some View {
+        VStack(spacing: 0) {
+            WallBoardRow(train: train, isNext: isNext,
+                         fallbackDestination: current?.leg.to.name ?? station?.name,
+                         showsArrival: current != nil, isTomorrow: isTomorrow, liveNow: liveNow)
+            Color.white.opacity(0.06).frame(height: 1)
         }
     }
 
@@ -274,7 +294,7 @@ struct WallModeView: View {
         VStack(alignment: .leading, spacing: 16) {
             // Always there, even with no train left to catch: a card that came and went shoved the whole
             // column up and down on every journey switch. Its tiles spin to "--" instead.
-            leaveCard(leave, to: leaveLeg?.to.name, liveNow: liveNow)
+            leaveCard(to: leaveLeg?.to.name, liveNow: liveNow)
             Text("YOUR JOURNEYS")
                 .font(.mono(11, weight: .semibold)).tracking(1.6)
                 .foregroundStyle(Color.inkSecondary).padding(.horizontal, 6).padding(.top, 4)
@@ -284,7 +304,8 @@ struct WallModeView: View {
                         let key = Self.key(for: journey.journey)
                         let selected = current?.journey == journey.journey
                         Button { selection = key } label: {
-                            WallJourneyCard(leg: journey.leg, state: journey.state, liveNow: liveNow, selected: selected)
+                            WallJourneyCard(leg: journey.leg, state: journey.state, tomorrow: journey.tomorrow,
+                                            liveNow: liveNow, selected: selected)
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -302,23 +323,38 @@ struct WallModeView: View {
     }
 
     /// The small line under the train time: where it goes, or why there is nothing to catch.
-    private func leaveDetail(_ leave: LeaveBy?, to destination: String?) -> String {
+    private func leaveDetail(_ leave: LeaveBy?, tomorrow: Bool, to destination: String?) -> String {
         guard let destination else { return "no journey saved" }
-        if leave != nil { return destination }
+        if leave != nil { return tomorrow ? "tomorrow · \(destination)" : destination }
         if case .endOfService(let first)? = journeys.first(where: { $0.leg == leaveLeg })?.state {
             return "first tomorrow \(WallFormat.time.string(from: first))"
         }
         return "none to \(destination) now"
     }
 
-    private func leaveCard(_ leave: LeaveBy?, to destination: String?, liveNow: Date) -> some View {
-        // The hero is a countdown of whole minutes until you must walk out, not a clock time, so it is two
-        // bare `FlapTile`s rather than a `FlapTime` (which renders HH:MM) — the same tile, so it flips the
-        // same way each minute. Clamped 0–99: a door-leave window never runs to hours.
-        let minutes = leave.map { min(99, max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60))) }
-        let digits = minutes.map { String(format: "%02d", $0) } ?? "--"
+    /// What LEAVE HOME IN counts down to: the provider's train while tonight runs, then the morning's first
+    /// with the same stored walk before it. The provider only looks at tonight, and the morning is already
+    /// on the board, so the night costs no request of its own.
+    private func shownLeave(liveNow: Date) -> (leave: LeaveBy, tomorrow: Bool)? {
+        if let leave { return (leave, false) }
+        guard let board = journeys.first(where: { $0.leg == leaveLeg }),
+              BoardReading.nextUpcoming(board.state, after: liveNow) == nil,
+              let first = board.tomorrow.first(where: { !$0.isCancelled }) else { return nil }
+        let walk = SharedSettings[walkMinutesFor: board.leg.from.id]
+        return (LeaveBy(train: first, walkMinutes: walk, leaveAt: first.expectedDeparture.addingTimeInterval(-Double(walk) * 60)), true)
+    }
+
+    private func leaveCard(to destination: String?, liveNow: Date) -> some View {
+        let shown = shownLeave(liveNow: liveNow)
+        let leave = shown?.leave
+        // The hero is a countdown until you must walk out, not a clock time, so it is two bare `FlapTile`s
+        // rather than a `FlapTime` (which renders HH:MM) — the same tile, so it flips the same way each
+        // minute. Past 99 minutes (the night before the first train) it counts whole hours instead.
+        let minutes = leave.map { max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60)) }
+        let inHours = (minutes ?? 0) >= 100
+        let digits = minutes.map { String(format: "%02d", inHours ? min(99, $0 / 60) : $0) } ?? "--"
         let trainTime = leave.map { WallFormat.time.string(from: $0.train.expectedDeparture) } ?? "--:--"
-        let detail = leaveDetail(leave, to: destination)
+        let detail = leaveDetail(leave, tomorrow: shown?.tomorrow ?? false, to: destination)
         return VStack(alignment: .leading, spacing: 14) {
             Text("LEAVE HOME IN").font(.mono(12, weight: .bold)).tracking(2)
             HStack(alignment: .center, spacing: 22) {
@@ -330,7 +366,7 @@ struct WallModeView: View {
                                      tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
                         }
                     }
-                    Text("MIN").font(.mono(15, weight: .bold)).tracking(2)
+                    Text(inHours ? "H" : "MIN").font(.mono(15, weight: .bold)).tracking(2)
                 }
                 // Two glyphs with their numbers rather than a sentence: the train to catch, and the walk to it.
                 // Both rows stay in every state (a dash in place of a number), so the card never changes size.
@@ -355,7 +391,7 @@ struct WallModeView: View {
         .padding(.horizontal, 24).padding(.vertical, 22)
         .background(Color.amber, in: RoundedRectangle(cornerRadius: 26))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(leave.map { "Leave home in \(minutes ?? 0) minutes for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk" }
+        .accessibilityLabel(leave.map { "Leave home in \(inHours ? (minutes ?? 0) / 60 : (minutes ?? 0)) \(inHours ? "hours" : "minutes") for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk" }
                             ?? "No train to leave for: \(detail)")
     }
 
@@ -428,6 +464,8 @@ private struct WallBoardRow: View {
     let fallbackDestination: String?
     /// A journey row: the second line is the arrival and the trip time, which a station board lacks.
     let showsArrival: Bool
+    /// A morning row under the split: "tomorrow" in place of a countdown hours long.
+    let isTomorrow: Bool
     let liveNow: Date
     @State private var via: [String] = []
 
@@ -489,9 +527,9 @@ private struct WallBoardRow: View {
     @ViewBuilder private var status: some View {
         switch train.status {
         case .onTime:
-            Text(wallCountdown(to: train.expectedDeparture, from: liveNow))
+            Text(isTomorrow ? "tomorrow" : wallCountdown(to: train.expectedDeparture, from: liveNow))
                 .font(.mono(isNext ? 20 : 18, weight: isNext ? .bold : .medium))
-                .foregroundStyle(isNext ? Color.soon : Color.inkSecondary)
+                .foregroundStyle(isNext && !isTomorrow ? Color.soon : Color.inkSecondary)
         case .delayed, .severelyDelayed:
             VStack(alignment: .trailing, spacing: 3) {
                 StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
@@ -511,6 +549,7 @@ private struct WallBoardRow: View {
 private struct WallJourneyCard: View {
     let leg: Leg
     let state: BoardState
+    let tomorrow: [TrainDeparture]
     let liveNow: Date
     let selected: Bool
 
@@ -559,6 +598,9 @@ private struct WallJourneyCard: View {
         case .departures(let trains):
             let upcoming = trains.filter { $0.expectedDeparture > liveNow }
             guard let next = upcoming.first(where: { !$0.isCancelled }) ?? upcoming.first else {
+                if let first = tomorrow.first(where: { !$0.isCancelled }) {
+                    return (WallFormat.time.string(from: first.expectedDeparture), Text("first tomorrow").foregroundStyle(Color.inkSecondary))
+                }
                 return ("—", Text("no more trains").foregroundStyle(Color.inkSecondary))
             }
             let time = WallFormat.time.string(from: next.expectedDeparture)
@@ -680,5 +722,12 @@ private enum WallFormat {
 #Preview("Wall mode") {
     WallModeView(now: BigScreenFixtures.now)
         .environment(BigScreenModel())
+        .frame(width: 1376, height: 1032)
+}
+
+#Preview("Wall mode · late evening") {
+    WallModeView(now: BigScreenFixtures.lateNow)
+        .environment(BigScreenModel())
+        .environment(\.bigScreenData, .fakeLateEvening)
         .frame(width: 1376, height: 1032)
 }

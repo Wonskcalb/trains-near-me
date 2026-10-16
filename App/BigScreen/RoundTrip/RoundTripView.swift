@@ -254,10 +254,22 @@ struct RoundTripView: View {
             if let plan {
                 routeHeader(plan.returnLeg)
                 stayStepper
+                // The way back is asked by count from the arrival, so late in the evening it runs on into the
+                // morning. Those rows go under the split, tagged TOMORROW: "first that fits" on a train the
+                // next day would read as a return tonight.
+                let tonight = plan.returnOptions.filter { !BoardReading.isTomorrow($0.train, after: now) }
+                let morning = plan.returnOptions.filter { BoardReading.isTomorrow($0.train, after: now) }
                 card {
-                    ForEach(Array(plan.returnOptions.enumerated()), id: \.offset) { index, option in
+                    ForEach(Array(tonight.enumerated()), id: \.offset) { index, option in
                         if index > 0 { rowDivider }
-                        returnRow(option)
+                        returnRow(option, lastTonight: !morning.isEmpty && index == tonight.count - 1)
+                    }
+                    if !morning.isEmpty {
+                        TomorrowSplit(lastTonight: tonight.last { !$0.train.isCancelled }?.train.scheduledDeparture, inset: 16)
+                        ForEach(Array(morning.enumerated()), id: \.offset) { index, option in
+                            if index > 0 { rowDivider }
+                            returnRow(option, tomorrow: true)
+                        }
                     }
                 }
                 watchBoth(plan)
@@ -267,8 +279,12 @@ struct RoundTripView: View {
         }
     }
 
-    private func returnRow(_ option: ReturnOption) -> some View {
-        let dimmed = option.fit == .tooEarly
+    /// `lastTonight` marks tonight's final row when the morning follows: the planner gave LAST TRAIN to the
+    /// list's final row, which is then tomorrow's, so tonight's last would otherwise read "+1 h there".
+    private func returnRow(_ option: ReturnOption, lastTonight: Bool = false, tomorrow: Bool = false) -> some View {
+        let dimmed = option.fit == .tooEarly && !tomorrow
+        var fit = option.fit
+        if lastTonight, case .laterBy = fit { fit = .lastTrain }
         return HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 timeLine(option.train)
@@ -280,13 +296,20 @@ struct RoundTripView: View {
             Spacer(minLength: 4)
             // A return can be late or cancelled too; say so beside its fit, as the outbound rows do.
             VStack(alignment: .trailing, spacing: 4) {
-                returnTag(option.fit)
+                if tomorrow { tomorrowTag } else { returnTag(fit) }
                 returnStatus(option.train)
             }
         }
         .opacity(dimmed ? 0.4 : 1)
-        .modifier(RowHighlight(selected: option.fit == .firstThatFits))
+        .modifier(RowHighlight(selected: option.fit == .firstThatFits && !tomorrow))
         .accessibilityElement(children: .combine)
+    }
+
+    private var tomorrowTag: some View {
+        Text("TOMORROW").font(.mono(10, weight: .bold)).tracking(1.2)
+            .foregroundStyle(Color.white.opacity(0.9))
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .background(TomorrowSplit.navy, in: RoundedRectangle(cornerRadius: 5))
     }
 
     @ViewBuilder private func returnStatus(_ train: TrainDeparture) -> some View {
