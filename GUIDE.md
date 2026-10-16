@@ -70,7 +70,7 @@ If a dialog says **codesign** wants to access a keychain key, enter your Mac log
 
 ## 5. Set up the app
 
-The **Trains near me** window opens.
+The **Trains near me** window opens into the big-screen board (see [The app on Mac and iPad](#the-app-on-mac-and-ipad)). The token and location live in its **Settings** — press **⌘ ,** or click **Settings** in the sidebar.
 
 1. **SNCF API token**: paste your token, then click **Save and test**. The message "Token works." confirms it's working.
 2. **Location**: accept the location prompt if you want "nearest station" mode (see step 7). Otherwise decline it; everything else still works.
@@ -116,6 +116,17 @@ The Radar widget has no settings. It asks for your position, finds the closest s
 To find that station, it sends your position **rounded to about 100 m** to the SNCF API — that is the one case where your position leaves your device. Everything else stays local.
 
 If location is off, the widget says so: allow it in **System Settings › Privacy & Security › Location Services**.
+
+## The app on Mac and iPad
+
+Beyond the widgets, the window itself is now a departure board you can live in — the same layout on the Mac and on iPad:
+
+- **Station hall**: your saved journeys and the nearest station down the side, the next train on a split-flap, a time track, and a panel showing the picked train's every stop. Watch a train to be reminded before it leaves, or share its arrival time.
+- **Lanes**: every journey on one timeline, so you can see the whole evening at a glance.
+- **Wall mode**: a full-screen board for a station you pin, with a big clock and a "leave home in" countdown — made to leave open on a spare screen in the hall.
+- **Round trip**: the way there and the way back together, with a "stay at least" dial that picks the first return you can make.
+
+On the Mac there is also a small menu-bar item showing the next train, with the full board a click away. Switch screens with ⌘1–4, search with ⌘K, refresh with ⌘R.
 
 ## 9. On iPhone or iPad
 

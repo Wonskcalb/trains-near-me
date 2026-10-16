@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- **The big screen**: the Tableau look taken to every surface with room to spare, built on frozen data contracts (with a mockup `.fake` behind previews, screenshots and tests), iPad support, an axis-parameterised time track (horizontal or vertical) and a shared app shell with ⌘K / ⌘R / ⌘1–4 / ↑↓ / Space / Esc.
+- **Station hall** on iPad and Mac: a sidebar of saved journeys and the nearest station, a journey board with a split-flap next-train hero and the full-width time track, and an inspector that draws the selected train's stopping pattern (your leg solid, the rest dashed), with **Watch train** and **Share ETA**.
+- **Lanes**: every saved journey on one time axis, each train a bar from departure to arrival (delays slide off a dashed ghost at the timetabled slot, cancellations hatched, a whole lane striped when nothing runs), a Watch / Stops popover, the service-day minimap and a NEXT 4 H / TONIGHT / TOMORROW AM range picker.
+- **Wall mode**: a full-screen, always-dark departure board for the pinned station, with a split-flap clock, a LEAVE HOME IN countdown, the saved journeys, a disruption ticker, and the display kept awake.
+- **Round trip (Duo)**: the outbound board and the way back side by side, a minimum-stay stepper that re-tags the returns (TOO EARLY / FIRST THAT FITS / LAST TRAIN), the paper pairing pill across the hinge, and **Watch both trains**.
+- **Extra-tall widget**: the time track turned vertical with a written label beside each marker, on the `.systemExtraLargePortrait` family where iOS / macOS 27 offers it.
+- **A macOS menu-bar extra**: a window-style popover (journey switcher, next train, compact track, the next three trains, journey chips, Open / Wall-mode actions) and a bar label with the amber flap and the next time.
+- **Live data behind all of it**: concurrent journey boards and a cached service-day summary, the round-trip planner, the leave-by countdown (per-station walk time, pinned station, optional MapKit walking ETA), watching a train (a reminder before it leaves and a delay-band / cancellation alert, re-evaluated in the foreground and in iOS background app refresh — never by spending the widget reload budget), and Share ETA.
+
 ### Fixed
 
 - The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app is now iPhone-only and portrait-only, so it no longer claims iPad support.
