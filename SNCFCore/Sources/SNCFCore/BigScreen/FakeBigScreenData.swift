@@ -1,0 +1,284 @@
+import Foundation
+
+// The Phase-0 fake: every provider answered from the big-screen mockups, verbatim. One fixed world —
+// Thursday 15 October 2026, 17:40 Europe/Paris, the Grenoble ↔ Voiron journey (reverses at 13:00) —
+// drives Main, Lanes, Wall, Duo, DuoWidget and MenuBar. Numbers, times, via-lists, the 17655 stopping
+// pattern, the round trip and the leave-by are lifted straight from Design/BigScreen/*.dc.html, so
+// previews, the screenshot build and the tests all show exactly what was designed, with no network.
+
+/// The canned data behind `BigScreenData.fake`, exposed so tests can assert against the same anchor.
+public enum BigScreenFixtures {
+    public static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Paris")!
+        return calendar
+    }()
+
+    /// Thu 15 Oct 2026, 17:40 — "now" in every mockup.
+    public static func at(_ hour: Int, _ minute: Int, day: Int = 15) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
+    }
+
+    public static let now = at(17, 40)
+
+    // MARK: Stations
+
+    public static let grenoble = Station(id: "stop_area:SNCF:87747006", name: "Grenoble", latitude: 45.191463, longitude: 5.714466)
+    public static let voiron = Station(id: "stop_area:SNCF:87747337", name: "Voiron", latitude: 45.364105, longitude: 5.590006)
+    public static let lyon = Station(id: "stop_area:SNCF:87723197", name: "Lyon Part-Dieu", latitude: 45.760460, longitude: 4.859496)
+    public static let chambery = Station(id: "stop_area:SNCF:87741086", name: "Chambéry", latitude: 45.571156, longitude: 5.920660)
+    public static let valence = Station(id: "stop_area:SNCF:87747279", name: "Valence Ville", latitude: 44.926650, longitude: 4.893466)
+
+    // MARK: Train builders
+
+    private static func journeyTrain(_ h: Int, _ m: Int, arr: (Int, Int), number: String,
+                                     delay: Int? = 0, cancelled: Bool = false, mode: String = "TER") -> TrainDeparture {
+        TrainDeparture(scheduledDeparture: at(h, m), scheduledArrival: at(arr.0, arr.1), mode: mode,
+                       delayMinutes: delay, isCancelled: cancelled, trainNumber: number,
+                       vehicleJourneyID: "vehicle_journey:fake:\(number)")
+    }
+
+    private static func stationTrain(_ h: Int, _ m: Int, to direction: String, number: String, vj: String,
+                                     delay: Int? = 0, cancelled: Bool = false, mode: String = "TER") -> TrainDeparture {
+        TrainDeparture(scheduledDeparture: at(h, m), scheduledArrival: nil, direction: direction, mode: mode,
+                       delayMinutes: delay, isCancelled: cancelled, trainNumber: number, vehicleJourneyID: vj)
+    }
+
+    // MARK: Journey boards (Main centre board, Lanes, sidebars)
+
+    /// Grenoble → Voiron, the primary journey. The anchor board: 17655 +12, 17657 cancelled, 17661 +24.
+    /// Shared by Main, MenuBar and the extra-tall widget.
+    public static let grenobleVoironTrains = [
+        journeyTrain(17, 42, arr: (18, 7), number: "17653"),
+        journeyTrain(18, 12, arr: (18, 36), number: "17655", delay: 12),
+        journeyTrain(18, 42, arr: (19, 8), number: "17657", cancelled: true),
+        journeyTrain(19, 12, arr: (19, 37), number: "17659"),
+        journeyTrain(19, 42, arr: (20, 7), number: "17661", delay: 24),
+        journeyTrain(20, 42, arr: (21, 7), number: "17663"),
+    ]
+
+    /// Grenoble → Lyon Part-Dieu, 1 h 17 each, one +15 (Lanes lane 2).
+    public static let grenobleLyonTrains = [
+        journeyTrain(17, 47, arr: (19, 4), number: "17614"),
+        journeyTrain(18, 47, arr: (20, 4), number: "17616", delay: 15),
+        journeyTrain(19, 47, arr: (21, 4), number: "17618"),
+        journeyTrain(20, 47, arr: (22, 4), number: "17620"),
+    ]
+
+    /// Voiron → Valence Ville, 1 h 10 each (Lanes lane 4, "FOLLOWS YOU").
+    public static let voironValenceTrains = [
+        journeyTrain(18, 16, arr: (19, 26), number: "17851"),
+        journeyTrain(19, 16, arr: (20, 26), number: "17855"),
+        journeyTrain(20, 16, arr: (21, 26), number: "17859"),
+    ]
+
+    public static let journeyBoards: [JourneyBoard] = [
+        JourneyBoard(journey: JourneyConfiguration(stationA: grenoble, stationB: voiron, direction: .automatic),
+                     leg: Leg(from: grenoble, to: voiron),
+                     state: BoardState.from(grenobleVoironTrains, now: now, calendar: calendar), fetchedAt: now),
+        JourneyBoard(journey: JourneyConfiguration(stationA: grenoble, stationB: lyon, direction: .forward),
+                     leg: Leg(from: grenoble, to: lyon),
+                     state: BoardState.from(grenobleLyonTrains, now: now, calendar: calendar), fetchedAt: now),
+        JourneyBoard(journey: JourneyConfiguration(stationA: grenoble, stationB: chambery, direction: .forward),
+                     leg: Leg(from: grenoble, to: chambery), state: .noService, fetchedAt: now),
+        JourneyBoard(journey: JourneyConfiguration(stationA: voiron, stationB: valence, nearestStationAsDeparture: true),
+                     leg: Leg(from: voiron, to: valence),
+                     state: BoardState.from(voironValenceTrains, now: now, calendar: calendar), fetchedAt: now),
+    ]
+
+    // MARK: Station board (Wall — pinned station Voiron) and its via lists
+
+    public static let voironStationTrains = [
+        stationTrain(17, 46, to: "Grenoble", number: "17652", vj: "vehicle_journey:fake:17652"),
+        stationTrain(17, 58, to: "Lyon Part-Dieu", number: "17614", vj: "vehicle_journey:fake:17614v"),
+        stationTrain(18, 16, to: "Grenoble", number: "17654", vj: "vehicle_journey:fake:17654", delay: 12),
+        stationTrain(18, 16, to: "Valence Ville", number: "17851", vj: "vehicle_journey:fake:17851"),
+        stationTrain(18, 46, to: "Grenoble", number: "17656", vj: "vehicle_journey:fake:17656", cancelled: true),
+        stationTrain(18, 58, to: "Lyon Part-Dieu", number: "17618", vj: "vehicle_journey:fake:17618v", delay: 24),
+        stationTrain(19, 16, to: "Grenoble", number: "17658", vj: "vehicle_journey:fake:17658"),
+        stationTrain(19, 21, to: "Paris Gare de Lyon", number: "6926", vj: "vehicle_journey:fake:6926", mode: "TGV"),
+        stationTrain(19, 46, to: "Grenoble", number: "17660", vj: "vehicle_journey:fake:17660"),
+    ]
+
+    public static let voironBoard = BoardState.from(voironStationTrains, now: now, calendar: calendar)
+
+    public static let viaByVehicle: [String: [String]] = [
+        "vehicle_journey:fake:17652": ["Moirans", "Saint-Égrève–St-Robert"],
+        "vehicle_journey:fake:17614v": ["Rives", "La Tour-du-Pin", "Bourgoin-Jallieu"],
+        "vehicle_journey:fake:17654": ["Moirans"],
+        "vehicle_journey:fake:17851": ["Moirans", "Saint-Marcellin", "Romans-Bourg-de-Péage"],
+        "vehicle_journey:fake:17656": ["Moirans", "Saint-Égrève–St-Robert"],
+        "vehicle_journey:fake:17618v": ["Rives", "Bourgoin-Jallieu"],
+        "vehicle_journey:fake:17658": ["Moirans", "Saint-Égrève–St-Robert"],
+        "vehicle_journey:fake:6926": [],
+        "vehicle_journey:fake:17660": ["Moirans"],
+    ]
+
+    // MARK: Stopping pattern (Main inspector — 17655, base-schedule times)
+
+    /// The run of 17655, Grenoble → Lyon Part-Dieu, as `trip()` returns it: base-schedule "HH:MM". The
+    /// inspector draws the +12 amendment on top; the stored times stay the timetable's own.
+    public static let stops17655 = [
+        TripStop(name: "Grenoble", time: "18:12", isSkipped: false),
+        TripStop(name: "Saint-Égrève–St-Robert", time: "18:19", isSkipped: false),
+        TripStop(name: "Moirans", time: "18:28", isSkipped: false),
+        TripStop(name: "Voiron", time: "18:36", isSkipped: false),
+        TripStop(name: "Rives", time: "18:42", isSkipped: false),
+        TripStop(name: "La Tour-du-Pin", time: "19:02", isSkipped: false),
+        TripStop(name: "Bourgoin-Jallieu", time: "19:13", isSkipped: false),
+        TripStop(name: "Lyon Part-Dieu", time: "19:41", isSkipped: false),
+    ]
+
+    public static let stopsByVehicle: [String: [TripStop]] = ["vehicle_journey:fake:17655": stops17655]
+
+    // MARK: Service day (Lanes minimap + station-hall footer, for Grenoble → Voiron)
+
+    /// Trains per hour from 03:00, read off the Lanes minimap bars (0/1/2/3). Sums to 32.
+    public static let trainsPerHour = [0, 0, 1, 2, 3, 3, 2, 1, 1, 2, 2, 1, 1, 2, 3, 3, 2, 1, 1, 1, 0, 0, 0, 0]
+
+    public static let serviceDaySummary = ServiceDaySummary(
+        lastTonight: at(22, 42), firstTomorrow: at(5, 42, day: 16), disruptedCount: 2, trainsPerHour: trainsPerHour)
+
+    // MARK: Round trip (Duo): outbound Voiron → Grenoble, way back Grenoble → Voiron
+
+    public static let roundTripOutbound = [
+        journeyTrain(17, 46, arr: (18, 11), number: "17652"),
+        journeyTrain(18, 16, arr: (18, 41), number: "17654", delay: 12),
+        journeyTrain(18, 46, arr: (19, 11), number: "17656", cancelled: true),
+        journeyTrain(19, 16, arr: (19, 41), number: "17658"),
+        journeyTrain(19, 46, arr: (20, 11), number: "17660"),
+    ]
+
+    public static let roundTripReturns: [ReturnOption] = [
+        ReturnOption(train: TrainDeparture(scheduledDeparture: at(20, 6), scheduledArrival: at(20, 31), mode: "TER",
+                                           delayMinutes: 0, isCancelled: false, trainNumber: nil, vehicleJourneyID: nil),
+                     fit: .tooEarly),
+        ReturnOption(train: journeyTrain(20, 42, arr: (21, 7), number: "17663"), fit: .firstThatFits),
+        ReturnOption(train: journeyTrain(21, 12, arr: (21, 37), number: "17665"), fit: .laterBy(minutes: 30)),
+        ReturnOption(train: journeyTrain(21, 42, arr: (22, 7), number: "17667"), fit: .laterBy(minutes: 60)),
+        ReturnOption(train: journeyTrain(22, 42, arr: (23, 7), number: "17669"), fit: .lastTrain),
+    ]
+
+    public static let roundTripPlan = RoundTripPlan(
+        outbound: Leg(from: voiron, to: grenoble), returnLeg: Leg(from: grenoble, to: voiron),
+        minimumStay: 150 * 60, outboundOptions: roundTripOutbound,
+        selectedOutbound: roundTripOutbound.first, returnOptions: roundTripReturns)
+
+    // MARK: Leave by (Wall right column)
+
+    /// "LEAVE HOME IN … for the 17:46 to Grenoble. 6 min walk to the platform." The leave time is the
+    /// train's departure minus the walk; the mockup's hero "04" flap is illustrative (at 17:40 with a
+    /// 6-minute walk it is 0), so the fake derives `leaveAt` consistently instead.
+    public static let leaveBy = LeaveBy(
+        train: journeyTrain(17, 46, arr: (18, 11), number: "17652"), walkMinutes: 6, leaveAt: at(17, 40))
+
+    public static func isGrenobleVoiron(_ leg: Leg) -> Bool {
+        let ids = Set([leg.from.id, leg.to.id])
+        return ids == Set([grenoble.id, voiron.id])
+    }
+}
+
+// MARK: - Fake conformances
+
+struct FakeJourneyBoards: JourneyBoardsProviding {
+    let all: [JourneyBoard]
+    func boards(at now: Date) async -> [JourneyBoard] { all }
+}
+
+/// One canned board (the pinned station); the `station` argument is ignored, there is only one in the fake.
+struct FakeStationBoard: StationBoardProviding {
+    let state: BoardState
+    let viaByVehicle: [String: [String]]
+    func board(for station: Station, at now: Date) async -> BoardState { state }
+    func via(forVehicleJourneyID id: String) async -> [String] { viaByVehicle[id] ?? [] }
+}
+
+struct FakeTrainStops: TrainStopsProviding {
+    let stopsByVehicle: [String: [TripStop]]
+    func stops(forVehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop] {
+        stopsByVehicle[id] ?? []
+    }
+}
+
+struct FakeServiceDay: ServiceDayProviding {
+    let main: ServiceDaySummary
+    func summary(for leg: Leg, at now: Date) async -> ServiceDaySummary? {
+        BigScreenFixtures.isGrenobleVoiron(leg) ? main : nil
+    }
+}
+
+/// Returns the one Duo scenario whatever is asked; the stepper / re-pick are Phase 1's to wire.
+struct FakeRoundTrip: RoundTripPlanning {
+    let plan: RoundTripPlan
+    func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan { plan }
+}
+
+/// An actor so the pinned station survives across calls, like the real App-Group-backed setting will.
+actor FakeLeaveBy: LeaveByProviding {
+    private var pinned: Station?
+    private let canned: LeaveBy
+
+    init(pinned: Station?, leaveBy: LeaveBy) {
+        self.pinned = pinned
+        self.canned = leaveBy
+    }
+
+    func pinnedStation() -> Station? { pinned }
+    func pin(_ station: Station?) { pinned = station }
+    func leaveBy(toCatch leg: Leg, at now: Date) -> LeaveBy? { canned }
+}
+
+/// Watch state is per-instance and in-memory; the real one writes through the App Group and schedules a
+/// local notification.
+actor FakeTrainWatching: TrainWatching {
+    private var set: Set<TrainIdentity> = []
+    func isWatched(_ identity: TrainIdentity) -> Bool { set.contains(identity) }
+    func watch(_ identity: TrainIdentity) { set.insert(identity) }
+    func unwatch(_ identity: TrainIdentity) { set.remove(identity) }
+    func watched() -> Set<TrainIdentity> { set }
+}
+
+struct FakeETA: ETAComposing {
+    func shareText(for train: TrainDeparture, leg: Leg) -> String {
+        var line = ""
+        if let mode = train.mode { line += mode + " " }
+        if let number = train.trainNumber { line += number + " · " }
+        line += "\(leg.from.name) → \(leg.to.name)"
+        var lines = [line]
+        if train.isCancelled {
+            lines.append("Cancelled")
+        } else {
+            var leaves = "Leaves \(Self.time.string(from: train.expectedDeparture))"
+            if let delay = train.delayMinutes, delay > 0 {
+                leaves += " (was \(Self.time.string(from: train.scheduledDeparture)), +\(delay) min)"
+            }
+            lines.append(leaves)
+            if let arrival = train.expectedArrival {
+                lines.append("Arrives \(Self.time.string(from: arrival))")
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static let time: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+}
+
+extension BigScreenData {
+    static func makeFake() -> BigScreenData {
+        BigScreenData(
+            journeyBoards: FakeJourneyBoards(all: BigScreenFixtures.journeyBoards),
+            stationBoard: FakeStationBoard(state: BigScreenFixtures.voironBoard, viaByVehicle: BigScreenFixtures.viaByVehicle),
+            trainStops: FakeTrainStops(stopsByVehicle: BigScreenFixtures.stopsByVehicle),
+            serviceDay: FakeServiceDay(main: BigScreenFixtures.serviceDaySummary),
+            roundTrip: FakeRoundTrip(plan: BigScreenFixtures.roundTripPlan),
+            leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron, leaveBy: BigScreenFixtures.leaveBy),
+            watching: FakeTrainWatching(),
+            eta: FakeETA())
+    }
+}
