@@ -595,6 +595,20 @@ private struct SidebarJourneyRow: View {
     }
 }
 
+extension View {
+    /// The selected row of a table or list card: an edge-to-edge amber tint and a 3 pt bar on the leading
+    /// edge, no ring. An inset ring had to dodge the card's rounded corners and so sat with more room left
+    /// and right than above and below; a fill and a flush bar can simply be clipped by the card.
+    func selectedRowBackground(_ isSelected: Bool) -> some View {
+        background {
+            if isSelected {
+                Color.amber.opacity(0.08)
+                    .overlay(alignment: .leading) { Color.amber.frame(width: 3) }
+            }
+        }
+    }
+}
+
 #Preview("Sidebar") {
     NavigationSplitView {
         BigScreenSidebar(now: BigScreenFixtures.now).navigationSplitViewColumnWidth(280)
