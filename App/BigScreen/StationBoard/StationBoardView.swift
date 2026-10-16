@@ -897,11 +897,13 @@ private struct LinePill: View {
     let status: DepartureStatus
     let size: CGFloat
 
-    static func text(_ train: TrainDeparture) -> String {
+    // Pure text and arithmetic, called while laying the map out off the main actor: a `View`'s members are
+    // main-actor isolated by default, so these opt out.
+    nonisolated static func text(_ train: TrainDeparture) -> String {
         train.status == .unknown ? "+?" : "+\(train.delayMinutes ?? 0)"
     }
 
-    static func width(_ text: String, size: Double) -> Double { StationLines.monoWidth(text, size: size) + 14 }
+    nonisolated static func width(_ text: String, size: Double) -> Double { StationLines.monoWidth(text, size: size) + 14 }
 
     var body: some View {
         Text(text).font(.mono(size, weight: .bold)).foregroundStyle(status.tableauInk)
