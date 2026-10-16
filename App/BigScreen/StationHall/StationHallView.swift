@@ -520,10 +520,14 @@ private struct BoardRow: View {
                 Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
             }
         case .delayed, .severelyDelayed:
-            VStack(alignment: .trailing, spacing: 3) {
+            // One line, the amended time beside the pill: stacking "leaves 18:24" under it made a delayed row
+            // taller than every other. The time in the status colour already reads as "now leaves at".
+            HStack(spacing: 6) {
+                Text(HallFormat.hm(train.expectedDeparture)).font(.mono(12.5, weight: .semibold))
+                    .foregroundStyle(train.status.tableauInk)
                 StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
-                Text("leaves \(HallFormat.hm(train.expectedDeparture))").font(.mono(11.5)).foregroundStyle(train.status.tableauInk)
             }
+            .fixedSize()
         case .cancelled:
             StatusPill("CANCELLED", status: .cancelled)
         case .unknown:
