@@ -191,7 +191,7 @@ public protocol RoundTripPlanning: Sendable {
     func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan
 }
 
-/// The leave-by countdown, and the single "pinned" station Wall mode is locked to.
+/// The leave-by countdown, and the single "pinned" station the Wall's Station board shows.
 public protocol LeaveByProviding: Sendable {
     func pinnedStation() async -> Station?
     func pin(_ station: Station?) async

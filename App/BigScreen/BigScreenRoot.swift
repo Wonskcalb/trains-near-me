@@ -62,13 +62,11 @@ enum BigScreenRoute: Hashable, CaseIterable {
     func show(station: Station) { self.station = station; route = .station }
     func requestSearch() { searchRequested = true }
     func refresh() { refreshTick += 1 }
-    /// Esc (or a tap) on the wall: leave Wall mode, otherwise do nothing.
-    func escape() { if route == .wall { route = .stationHall } }
 }
 
 /// The big-screen container: a sidebar + a routed detail column on macOS and on iPad / any regular
 /// width; compact iPhone keeps the existing three-tab `RootView`. The keyboard commands (⌘K / ⌘R /
-/// ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode handles its own Esc.
+/// ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode is a route like the others.
 struct BigScreenRoot: View {
     @Environment(\.bigScreenData) private var data
     #if os(iOS)

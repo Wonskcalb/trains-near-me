@@ -6,7 +6,10 @@ import UIKit
 import AppKit
 #endif
 
-/// Wall mode — a full-screen departure board for the pinned station, kept awake (Wall.dc.html).
+/// Wall mode — a full-screen departure board kept awake (Wall.dc.html). The board follows the card picked
+/// under YOUR JOURNEYS: one saved journey's trains, or "Station", every departure from the pinned station
+/// (the nearest one when nothing is pinned). It is an ordinary page of the app: the sidebar stays and any
+/// route leaves it.
 ///
 /// Always drawn on the Board (dark) palette whatever the app's appearance setting: a wall is a dark
 /// board, so the subtree forces `\.colorScheme = .dark` and the Tableau tokens resolve to their dark
@@ -16,17 +19,22 @@ struct WallModeView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
 
+    /// The card last picked on the wall: `stationKey`, a journey's `key(for:)`, or "" before any pick.
+    /// Keyed by the journey's station ids rather than its index, so reordering the saved list keeps it.
+    @AppStorage("wall.selection") private var selection = ""
+
     /// A frozen anchor for previews / screenshots; nil in the app so the board and clock follow the real
     /// clock (and ⌘R re-anchors to the current time).
     private let frozenNow: Date?
+    /// When the last fetch ran; only the requests read it, the drawing reads the timeline's date.
     @State private var now = Date()
 
     @State private var station: Station?
+    @State private var stationIsPinned = false
     @State private var board: BoardState = .noTrains
     @State private var journeys: [JourneyBoard] = []
     @State private var leave: LeaveBy?
     @State private var leaveLeg: Leg?
-    @FocusState private var focused: Bool
 
     #if os(macOS)
     @State private var awake = WallAwake()
@@ -34,17 +42,32 @@ struct WallModeView: View {
 
     init(now: Date? = nil) { frozenNow = now }
 
+    private static let stationKey = "station"
+    private static func key(for journey: JourneyConfiguration) -> String {
+        "\(journey.stationA.id)|\(journey.stationB.id)"
+    }
+
+    /// The journey the wall shows, nil for the station board. Nothing picked yet, or the picked journey
+    /// since deleted, falls back to the first saved one; no saved journey at all leaves the station.
+    private var current: JourneyBoard? {
+        guard selection != Self.stationKey, let first = journeys.first else { return nil }
+        return journeys.first { Self.key(for: $0.journey) == selection } ?? first
+    }
+
+    private var shownState: BoardState { current?.state ?? board }
+
     var body: some View {
-        // One TimelineView ticks the whole board every minute: the clock advances, the "LEAVE HOME IN"
-        // countdown drops, and the per-row "6 min" times recount — all from `context.date`, the live now.
-        TimelineView(.periodic(from: now, by: 60)) { context in
+        // `.everyMinute` fires on each minute change, which a clock needs: a `.periodic` schedule anchored
+        // on the last fetch ticks at that fetch's second and restarts on every reload. The clock, the
+        // countdowns, LEAVE HOME IN and the dropping of departed rows all read `context.date`.
+        TimelineView(.everyMinute) { context in
             // Previews and screenshots stay on the frozen mockup clock instead of the real one.
             wall(liveNow: frozenNow ?? context.date)
         }
         // A wall is left running for hours: refetch every five minutes (the free tier's 5 000 requests a
-        // day allow it; one station board and the journeys each round), on ⌘R, and on appear. Between
+        // day allow it; the journeys and one board each round), on ⌘R, on appear and on a new pick. Between
         // rounds the minute tick drops departed rows and recounts the countdowns from what is held.
-        .task(id: model.refreshTick) {
+        .task(id: "\(model.refreshTick)|\(selection)") {
             await load()
             guard frozenNow == nil else { return }
             while !Task.isCancelled {
@@ -53,14 +76,6 @@ struct WallModeView: View {
                 await load()
             }
         }
-        // Esc leaves, on the Mac and on an iPad keyboard; the wall takes focus so the key reaches it. A tap
-        // anywhere leaves too (a wall is glanceable, not clicky).
-        .focusable()
-        .focusEffectDisabled()
-        .focused($focused)
-        .onAppear { focused = true }
-        .onKeyPress(.escape) { model.escape(); return .handled }
-        .onTapGesture { model.escape() }
         .keepScreenAwake(enter: enterKeepAwake, leave: leaveKeepAwake)
         .environment(\.colorScheme, .dark)
     }
@@ -69,16 +84,31 @@ struct WallModeView: View {
 
     private func load() async {
         now = frozenNow ?? Date()
-        let station = await data.leaveBy.pinnedStation()
-        self.station = station
-        if let station {
-            board = await data.stationBoard.board(for: station, at: now)
-        }
         journeys = await data.journeyBoards.boards(at: now)
-        // The leave-by is for the primary saved journey (the first card); its destination names the train.
-        if let primary = journeys.first?.leg {
-            leaveLeg = primary
-            leave = await data.leaveBy.leaveBy(toCatch: primary, at: now)
+        // The pin is a local read, so the Station card can name it whatever the wall shows; the nearest
+        // station costs a location fix and a request, so it is only looked up when the board needs it.
+        let pinned = await data.leaveBy.pinnedStation()
+        stationIsPinned = pinned != nil
+        station = pinned
+        if current == nil {
+            if let pinned {
+                board = await data.stationBoard.board(for: pinned, at: now)
+            } else {
+                do throws(TrainServiceError) {
+                    let nearest = try await data.stationSearch.nearest().station
+                    station = nearest
+                    board = await data.stationBoard.board(for: nearest, at: now)
+                } catch {
+                    board = .unavailable(error)
+                }
+            }
+        }
+        // LEAVE HOME IN follows the journey on the board; the station board keeps the first saved one.
+        leaveLeg = current?.leg ?? journeys.first?.leg
+        if let leaveLeg {
+            leave = await data.leaveBy.leaveBy(toCatch: leaveLeg, at: now)
+        } else {
+            leave = nil
         }
     }
 
@@ -126,24 +156,35 @@ struct WallModeView: View {
 
     // MARK: Header
 
+    private var headerCaption: String {
+        if current != nil { return "DEPARTURES · YOUR JOURNEY" }
+        return stationIsPinned ? "DEPARTURES · PINNED STATION" : "DEPARTURES · NEAREST STATION"
+    }
+
+    private var headerTitle: String {
+        if let current { return "\(current.leg.from.name) → \(current.leg.to.name)" }
+        return station?.name ?? "Nearest station"
+    }
+
     private func header(liveNow: Date) -> some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 6) {
                 Label {
-                    Text("DEPARTURES · PINNED STATION")
+                    Text(headerCaption)
                         .font(.mono(13, weight: .semibold)).tracking(2.4)
                 } icon: {
-                    Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(Color.amber)
+                    Image(systemName: current == nil ? "dot.radiowaves.left.and.right" : "arrow.right")
+                        .foregroundStyle(Color.amberText)
                 }
                 .font(.system(size: 15))
                 .foregroundStyle(Color.inkSecondary)
-                Text(station?.name ?? "No pinned station")
+                Text(headerTitle)
                     .font(.system(size: 64, weight: .heavy)).foregroundStyle(Color.ink)
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                    .lineLimit(1).minimumScaleFactor(0.4)
             }
             Spacer(minLength: 20)
             HStack(alignment: .bottom, spacing: 18) {
-                Text(WallFormat.day.string(from: now).uppercased())
+                Text(WallFormat.day.string(from: liveNow).uppercased())
                     .font(.mono(14, weight: .semibold)).tracking(2)
                     .foregroundStyle(Color.inkSecondary).padding(.bottom, 6)
                 FlapTime(date: liveNow, digitColor: .ink, tileWidth: 52, tileHeight: 74,
@@ -157,12 +198,17 @@ struct WallModeView: View {
     @ViewBuilder private func boardPanel(liveNow: Date) -> some View {
         VStack(spacing: 0) {
             boardHeaderRow
-            if case .departures(let trains) = board {
+            switch shownState {
+            case .departures(let trains):
                 ScrollView { boardRows(trains, liveNow: liveNow) }
-            } else {
-                Text(boardFallback)
-                    .font(.mono(16, weight: .medium)).foregroundStyle(Color.inkSecondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .noService:
+                noServicePlate
+            case .endOfService(let first):
+                boardNote("moon.stars", "Last train gone · first tomorrow \(WallFormat.time.string(from: first))")
+            case .noTrains:
+                boardNote("tram", "No departures")
+            case .unavailable(let error):
+                boardNote("exclamationmark.triangle", error.appDescription)
             }
         }
         .background(Color.wallPanel, in: RoundedRectangle(cornerRadius: 26))
@@ -170,14 +216,29 @@ struct WallModeView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 
-    private var boardFallback: String {
-        switch board {
-        case .endOfService(let first): "Last train gone · first tomorrow \(WallFormat.time.string(from: first))"
-        case .noService: "No service tonight"
-        case .noTrains: "No departures"
-        case .unavailable(let error): error.terse
-        case .departures: ""
+    /// Every remaining train cancelled: the board's one hazard plate (a single cancelled row never gets it).
+    private var noServicePlate: some View {
+        ZStack {
+            HazardBackground(variant: .widget)
+            VStack(spacing: 10) {
+                Text("NO SERVICE").font(.mono(34, weight: .heavy)).tracking(3).foregroundStyle(Color.amberText)
+                Text("Every remaining train tonight is cancelled")
+                    .font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)
+            }
+            .padding(.horizontal, 36).padding(.vertical, 26)
+            .background(Color.wallGround, in: RoundedRectangle(cornerRadius: 18))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func boardNote(_ symbol: String, _ text: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: symbol).font(.system(size: 30)).foregroundStyle(Color.inkSecondary)
+            Text(text).font(.mono(18, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(30)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var boardHeaderRow: some View {
@@ -199,7 +260,9 @@ struct WallModeView: View {
         let next = upcoming.first { !$0.isCancelled }
         return VStack(spacing: 0) {
             ForEach(Array(upcoming.enumerated()), id: \.offset) { _, train in
-                WallBoardRow(train: train, isNext: train == next, fallbackDestination: station?.name, liveNow: liveNow)
+                WallBoardRow(train: train, isNext: train == next,
+                             fallbackDestination: current?.leg.to.name ?? station?.name,
+                             showsArrival: current != nil, liveNow: liveNow)
                 Color.white.opacity(0.06).frame(height: 1)
             }
         }
@@ -218,8 +281,21 @@ struct WallModeView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(Array(journeys.enumerated()), id: \.offset) { _, journey in
-                        WallJourneyCard(leg: journey.leg, state: journey.state)
+                        let key = Self.key(for: journey.journey)
+                        let selected = current?.journey == journey.journey
+                        Button { selection = key } label: {
+                            WallJourneyCard(leg: journey.leg, state: journey.state, liveNow: liveNow, selected: selected)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                     }
+                    // Last, because the journeys are what a wall is mostly for; the station board is the
+                    // one-off "what leaves from here" view.
+                    Button { selection = Self.stationKey } label: {
+                        WallStationCard(name: station?.name, pinned: stationIsPinned, selected: current == nil)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(current == nil ? .isSelected : [])
                 }
             }
         }
@@ -255,7 +331,7 @@ struct WallModeView: View {
         HStack(spacing: 0) {
             ZStack {
                 HazardBackground(variant: .band, stripe: .amber, bandWidth: 10)
-                Text("INFO").font(.mono(13, weight: .heavy)).tracking(2).foregroundStyle(Color.amber)
+                Text("INFO").font(.mono(13, weight: .heavy)).tracking(2).foregroundStyle(Color.amberText)
                     .padding(.horizontal, 9).padding(.vertical, 6)
                     .background(Color.wallGround, in: RoundedRectangle(cornerRadius: 6))
             }
@@ -267,7 +343,7 @@ struct WallModeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24)
             HStack(spacing: 8) {
                 Circle().fill(Color.soon).frame(width: 7, height: 7)
-                Text("Data © SNCF · \(WallFormat.time.string(from: liveNow)) · Esc to leave")
+                Text("Data © SNCF · \(WallFormat.time.string(from: liveNow))")
                     .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
             }
             .padding(.horizontal, 28)
@@ -277,15 +353,17 @@ struct WallModeView: View {
         .overlay(alignment: .top) { Color.white.opacity(0.06).frame(height: 1) }
     }
 
-    /// The disruptions, one line: dead journeys first, then the station's late and cancelled trains.
+    /// The disruptions, one line. A journey lists its own board; the station board leads with the dead
+    /// journeys, then its late and cancelled trains.
     private var disruptions: String {
         var parts: [String] = []
-        for journey in journeys where journey.state == .noService {
+        let dead = current.map { [$0] } ?? journeys
+        for journey in dead where journey.state == .noService {
             parts.append("\(journey.leg.from.name) → \(journey.leg.to.name): no service tonight, every remaining train cancelled")
         }
-        if case .departures(let trains) = board {
+        if case .departures(let trains) = shownState {
             for train in trains {
-                let name = train.direction ?? station?.name ?? "Train"
+                let name = train.direction ?? current?.leg.to.name ?? station?.name ?? "Train"
                 let at = WallFormat.time.string(from: train.scheduledDeparture)
                 if train.isCancelled {
                     parts.append("\(name) \(at) cancelled")
@@ -314,6 +392,8 @@ private struct WallBoardRow: View {
     let train: TrainDeparture
     let isNext: Bool
     let fallbackDestination: String?
+    /// A journey row: the second line is the arrival and the trip time, which a station board lacks.
+    let showsArrival: Bool
     let liveNow: Date
     @State private var via: [String] = []
 
@@ -329,7 +409,7 @@ private struct WallBoardRow: View {
         // The station board carries no stopping pattern, so each row asks for its own "via …" as it
         // appears — all rows at once rather than one after another, and cached by the provider.
         .task(id: train.vehicleJourneyID) {
-            guard let id = train.vehicleJourneyID else { return }
+            guard !showsArrival, let id = train.vehicleJourneyID else { return }
             via = await data.stationBoard.via(forVehicleJourneyID: id)
         }
     }
@@ -344,13 +424,19 @@ private struct WallBoardRow: View {
             .opacity(train.isCancelled ? 0.45 : 1)
     }
 
+    private var secondLine: String {
+        guard showsArrival else { return via.isEmpty ? "direct" : "via " + via.joined(separator: " · ") }
+        guard let arrival = train.expectedArrival else { return "" }
+        return "arrives \(WallFormat.time.string(from: arrival)) · \(wallCountdown(to: arrival, from: train.expectedDeparture))"
+    }
+
     private var destination: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(train.direction ?? fallbackDestination ?? "—")
                 .font(.system(size: 27, weight: .bold)).foregroundStyle(Color.ink)
                 .strikethrough(train.isCancelled, color: Color.ink)
                 .lineLimit(1)
-            Text(via.isEmpty ? "direct" : "via " + via.joined(separator: " · "))
+            Text(secondLine)
                 .font(.mono(12.5, weight: .medium)).foregroundStyle(Color.inkSecondary).lineLimit(1)
         }
         .opacity(train.isCancelled ? 0.55 : 1)
@@ -391,6 +477,8 @@ private struct WallBoardRow: View {
 private struct WallJourneyCard: View {
     let leg: Leg
     let state: BoardState
+    let liveNow: Date
+    let selected: Bool
 
     private var noService: Bool { state == .noService }
 
@@ -404,10 +492,7 @@ private struct WallJourneyCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             trailing
         }
-        .padding(.horizontal, 18).padding(.vertical, 16)
-        .background { background }
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.white.opacity(0.05), lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .wallCard(selected: selected) { background }
     }
 
     // Only a dead journey carries the hazard; a single cancelled train never does (Tableau rule).
@@ -422,22 +507,26 @@ private struct WallJourneyCard: View {
     @ViewBuilder private var trailing: some View {
         if noService {
             Text("NO SERVICE")
-                .font(.mono(13, weight: .bold)).tracking(1.6).foregroundStyle(Color.amber)
+                .font(.mono(13, weight: .bold)).tracking(1.6).foregroundStyle(Color.amberText)
                 .padding(.horizontal, 11).padding(.vertical, 8)
                 .background(Color.wallGround, in: RoundedRectangle(cornerRadius: 8))
         } else if let (time, secondary) = headline {
             VStack(alignment: .trailing, spacing: 2) {
-                Text(time).font(.mono(24, weight: .bold)).foregroundStyle(Color.amber)
+                Text(time).font(.mono(24, weight: .bold)).foregroundStyle(Color.amberText)
                 secondary.font(.mono(12, weight: .medium))
             }
         }
     }
 
-    /// The next departure time and a secondary line: its delay, or its arrival.
+    /// The next departure time and a secondary line: its delay, or its arrival. Read against the live
+    /// minute, like the board, so a departed train leaves the card too.
     private var headline: (String, Text)? {
         switch state {
         case .departures(let trains):
-            guard let next = trains.first(where: { !$0.isCancelled }) ?? trains.first else { return nil }
+            let upcoming = trains.filter { $0.expectedDeparture > liveNow }
+            guard let next = upcoming.first(where: { !$0.isCancelled }) ?? upcoming.first else {
+                return ("—", Text("no more trains").foregroundStyle(Color.inkSecondary))
+            }
             let time = WallFormat.time.string(from: next.expectedDeparture)
             if next.status == .delayed || next.status == .severelyDelayed {
                 let second = Text("+\(next.delayMinutes ?? 0) · leaves \(WallFormat.time.string(from: next.expectedDeparture))")
@@ -457,6 +546,28 @@ private struct WallJourneyCard: View {
         case .noService:
             return nil
         }
+    }
+}
+
+/// The extra card that turns the wall back into a station board: the pinned station's name when there
+/// is one, otherwise the nearest one's once the card has been picked (it is only looked up then).
+private struct WallStationCard: View {
+    let name: String?
+    let pinned: Bool
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(Color.amberText)
+                .frame(width: 12, height: 38)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pinned ? "Pinned station" : "Nearest station").font(.system(size: 13)).foregroundStyle(Color.ink.opacity(0.7))
+                Text(name ?? "Station").font(.system(size: 20, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text("every departure").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+        }
+        .wallCard(selected: selected) { Color.wallPanel }
     }
 }
 
@@ -503,8 +614,24 @@ private extension View {
         frame(width: width, alignment: alignment)
     }
 
-    /// Enter / leave the display-awake state. One release point: changing route removes the view, so Esc
-    /// and a tap both land on `.onDisappear`.
+    /// A YOUR JOURNEYS card: its ground, then the app's selection treatment when picked (amber 7 % over
+    /// the ground, a 1.5 pt amber ring), like the Lanes and station-hall selections.
+    func wallCard(selected: Bool, @ViewBuilder background: () -> some View) -> some View {
+        padding(.horizontal, 18).padding(.vertical, 16)
+            .background {
+                ZStack {
+                    background()
+                    if selected { Color.amber.opacity(0.07) }
+                }
+            }
+            .overlay(RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(selected ? Color.amber : Color.white.opacity(0.05), lineWidth: selected ? 1.5 : 1))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .contentShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    /// Enter / leave the display-awake state. One release point: navigating to any other route removes
+    /// the view, which lands on `.onDisappear`.
     func keepScreenAwake(enter: @escaping () -> Void, leave: @escaping () -> Void) -> some View {
         onAppear(perform: enter).onDisappear(perform: leave)
     }

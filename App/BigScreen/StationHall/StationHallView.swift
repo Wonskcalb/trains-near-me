@@ -7,6 +7,22 @@ import SwiftUI
 /// appearance setting: its times are `amberText`, so on the Timetable (light) palette they turn to ink
 /// rather than putting amber text on paper.
 struct StationHallView: View {
+    /// A frozen anchor for the `#Preview` and the screenshot build; nil follows the real clock.
+    private let frozenNow: Date?
+
+    init(now: Date? = nil) { frozenNow = now }
+
+    // The hero's "in N min" and the board's countdowns must move on their own: `.everyMinute` re-draws
+    // the board at each minute change. The board's state survives the tick (same view identity), and its
+    // fetch is keyed on the journey and ⌘R, not on the time, so a tick never costs a request.
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            StationHallBoard(now: frozenNow ?? context.date)
+        }
+    }
+}
+
+private struct StationHallBoard: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
 
@@ -22,8 +38,6 @@ struct StationHallView: View {
     /// The clock the board reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
     /// from the `#Preview` and the screenshot build so the mockup lines up.
     let now: Date
-
-    init(now: Date = Date()) { self.now = now }
 
     private var board: JourneyBoard? {
         guard !boards.isEmpty else { return nil }
