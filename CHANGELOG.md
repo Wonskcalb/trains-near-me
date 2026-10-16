@@ -29,9 +29,12 @@ All notable changes to this project are documented here. The format follows [Kee
 - Wall mode keeps the LEAVE HOME IN card when a journey has no train left: its tiles spin to "--" and it says
   why, instead of disappearing and shifting the column.
 - Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
+- iPhone Duo: on its side like a desk clock, Wall mode puts the clock and LEAVE HOME IN on top and the trains and controls below.
 
 ### Fixed
 - Tapping a terminus on the line map opens its journey inside the iPhone tabs too.
+- iPhone Duo: Journeys stays readable half open, with its columns kept clear of the fold.
+- Wall mode fits any screen: one scrolling column on an iPhone, the board and LEAVE HOME IN either side of the Duo's fold, and no more fixed widths spilling off both edges.
 - After the last train, a cancelled first train tomorrow no longer reads as "no service": the board shows the end of service and names the first train that runs.
 
 - Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
