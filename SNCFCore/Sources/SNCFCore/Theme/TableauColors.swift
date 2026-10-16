@@ -50,6 +50,10 @@ public extension Color {
     static var rail: Color { tableau("Rail") }
     /// The sleepers of a track rule.
     static var sleeper: Color { tableau("Sleeper") }
+    /// The station board's two sides of the line: a warm rail above the time axis and a cool one below,
+    /// so a lane reads as belonging to its group without a legend. Darker on paper, lighter on the board.
+    static var railWarm: Color { tableau("RailWarm") }
+    static var railCool: Color { tableau("RailCool") }
     /// Text on an amber fill (a NEXT tag, a FIRST THAT FITS pill, the leave-by card). Fixed near-black in
     /// both schemes: amber stays amber, so no adaptive token spans it — `ground` turns to paper on light.
     static let onAmber = Color(red: 0.055, green: 0.059, blue: 0.067)
