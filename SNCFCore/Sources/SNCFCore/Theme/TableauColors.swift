@@ -29,6 +29,12 @@ public extension Color {
     static var inkSecondary: Color { tableau("InkSecondary") }
     /// The one accent. Amber is a fill on light and a text colour on dark, never text on light.
     static var amber: Color { tableau("Amber") }
+    /// The accent as a text colour: amber on dark, ink on light, because amber text on paper fails
+    /// contrast and the Timetable rules keep amber a fill there.
+    static var amberText: Color { tableau("AmberText") }
+    /// A split-flap tile: raised on dark, ink on light, so the amber digit always sits on a dark tile
+    /// (the light extra-tall widget's treatment).
+    static var flapTile: Color { tableau("FlapTile") }
     /// "Leaving soon" / clear to go. Named `soon` rather than `clear` so it never shadows the
     /// system's transparent `Color.clear`, which the widgets rely on for an untinted row.
     static var soon: Color { tableau("Clear") }

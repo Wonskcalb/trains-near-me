@@ -150,7 +150,7 @@ struct TrainInspector: View {
             Link(destination: URL(string: "https://www.sncf-connect.com")!) {
                 HStack(spacing: 8) {
                     Text("Tickets & details in SNCF Connect").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
-                    Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.amber)
+                    Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.amberText)
                 }
                 .frame(maxWidth: .infinity).frame(height: 46)
                 .background(Color.raised, in: RoundedRectangle(cornerRadius: 14))
@@ -164,7 +164,7 @@ struct TrainInspector: View {
 
     private func actionLabel(_ symbol: String, _ title: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(Color.amber)
+            Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(Color.amberText)
             Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
         }
         .frame(maxWidth: .infinity).frame(height: 46)
@@ -222,7 +222,7 @@ private struct StopRow: View {
             case .board:
                 caption("YOU BOARD", Color.inkSecondary)
             case .alight:
-                caption("YOU GET OFF · \(onBoardMinutes) MIN", Color.amber)
+                caption("YOU GET OFF · \(onBoardMinutes) MIN", Color.amberText)
             default:
                 EmptyView()
             }

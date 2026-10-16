@@ -52,7 +52,14 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
                 calendar: Calendar = SNCFTime.calendar,
                 maxConcurrent: Int = 4) {
         let fetch: Fetch = { leg, now in
-            try await SNCFClient(token: token(), session: session).departures(from: leg.from, to: leg.to, at: now)
+            // The rest of the service day (to the next 03:00, at least Lanes' 4 h window) in the same single
+            // request: `min_nb_journeys` alone stops at a dozen trains, about 2 h on a busy line, so Lanes
+            // drew empty track where its service-day minimap showed trains.
+            let dayStart = BoardState.serviceDay(of: now, calendar: calendar)
+            let closes = calendar.date(byAdding: .day, value: 1, to: dayStart)
+                .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(4 * 3600)
+            return try await SNCFClient(token: token(), session: session)
+                .departures(from: leg.from, to: leg.to, at: now, within: max(closes.timeIntervalSince(now), 4 * 3600))
         }
         self.init(favorites: favorites, location: location, calendar: calendar, maxConcurrent: maxConcurrent,
                   observe: { trains, leg in await TrainWatcher.shared.reevaluate(against: trains, to: leg) },

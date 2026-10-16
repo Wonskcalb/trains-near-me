@@ -3,9 +3,9 @@ import SwiftUI
 
 /// Station hall — the centre journey board and the right-hand train inspector of Main.dc.html. The
 /// sidebar lives in `BigScreenRoot`; this is the two columns the detail area fills. Everything comes
-/// through `BigScreenData` (live in the app, the mockup in previews), never `SNCFClient`. Always on the
-/// Board (dark) palette, like Wall and Round trip: its times, NEXT tags and hero digits are amber text,
-/// which the Timetable (light) palette forbids on paper.
+/// through `BigScreenData` (live in the app, the mockup in previews), never `SNCFClient`. Follows the
+/// appearance setting: its times are `amberText`, so on the Timetable (light) palette they turn to ink
+/// rather than putting amber text on paper.
 struct StationHallView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -41,7 +41,6 @@ struct StationHallView: View {
                 .frame(width: 360)
         }
         .background(Color.ground.ignoresSafeArea())
-        .environment(\.colorScheme, .dark)
         .task(id: reloadKey) { await load() }
         // Keyed on the train so a quick ↑↓ run cancels the lookups it has already left behind.
         .task(id: selected) { await loadStops() }
@@ -188,7 +187,7 @@ struct StationHallView: View {
         if let next = BoardReading.nextUpcoming(board?.state, after: now) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 22) {
-                    FlapTime(date: next.expectedDeparture, tileWidth: 46, tileHeight: 66, cornerRadius: 9)
+                    FlapTime(date: next.expectedDeparture, tileWidth: 46, tileHeight: 66, cornerRadius: 9, colonColor: .amberText)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("NEXT TRAIN · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
                             .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
@@ -255,6 +254,8 @@ struct StationHallView: View {
                 .background(Color.ground, in: RoundedRectangle(cornerRadius: 16))
             }
             .clipShape(RoundedRectangle(cornerRadius: 24))
+            // The hazard and its black plate are a dark surface by design, as on the widget, whatever the theme.
+            .environment(\.colorScheme, .dark)
     }
 
     /// The widget's end-of-service treatment: the fixed night gradient and the moon, the first train in
@@ -391,7 +392,7 @@ private struct BoardRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             Text(HallFormat.hm(train.scheduledDeparture))
                 .font(.mono(22, weight: .bold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
                 .strikethrough(train.isCancelled)
             if let arrival = train.scheduledArrival {
                 DashLine().frame(width: 16, height: 2)
@@ -404,7 +405,7 @@ private struct BoardRow: View {
 
     private var trainCell: some View {
         HStack(spacing: 7) {
-            if isPinned { Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(Color.amber) }
+            if isPinned { Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(Color.amberText) }
             if let mode = train.mode { ModeChip(mode) }
             if let number = train.trainNumber {
                 Text("N° \(number)").font(.mono(12.5)).foregroundStyle(Color.inkSecondary)
@@ -491,7 +492,7 @@ struct RemindButton: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: watched ? "bell.fill" : "bell").font(.system(size: 15)).foregroundStyle(Color.amber)
+                Image(systemName: watched ? "bell.fill" : "bell").font(.system(size: 15)).foregroundStyle(Color.amberText)
                 Text(watched ? "Reminding" : "Remind me").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
             }
             .padding(.horizontal, 16).frame(height: 44)

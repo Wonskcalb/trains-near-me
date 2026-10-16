@@ -26,6 +26,7 @@ struct WallModeView: View {
     @State private var journeys: [JourneyBoard] = []
     @State private var leave: LeaveBy?
     @State private var leaveLeg: Leg?
+    @FocusState private var focused: Bool
 
     #if os(macOS)
     @State private var awake = WallAwake()
@@ -52,7 +53,13 @@ struct WallModeView: View {
                 await load()
             }
         }
-        // Esc is wired globally by the shell; a tap anywhere leaves too (a wall is glanceable, not clicky).
+        // Esc leaves, on the Mac and on an iPad keyboard; the wall takes focus so the key reaches it. A tap
+        // anywhere leaves too (a wall is glanceable, not clicky).
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focused)
+        .onAppear { focused = true }
+        .onKeyPress(.escape) { model.escape(); return .handled }
         .onTapGesture { model.escape() }
         .keepScreenAwake(enter: enterKeepAwake, leave: leaveKeepAwake)
         .environment(\.colorScheme, .dark)

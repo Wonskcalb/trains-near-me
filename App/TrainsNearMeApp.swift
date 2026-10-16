@@ -23,14 +23,16 @@ struct TrainsNearMeApp: App {
         WindowGroup(id: "main") {
             BigScreenRoot().environment(\.bigScreenData, data)
         }
+        .commands { BigScreenCommands(data: data) }
         Settings {
             // The same Tableau pane the main window shows under Settings, at a size it was drawn for.
             SettingsView().environment(\.bigScreenData, data).frame(width: 560, height: 680)
+                .followsAppearance()
         }
         // Window style so the popover can host the full board (MenuBar.dc.html), not a plain menu. A
         // custom label (the amber flap + next time) rather than a template symbol, per MenuBar.dc.html.
         MenuBarExtra {
-            MenuBarExtraView().environment(\.bigScreenData, data)
+            MenuBarExtraView().environment(\.bigScreenData, data).followsAppearance()
         } label: {
             MenuBarLabel().environment(\.bigScreenData, data)
         }
@@ -43,6 +45,7 @@ struct TrainsNearMeApp: App {
                     if phase == .background { BackgroundRefresh.schedule() }
                 }
         }
+        .commands { BigScreenCommands(data: data) }
         #endif
     }
 }
@@ -55,6 +58,18 @@ enum AppGroupStore {
     // marker is only to satisfy Swift 6's blanket ban on non-Sendable static storage.
     nonisolated(unsafe) static let defaults = (Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String)
         .flatMap { UserDefaults(suiteName: $0) } ?? .standard
+}
+
+/// Applies the Settings pane's appearance choice to a scene's root. Each scene (main window, ⌘, window,
+/// menu-bar popover) is its own window, so each reads the shared key; `.system` hands over nil, which
+/// leaves the window on the system appearance.
+private struct FollowsAppearance: ViewModifier {
+    @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
+    func body(content: Content) -> some View { content.preferredColorScheme(appearance.colorScheme) }
+}
+
+extension View {
+    func followsAppearance() -> some View { modifier(FollowsAppearance()) }
 }
 
 struct SettingsView: View {

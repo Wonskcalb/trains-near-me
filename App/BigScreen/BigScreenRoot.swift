@@ -62,13 +62,13 @@ enum BigScreenRoute: Hashable, CaseIterable {
     func show(station: Station) { self.station = station; route = .station }
     func requestSearch() { searchRequested = true }
     func refresh() { refreshTick += 1 }
-    /// Esc: leave Wall mode, otherwise do nothing (a screen may dismiss its own sheet first).
+    /// Esc (or a tap) on the wall: leave Wall mode, otherwise do nothing.
     func escape() { if route == .wall { route = .stationHall } }
 }
 
 /// The big-screen container: a sidebar + a routed detail column on macOS and on iPad / any regular
 /// width; compact iPhone keeps the existing three-tab `RootView`. The keyboard commands (⌘K / ⌘R /
-/// ⌘1–4 / Esc) are wired here and drive the route; the screens decide what each one does.
+/// ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode handles its own Esc.
 struct BigScreenRoot: View {
     @Environment(\.bigScreenData) private var data
     #if os(iOS)
@@ -80,15 +80,15 @@ struct BigScreenRoot: View {
     // (already open). Same process, so plain standard defaults carry it.
     @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
     #endif
-    // The Settings pane's picker writes here; the big screen follows it like the iPhone tabs do.
-    @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
     @State private var model = BigScreenModel()
 
     var body: some View {
         content
             .environment(model)
-            .background(commands)
-            .preferredColorScheme(appearance.colorScheme)
+            // The menu commands (⌘1–4, ⌘K, ⌘R) reach this window's model through the focused scene.
+            .focusedSceneValue(\.bigScreenModel, model)
+            // The Settings pane's picker; the big screen follows it like the iPhone tabs do.
+            .followsAppearance()
         #if os(macOS)
             .onAppear { consumePendingRoute() }
             .onChange(of: pendingRoute) { _, _ in consumePendingRoute() }
@@ -135,25 +135,40 @@ struct BigScreenRoot: View {
         case .settings: SettingsView()
         }
     }
+}
 
-    // Hidden shortcut sinks: the one cross-platform way (iPad hardware keyboard + Mac) to bind ⌘-keys
-    // without an AppKit/UIKit responder. Phase 1 can promote these to a macOS `.commands` menu.
-    private var commands: some View {
-        Group {
+// MARK: - Commands
+
+extension FocusedValues {
+    @Entry var bigScreenModel: BigScreenModel?
+}
+
+/// The big screen's keyboard commands as real menu items, so they show in the View menu on the Mac and
+/// in the hardware-keyboard overlay on iPad; they act on whichever big-screen window has focus.
+struct BigScreenCommands: Commands {
+    /// Handed in by the App: a `Commands` body does not see the environment the scenes' views get.
+    let data: BigScreenData
+    @FocusedValue(\.bigScreenModel) private var model
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
             ForEach(BigScreenRoute.numbered, id: \.self) { route in
                 if let key = route.shortcut {
-                    Button("") { model.select(route) }.keyboardShortcut(key, modifiers: .command)
+                    Button(route.title) { model?.select(route) }.keyboardShortcut(key, modifiers: .command)
+                        .disabled(model == nil)
                 }
             }
-            Button("") { model.requestSearch() }.keyboardShortcut("k", modifiers: .command)
+            Divider()
+            Button("Go to station") { model?.requestSearch() }.keyboardShortcut("k", modifiers: .command)
+                .disabled(model == nil)
             // ⌘R means "fetch now", so the boards memo that spares the duplicate requests is dropped first.
-            Button("") { Task { await data.journeyBoards.invalidate(); model.refresh() } }
-                .keyboardShortcut("r", modifiers: .command)
-            Button("") { model.escape() }.keyboardShortcut(.cancelAction)
+            Button("Refresh") {
+                guard let model else { return }
+                Task { await data.journeyBoards.invalidate(); model.refresh() }
+            }
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(model == nil)
         }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
     }
 }
 
@@ -162,8 +177,6 @@ struct BigScreenRoot: View {
 /// The station-hall sidebar: app mark, a "Go to station" search over every SNCF station, the NEAR ME row,
 /// the saved journeys (add / edit / delete / reorder), the VIEWS switcher, Settings and the "Updated …"
 /// freshness line. It is the shell sidebar, so it is what the two-column split shows beside every screen.
-/// Drawn on the Board (dark) palette like the station hall beside it: its times are amber text, which
-/// the Timetable (light) palette forbids on paper.
 private struct BigScreenSidebar: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -207,7 +220,6 @@ private struct BigScreenSidebar: View {
         .padding(.vertical, 22)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.ground)
-        .environment(\.colorScheme, .dark)
         .task(id: model.refreshTick) { await load() }
         // A just-granted permission is worth a fresh NEAR ME at once, not at the next ⌘R.
         .onChange(of: location.status) { Task { await loadNear() } }
@@ -325,7 +337,7 @@ private struct BigScreenSidebar: View {
             ForEach(Array(results.prefix(8).enumerated()), id: \.element.id) { index, station in
                 Button { pick(station) } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: "mappin.and.ellipse").font(.system(size: 13)).foregroundStyle(Color.amber)
+                        Image(systemName: "mappin.and.ellipse").font(.system(size: 13)).foregroundStyle(Color.amberText)
                         Text(station.name).font(.system(size: 15)).foregroundStyle(Color.ink).lineLimit(1)
                         Spacer(minLength: 0)
                     }
@@ -347,7 +359,7 @@ private struct BigScreenSidebar: View {
                 if let station = nearStation { model.show(station: station) }
             } label: {
                 HStack(spacing: 11) {
-                    Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(Color.amber).frame(width: 22)
+                    Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(Color.amberText).frame(width: 22)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(nearStation?.name ?? "Nearest station").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
                             .lineLimit(1)
@@ -355,7 +367,7 @@ private struct BigScreenSidebar: View {
                     }
                     Spacer(minLength: 0)
                     if let nextNearMe {
-                        Text(HallFormat.hm(nextNearMe)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amber)
+                        Text(HallFormat.hm(nextNearMe)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amberText)
                     }
                 }
                 .padding(10).contentShape(Rectangle())
@@ -364,7 +376,7 @@ private struct BigScreenSidebar: View {
             .disabled(nearStation == nil)
             if case .failure(.noLocation) = near, location.status == .notDetermined {
                 Button("Allow location") { location.requestAuthorization() }
-                    .buttonStyle(.borderless).font(.system(size: 13, weight: .semibold)).tint(.amber)
+                    .buttonStyle(.borderless).font(.system(size: 13, weight: .semibold)).tint(.amberText)
                     .padding(.horizontal, 10)
             }
         }
@@ -442,7 +454,7 @@ private struct BigScreenSidebar: View {
                     Text(shortcut).font(.mono(11, weight: .semibold)).foregroundStyle(Color.inkSecondary.opacity(0.8))
                 }
             }
-            .foregroundStyle(model.route == route ? Color.amber : Color.ink.opacity(0.85))
+            .foregroundStyle(model.route == route ? Color.amberText : Color.ink.opacity(0.85))
             .padding(.horizontal, 10).padding(.vertical, 9).contentShape(Rectangle())
             .background(model.route == route ? Color.raised : .clear, in: RoundedRectangle(cornerRadius: 12))
         }
@@ -464,11 +476,11 @@ private struct BigScreenSidebar: View {
     }
 }
 
-/// The "T" flap mark: a raised tile, an amber mono glyph, the split-flap seam across the middle.
+/// The "T" flap mark: a flap tile, an amber mono glyph, the split-flap seam across the middle.
 private struct FlapMark: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8).fill(Color.raised)
+            RoundedRectangle(cornerRadius: 8).fill(Color.flapTile)
             Text("T").font(.monoFixed(18, weight: .bold)).foregroundStyle(Color.amber)
             Color.ground.frame(height: 1)
         }
@@ -568,7 +580,7 @@ private struct SidebarJourneyRow: View {
             }
         case .none:
             if let next = BoardReading.nextUpcoming(board.state, after: now) {
-                Text(HallFormat.hm(next.expectedDeparture)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amber)
+                Text(HallFormat.hm(next.expectedDeparture)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amberText)
             }
         }
     }

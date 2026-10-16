@@ -5,10 +5,6 @@ import SwiftUI
 /// paper pairing pill across the hinge (Design/BigScreen/Duo.dc.html). Two panes whenever the window
 /// is wide enough for two compact columns (iPad, iPad split view, Mac); otherwise the way back is a
 /// pushed second screen. There is no iPhone "Duo" today, so compact iPhone never reaches here.
-///
-/// The screen is the Board (dark) look whatever the app appearance, like Main and Wall: it forces the
-/// dark token variants locally rather than flipping the whole window, so the sidebar and the light
-/// Lanes screen keep their own scheme.
 struct RoundTripView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -45,7 +41,6 @@ struct RoundTripView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Color.ground.ignoresSafeArea())
         }
-        .environment(\.colorScheme, .dark)
         // One reload covers the first appearance, ⌘R, a new minimum stay and a re-picked outbound.
         .task(id: ReloadKey(tick: model.refreshTick, stayMinutes: Int(stay / 60), pick: pick)) {
             await load()
@@ -203,7 +198,7 @@ struct RoundTripView: View {
             let backFraction = (back.duration ?? 0) / total
             let stayMinutes = Int(back.scheduledDeparture.timeIntervalSince(arrival) / 60)
             VStack(alignment: .leading, spacing: 8) {
-                sectionLabel("THE WHOLE DAY OUT", color: .inkSecondary)
+                sectionLabel("THE WHOLE DAY OUT", accent: false)
                 VStack(spacing: 5) {
                     HStack {
                         Text(hhmm(out.scheduledDeparture)).foregroundStyle(Color.inkSecondary)
@@ -320,16 +315,16 @@ struct RoundTripView: View {
                 .foregroundStyle(Color.inkSecondary)
         case .lastTrain:
             Text("LAST TRAIN").font(.mono(10, weight: .bold)).tracking(1.2)
-                .foregroundStyle(Color.amber)
+                .foregroundStyle(Color.amberText)
                 .padding(.horizontal, 6).padding(.vertical, 3)
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.amber, lineWidth: 1.5))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.amberText, lineWidth: 1.5))
         }
     }
 
     private var stayStepper: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                sectionLabel("STAY AT LEAST", color: .inkSecondary)
+                sectionLabel("STAY AT LEAST", accent: false)
                 Text(durationWords(Int(stay / 60))).font(.mono(24, weight: .bold)).foregroundStyle(Color.ink)
             }
             Spacer()
@@ -394,9 +389,9 @@ struct RoundTripView: View {
 
     // MARK: Shared pieces
 
-    private func sectionLabel(_ text: String, color: Color = .amber) -> some View {
-        Text(text).font(.mono(color == .amber ? 12 : 10.5, weight: color == .amber ? .bold : .semibold))
-            .tracking(color == .amber ? 1.8 : 1.4).foregroundStyle(color)
+    private func sectionLabel(_ text: String, accent: Bool = true) -> some View {
+        Text(text).font(.mono(accent ? 12 : 10.5, weight: accent ? .bold : .semibold))
+            .tracking(accent ? 1.8 : 1.4).foregroundStyle(accent ? Color.amberText : Color.inkSecondary)
     }
 
     private func routeHeader(_ leg: Leg) -> some View {
@@ -416,7 +411,7 @@ struct RoundTripView: View {
     private func timeLine(_ train: TrainDeparture) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             Text(hhmm(train.scheduledDeparture)).font(.mono(22, weight: .bold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
                 .strikethrough(train.isCancelled)
             if let arrival = train.expectedArrival ?? train.scheduledArrival {
                 dash
@@ -482,7 +477,7 @@ struct RoundTripView: View {
     }
 
     private var loading: some View {
-        HStack { Spacer(); ProgressView().tint(.amber); Spacer() }.frame(height: 120)
+        HStack { Spacer(); ProgressView().tint(.amberText); Spacer() }.frame(height: 120)
     }
 
     // MARK: Formatting

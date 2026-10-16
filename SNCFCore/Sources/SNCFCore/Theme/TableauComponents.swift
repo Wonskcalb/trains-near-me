@@ -19,10 +19,11 @@ public struct FlapTime: View {
 
     // The tile sizes the mockups use are all passed in: 46×66 hero, 52×74 wall clock, 25×38 wall rows,
     // 62×88 leave-by, 30×44 menu bar, 34×50 extra-tall. The digit and colon scale from `tileHeight`, so
-    // one geometry serves them all. `tileColor`/`seamColor` default to the dark split-flap; the light
-    // extra-tall widget flips to an ink tile with a paper seam and an amber digit.
+    // one geometry serves them all. `tileColor` defaults to `flapTile`, so the amber digit always sits on
+    // a dark tile: raised on dark, ink on light (the extra-tall widget's light treatment). The `ground`
+    // seam reads either way: a black line on a raised tile, a paper line on an ink one.
     public init(date: Date, digitColor: Color = .amber, tileWidth: CGFloat = 36, tileHeight: CGFloat = 52,
-                tileColor: Color = .raised, seamColor: Color = .ground, cornerRadius: CGFloat = 7,
+                tileColor: Color = .flapTile, seamColor: Color = .ground, cornerRadius: CGFloat = 7,
                 colonColor: Color? = nil) {
         self.date = date
         self.digitColor = digitColor

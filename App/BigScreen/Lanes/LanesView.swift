@@ -446,7 +446,8 @@ private struct LaneRow: View {
         let rawL = window.rawX(from, in: w), rawR = window.rawX(end, in: w)
         guard rawR > 0 && rawL < w else { return nil }
         let left = max(0, rawL), right = min(w, rawR)
-        return (left, max(44, right - left), rawR > w)
+        // 56 = a mono "17:42" at 12.5 pt plus the bar's 8 pt insets, so the shortest bar still shows its time.
+        return (left, max(56, right - left), rawR > w)
     }
 
     private func ghostBar(_ scheduled: Date, color: Color, frame: (left: CGFloat, width: CGFloat, overflow: Bool), rowY: CGFloat) -> some View {
@@ -466,16 +467,22 @@ private struct LaneRow: View {
     @ViewBuilder private func mainBar(_ train: TrainDeparture, status: DepartureStatus, isNext: Bool,
                                       box: (left: CGFloat, width: CGFloat, overflow: Bool), selected: Bool) -> some View {
         let amber = isNext && status == .onTime
-        let content = HStack(spacing: 4) {
-            Text(LanesFormat.hm.string(from: departureX(train)))
-                .strikethrough(status == .cancelled)
-                .font(.mono(12.5, weight: .bold))
-            Spacer(minLength: 2)
-            if let tag = tagText(train, status: status, isNext: isNext) {
-                Text(tag).font(.mono(status == .cancelled || amber ? 9.5 : 11, weight: amber ? .semibold : .bold))
-                    .tracking(amber || status == .cancelled ? 0.9 : 0)
-            }
-            if box.overflow { Text("→").font(.mono(11, weight: .bold)) }
+        let time = Text(LanesFormat.hm.string(from: departureX(train)))
+            .strikethrough(status == .cancelled)
+            .font(.mono(12.5, weight: .bold))
+            .fixedSize()
+        let tag = tagText(train, status: status, isNext: isNext).map {
+            Text($0).font(.mono(status == .cancelled || amber ? 9.5 : 11, weight: amber ? .semibold : .bold))
+                .tracking(amber || status == .cancelled ? 0.9 : 0)
+                .fixedSize()
+        }
+        let arrow = box.overflow ? Text("→").font(.mono(11, weight: .bold)) : nil
+        // A short bar (a quick trip, or one clipped at NOW) can't hold the time and its tag side by side;
+        // squeezing them truncated the time, which is the one thing a bar must show. Drop the tag first.
+        let content = ViewThatFits(in: .horizontal) {
+            HStack(spacing: 4) { time; Spacer(minLength: 2); tag; arrow }
+            HStack(spacing: 4) { time; Spacer(minLength: 2); arrow }
+            time
         }
         .foregroundStyle(barInk(status: status, amber: amber))
         .padding(.horizontal, 8).frame(width: box.width, height: laneBarHeight)

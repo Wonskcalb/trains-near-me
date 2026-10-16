@@ -3,7 +3,6 @@ import SwiftUI
 
 /// One station's departure board in the detail column — what a "Go to station" pick or the NEAR ME row
 /// opens — with the one action that belongs to a station rather than a journey: pinning it for Wall mode.
-/// The Board (dark) palette like the station hall, so its amber times never sit on paper.
 struct StationBoardView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -22,7 +21,6 @@ struct StationBoardView: View {
             .padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 24)
         }
         .background(Color.ground.ignoresSafeArea())
-        .environment(\.colorScheme, .dark)
         // The board is only fetched on open, ⌘R and every five minutes: a station board is one request
         // from the free tier's 5 000, and the countdowns are recomputed from `now` in between.
         .task(id: "\(station.id)-\(model.refreshTick)") {
@@ -69,7 +67,7 @@ struct StationBoardView: View {
     @ViewBuilder private var content: some View {
         switch board {
         case nil:
-            HStack { Spacer(); ProgressView().tint(.amber); Spacer() }.frame(height: 120)
+            HStack { Spacer(); ProgressView().tint(.amberText); Spacer() }.frame(height: 120)
         case .departures(let trains):
             let next = BoardReading.nextUpcoming(board, after: now)
             VStack(spacing: 0) {
@@ -110,7 +108,7 @@ private struct StationBoardRow: View {
         HStack(spacing: 14) {
             Text(HallFormat.hm(train.scheduledDeparture))
                 .font(.mono(22, weight: .bold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
                 .strikethrough(train.isCancelled)
             VStack(alignment: .leading, spacing: 3) {
                 Text(train.direction ?? "—").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink).lineLimit(1)

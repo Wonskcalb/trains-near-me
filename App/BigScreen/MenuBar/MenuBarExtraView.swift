@@ -91,8 +91,6 @@ struct MenuBarExtraView: View {
         .padding(16)
         .frame(width: 372, alignment: .leading)
         .background(Color.surface)
-        // Board (dark) palette like the main window's station hall: the times here are amber text.
-        .environment(\.colorScheme, .dark)
         .task {
             boards = await data.journeyBoards.boards(at: now)
             // The open popover keeps its countdowns and its hero current from what it holds.
@@ -150,7 +148,7 @@ struct MenuBarExtraView: View {
     private func hero(_ next: TrainDeparture) -> some View {
         HStack(spacing: 14) {
             FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 30, tileHeight: 44,
-                     tileColor: .raised, seamColor: .surface, cornerRadius: 6)
+                     seamColor: .surface, cornerRadius: 6, colonColor: .amberText)
             VStack(alignment: .leading, spacing: 3) {
                 Text("in \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now)) min")
                     .font(.mono(14, weight: .semibold))
@@ -178,7 +176,7 @@ struct MenuBarExtraView: View {
         HStack(spacing: 10) {
             Text(MenuBarFormat.hm.string(from: train.scheduledDeparture))
                 .font(.mono(15, weight: .bold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
                 .strikethrough(train.isCancelled)
                 .fixedSize()
                 .frame(minWidth: 52, alignment: .leading)
