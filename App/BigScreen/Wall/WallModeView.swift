@@ -39,8 +39,17 @@ struct WallModeView: View {
     #if os(macOS)
     @State private var awake = WallAwake()
     #endif
+    /// The desk clock's sun button; on until turned off, as the wall always was.
+    @State private var keepAwake = true
+    @Environment(\.previewFold) private var previewFold
 
-    init(now: Date? = nil) { frozenNow = now }
+    /// Set when the wall covers the screen (the iPhone's Wall button), nil where it is a page or a tab.
+    private let onClose: (() -> Void)?
+
+    init(now: Date? = nil, onClose: (() -> Void)? = nil) {
+        frozenNow = now
+        self.onClose = onClose
+    }
 
     private static let stationKey = "station"
     private static func key(for journey: JourneyConfiguration) -> String {
@@ -79,6 +88,7 @@ struct WallModeView: View {
             }
         }
         .keepScreenAwake(enter: enterKeepAwake, leave: leaveKeepAwake)
+        .onChange(of: keepAwake) { _, on in on ? enterKeepAwake() : leaveKeepAwake() }
         .environment(\.colorScheme, .dark)
     }
 
@@ -119,6 +129,7 @@ struct WallModeView: View {
     // MARK: Keep awake
 
     private func enterKeepAwake() {
+        guard keepAwake else { return }
         #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = true
         #elseif os(macOS)
@@ -136,26 +147,224 @@ struct WallModeView: View {
 
     // MARK: Layout
 
+    /// Which arrangement the wall takes. Read from the fold's region and the size, never the hinge angle:
+    /// the region only changes when the posture does, so the wall does not flicker while the hinge moves.
+    private enum Arrangement {
+        /// The board and the side column: a Mac, an iPad or the Duo's inner display in landscape, whose
+        /// fold (flat or half open) the columns stay clear of.
+        case columns(FoldGap?)
+        /// Partially open with the fold across: the glance stands up, the board lies on the table.
+        case tabletop(FoldGap)
+        /// Narrow or portrait: the glance over the board, the journeys in the toolbar.
+        case stacked
+        /// An iPhone (either way up), the folded Duo: one scrolling column, nothing fixed to the screen.
+        case compact
+
+        var hasBottomBar: Bool {
+            switch self {
+            case .tabletop, .stacked: true
+            case .columns, .compact: false
+            }
+        }
+    }
+
+    private func arrangement(_ size: CGSize, _ region: Fold.Region?) -> Arrangement {
+        if let region, region.isTabletop { return .tabletop(region.gap) }
+        if let region, region.isVertical { return .columns(region.gap) }
+        // Too narrow for the glance's pairs side by side, or too short for a board under a header (an
+        // iPhone on its side): the iPhone's own column.
+        if size.width < 560 || size.height < 500 { return .compact }
+        return size.width > size.height && size.width >= 760 ? .columns(nil) : .stacked
+    }
+
     private func wall(liveNow: Date) -> some View {
-        VStack(spacing: 0) {
+        GeometryReader { proxy in
+            let arrangement = arrangement(proxy.size, Fold.region(in: proxy, preview: previewFold))
+            Group {
+                switch arrangement {
+                case .columns(let gap): columns(liveNow: liveNow, size: proxy.size, gap: gap)
+                case .tabletop(let gap): tabletop(liveNow: liveNow, gap: gap)
+                case .stacked: stacked(liveNow: liveNow)
+                case .compact: compact(liveNow: liveNow, width: proxy.size.width)
+                }
+            }
+            .toolbar { controls(inBottomBar: arrangement.hasBottomBar) }
+        }
+        .foregroundStyle(Color.ink)
+        .background(Color.wallGround.ignoresSafeArea())
+    }
+
+    /// The iPhone's wall, top to bottom in one scroll: the header, LEAVE HOME IN at full width, the
+    /// board, the journeys as a row of cards, then the ticker. Inside the safe area, so nothing sits under
+    /// the Dynamic Island, the home indicator or a tab bar.
+    private func compact(liveNow: Date, width: CGFloat) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                header(liveNow: liveNow, sideBySide: width >= 560)
+                leaveCard(to: leaveLeg?.to.name, liveNow: liveNow)
+                boardPanel(liveNow: liveNow, density: width < 480 ? .small : width < 668 ? .folded : .full,
+                           scrolls: false)
+                journeysCaption
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) { journeyCards(liveNow: liveNow, width: 260) }
+                }
+                .scrollClipDisabled()
+            }
+            .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 20)
+            footer(liveNow: liveNow, tickerWidth: nil, showsCredit: width >= 560)
+        }
+    }
+
+    /// Our inset from the safe area: the mockups' 24 pt on a phone-sized screen, 40 on an iPad or a Mac.
+    private func inset(_ size: CGSize) -> CGFloat { min(size.width, size.height) < 800 ? 24 : 40 }
+
+    /// The board and the side column. With a fold, each side of it holds one, clear of its band; without,
+    /// the side column takes at most 40 % of the width so the board's own columns keep their room.
+    private func columns(liveNow: Date, size: CGSize, gap: FoldGap?) -> some View {
+        let pad = inset(size)
+        let spacing = gap.map { $0.start - $0.end } ?? 28
+        let side = gap.map { size.width - pad - $0.start } ?? min(400, (size.width - 2 * pad - spacing) * 0.4)
+        let board = gap.map { $0.end - pad } ?? size.width - 2 * pad - spacing - side
+        return VStack(spacing: 0) {
             VStack(spacing: 26) {
-                header(liveNow: liveNow)
-                HStack(alignment: .top, spacing: 28) {
-                    boardPanel(liveNow: liveNow)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                HStack(alignment: .bottom, spacing: spacing) {
+                    title.frame(width: max(0, board), alignment: .leading)
+                    clock(liveNow: liveNow).frame(width: max(0, side), alignment: .trailing)
+                }
+                HStack(alignment: .top, spacing: spacing) {
+                    boardPanel(liveNow: liveNow, density: board < 620 ? .folded : .full)
+                        .frame(width: max(0, board)).frame(maxHeight: .infinity)
                     rightColumn(liveNow: liveNow)
-                        .frame(width: 400)
+                        .frame(width: max(0, side))
                 }
                 .frame(maxHeight: .infinity)
             }
-            .padding(.horizontal, 40)
-            .padding(.top, 36)
+            .padding(.horizontal, pad)
+            .padding(.top, pad)
             .padding(.bottom, 26)
-            footer(liveNow: liveNow)
+            // Across a fold the ticker stops short of it and the credit moves to the far side.
+            footer(liveNow: liveNow, tickerWidth: gap.map(\.end))
+        }
+    }
+
+    /// The desk clock. `ArrangementView` splits at the fold for us; before iOS 27.1, and in the headless
+    /// renders, the two halves are placed by hand either side of the same band.
+    @ViewBuilder private func tabletop(liveNow: Date, gap: FoldGap) -> some View {
+        #if os(iOS)
+        if #available(iOS 27.1, *) {
+            ArrangementView {
+                glance(liveNow: liveNow)
+            } secondary: {
+                tableBoard(liveNow: liveNow)
+            }
+            .arrangementViewStyle(.split)
+        } else {
+            tabletopByHand(liveNow: liveNow, gap: gap)
+        }
+        #else
+        tabletopByHand(liveNow: liveNow, gap: gap)
+        #endif
+    }
+
+    private func tabletopByHand(liveNow: Date, gap: FoldGap) -> some View {
+        VStack(spacing: 0) {
+            glance(liveNow: liveNow).frame(height: max(0, gap.end))
+            Color.clear.frame(height: gap.start - gap.end)
+            tableBoard(liveNow: liveNow)
+        }
+    }
+
+    /// Flat in portrait, an iPhone, a narrow window: the same two halves, one under the other.
+    private func stacked(liveNow: Date) -> some View {
+        VStack(spacing: 0) {
+            glance(liveNow: liveNow).fixedSize(horizontal: false, vertical: true)
+            tableBoard(liveNow: liveNow)
+        }
+    }
+
+    /// What is read from across the room: the clock, LEAVE HOME IN, the next train and the evening's track.
+    private func glance(liveNow: Date) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            header(liveNow: liveNow, sideBySide: true)
+            HStack(alignment: .top, spacing: 16) {
+                // First served, so LEAVE HOME IN keeps its glyphs beside its tiles and stays short enough
+                // for the standing half; the next train takes what is left.
+                leaveCard(to: leaveLeg?.to.name, liveNow: liveNow).layoutPriority(1)
+                nextTrainCard(liveNow: liveNow)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            track(liveNow: liveNow)
+        }
+        .padding(.horizontal, 24).padding(.top, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// What lies on the table: the next trains and the ticker; the controls are in the bottom bar.
+    private func tableBoard(liveNow: Date) -> some View {
+        VStack(spacing: 0) {
+            boardPanel(liveNow: liveNow, density: .folded)
+                .padding(.horizontal, 24).padding(.vertical, 16)
+            footer(liveNow: liveNow, tickerWidth: nil, showsCredit: false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .foregroundStyle(Color.ink)
-        .background(Color.wallGround.ignoresSafeArea())
+    }
+
+    // MARK: Controls
+
+    /// The journey, the walk, keep awake and close, in the bottom bar wherever the side column with its
+    /// journey cards is gone; otherwise only Close, where the wall covers the screen.
+    @ToolbarContentBuilder private func controls(inBottomBar: Bool) -> some ToolbarContent {
+        if inBottomBar {
+            #if os(iOS)
+            ToolbarItemGroup(placement: .bottomBar) { bottomControls }
+            #else
+            ToolbarItemGroup(placement: .automatic) { bottomControls }
+            #endif
+        } else if let onClose {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close", systemImage: "xmark", action: onClose)
+            }
+        }
+    }
+
+    @ViewBuilder private var bottomControls: some View {
+        Menu {
+            Picker("Board", selection: $selection) {
+                ForEach(journeys, id: \.journey) { journey in
+                    Text("\(journey.leg.from.name) → \(journey.leg.to.name)").tag(Self.key(for: journey.journey))
+                }
+                Text(station?.name ?? "Nearest station").tag(Self.stationKey)
+            }
+        } label: {
+            Label(headerTitle, systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                .labelStyle(.titleAndIcon)
+        }
+        if let leg = leaveLeg {
+            Menu {
+                Picker("Walk to the station", selection: walkMinutes(leg)) {
+                    ForEach(1...30, id: \.self) { Text("\($0) min").tag($0) }
+                }
+            } label: {
+                Label("\(walkMinutes(leg).wrappedValue) min", systemImage: "figure.walk")
+                    .labelStyle(.titleAndIcon)
+            }
+        }
+        Spacer()
+        Button(keepAwake ? "Let the screen sleep" : "Keep the screen awake",
+               systemImage: keepAwake ? "sun.max.fill" : "sun.max") { keepAwake.toggle() }
+        if let onClose {
+            Button("Close", systemImage: "xmark", action: onClose)
+        }
+    }
+
+    /// The stored walk to the leg's station; a new figure recounts LEAVE HOME IN straight away.
+    private func walkMinutes(_ leg: Leg) -> Binding<Int> {
+        Binding {
+            leave?.walkMinutes ?? SharedSettings[walkMinutesFor: leg.from.id]
+        } set: { minutes in
+            SharedSettings[walkMinutesFor: leg.from.id] = minutes
+            Task { leave = await data.leaveBy.leaveBy(toCatch: leg, at: frozenNow ?? Date()) }
+        }
     }
 
     // MARK: Header
@@ -170,50 +379,133 @@ struct WallModeView: View {
         return station?.name ?? "Nearest station"
     }
 
-    private func header(liveNow: Date) -> some View {
-        HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 6) {
-                Label {
-                    Text(headerCaption)
-                        .font(.mono(13, weight: .semibold)).tracking(2.4)
-                } icon: {
-                    Image(systemName: current == nil ? "dot.radiowaves.left.and.right" : "arrow.right")
-                        .foregroundStyle(Color.amberText)
-                }
-                .font(.system(size: 15))
-                .foregroundStyle(Color.inkSecondary)
-                Text(headerTitle)
-                    .font(.system(size: 64, weight: .heavy)).foregroundStyle(Color.ink)
-                    .lineLimit(1).minimumScaleFactor(0.4)
+    /// The title and the clock on one line, or the clock under the title on a phone held upright.
+    @ViewBuilder private func header(liveNow: Date, sideBySide: Bool) -> some View {
+        if sideBySide {
+            HStack(alignment: .bottom, spacing: 20) {
+                title.frame(maxWidth: .infinity, alignment: .leading)
+                clock(liveNow: liveNow)
             }
-            Spacer(minLength: 20)
-            HStack(alignment: .bottom, spacing: 18) {
-                Text(WallFormat.day.string(from: liveNow).uppercased())
-                    .font(.mono(14, weight: .semibold)).tracking(2)
-                    .foregroundStyle(Color.inkSecondary).padding(.bottom, 6)
-                FlapTime(date: liveNow, digitColor: .ink, tileWidth: 52, tileHeight: 74,
-                         tileColor: .wallClockTile, seamColor: .wallGround, cornerRadius: 9, colonColor: .inkSecondary)
+        } else {
+            title
+            clock(liveNow: liveNow).frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    private var title: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label {
+                Text(headerCaption)
+                    .font(.mono(13, weight: .semibold)).tracking(2.4)
+            } icon: {
+                Image(systemName: current == nil ? "dot.radiowaves.left.and.right" : "arrow.right")
+                    .foregroundStyle(Color.amberText)
+            }
+            .font(.system(size: 15))
+            .foregroundStyle(Color.inkSecondary)
+            .lineLimit(1).minimumScaleFactor(0.6)
+            Text(headerTitle)
+                .font(.system(size: 64, weight: .heavy)).foregroundStyle(Color.ink)
+                .lineLimit(1).minimumScaleFactor(0.4)
+        }
+    }
+
+    /// The day beside the clock where it fits, under it where the column is narrower.
+    private func clock(liveNow: Date) -> some View {
+        let day = Text(WallFormat.day.string(from: liveNow).uppercased())
+            .font(.mono(14, weight: .semibold)).tracking(2)
+            .foregroundStyle(Color.inkSecondary)
+        let flaps = FlapTime(date: liveNow, digitColor: .ink, tileWidth: 52, tileHeight: 74,
+                             tileColor: .wallClockTile, seamColor: .wallGround, cornerRadius: 9, colonColor: .inkSecondary)
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: 18) { day.padding(.bottom, 6); flaps }
+            VStack(alignment: .trailing, spacing: 8) { flaps; day }
+        }
+    }
+
+    // MARK: Glance
+
+    /// The train the wall points at: tonight's soonest that still runs, else the morning's first.
+    private func nextTrain(liveNow: Date) -> TrainDeparture? {
+        BoardReading.nextUpcoming(shownState, after: liveNow)
+            ?? shownTomorrow.first { !$0.isCancelled && $0.expectedDeparture > liveNow }
+    }
+
+    private func nextTrainCard(liveNow: Date) -> some View {
+        let next = nextTrain(liveNow: liveNow)
+        let countdown = next.map { wallCountdown(to: $0.expectedDeparture, from: liveNow) }
+            .map { $0 == "now" ? "leaving now" : "in \($0)" } ?? ""
+        // LEAVE HOME IN counts down to the first train you can still walk to; when that is not this one,
+        // this one leaves before you could reach it.
+        let tooTight = next != nil && leave.map { $0.train != next } == true
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("NEXT TRAIN").font(.mono(12, weight: .bold)).tracking(2).foregroundStyle(Color.inkSecondary)
+            if let next {
+                FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 44, tileHeight: 64,
+                         tileColor: .wallClockTile, seamColor: .wallPanel, cornerRadius: 8, colonColor: .amberText)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        if let mode = next.mode { ModeChip(mode) }
+                        Text([next.trainNumber.map { "N° \($0)" },
+                              next.expectedArrival.map { "arr. \(WallFormat.time.string(from: $0))" }]
+                            .compactMap(\.self).joined(separator: " · "))
+                            .font(.mono(13, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    }
+                    Text(countdown + (tooTight ? " · too tight to walk" : ""))
+                        .font(.mono(15, weight: .bold)).foregroundStyle(Color.soon)
+                }
+                .lineLimit(1).minimumScaleFactor(0.7)
+            } else {
+                Text("No train to come").font(.mono(15, weight: .medium)).foregroundStyle(Color.inkSecondary)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 24).padding(.vertical, 22)
+        .background(Color.wallPanel, in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.white.opacity(0.05), lineWidth: 1))
+    }
+
+    /// The evening on the rail, or once tonight is over the night up to the morning's first train.
+    private func track(liveNow: Date) -> some View {
+        let tonight = BoardReading.departures(shownState).filter { $0.expectedDeparture > liveNow }
+        let morning = tonight.isEmpty ? shownTomorrow.first { !$0.isCancelled } : nil
+        return TimeTrack(trains: morning == nil ? tonight : shownTomorrow, now: liveNow, axis: .horizontal,
+                         minutesSpan: morning.map { Int($0.expectedDeparture.timeIntervalSince(liveNow) / 60) + 40 } ?? 200,
+                         metrics: .board)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Board
 
-    @ViewBuilder private func boardPanel(liveNow: Date) -> some View {
+    /// The rows' density, by the board's width: `.folded` drops the TRAIN column into each row's second
+    /// line, so the board fits half a Duo or a narrow window without squeezing DESTINATION to nothing;
+    /// `.small` also takes smaller time tiles, for an iPhone held upright.
+    enum BoardDensity {
+        case full, folded, small
+
+        var tile: CGFloat { self == .small ? 20 : 25 }
+        /// Four tiles, their gaps and the colon.
+        var timeColumn: CGFloat { self == .small ? 102 : 126 }
+        var inset: CGFloat { self == .small ? 14 : 22 }
+    }
+
+    /// `scrolls` false inside the iPhone's single scrolling column, which a nested scroll view would
+    /// collapse.
+    @ViewBuilder private func boardPanel(liveNow: Date, density: BoardDensity, scrolls: Bool = true) -> some View {
         let tomorrow = shownTomorrow
         VStack(spacing: 0) {
-            boardHeaderRow
+            boardHeaderRow(density: density)
             switch shownState {
             case .departures(let trains):
-                ScrollView { boardRows(trains, liveNow: liveNow) }
+                scrolling(scrolls) { boardRows(trains, liveNow: liveNow, density: density) }
             case .noService:
                 noServicePlate
-                if !tomorrow.isEmpty { ScrollView { boardRows([], liveNow: liveNow) }.frame(maxHeight: .infinity) }
+                if !tomorrow.isEmpty { scrolling(scrolls) { boardRows([], liveNow: liveNow, density: density) }.frame(maxHeight: .infinity) }
             case .endOfService(let first):
                 if tomorrow.isEmpty {
                     boardNote("moon.stars", "Last train gone · first tomorrow \(WallFormat.time.string(from: first))")
                 } else {
-                    ScrollView { boardRows([], liveNow: liveNow) }
+                    scrolling(scrolls) { boardRows([], liveNow: liveNow, density: density) }
                 }
             case .noTrains:
                 boardNote("tram", "No departures")
@@ -224,6 +516,10 @@ struct WallModeView: View {
         .background(Color.wallPanel, in: RoundedRectangle(cornerRadius: 26))
         .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.white.opacity(0.05), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 26))
+    }
+
+    @ViewBuilder private func scrolling(_ scrolls: Bool, @ViewBuilder _ content: () -> some View) -> some View {
+        if scrolls { ScrollView { content() } } else { content() }
     }
 
     /// Every remaining train cancelled: the board's one hazard plate (a single cancelled row never gets it).
@@ -251,19 +547,24 @@ struct WallModeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var boardHeaderRow: some View {
+    private func boardHeaderRow(density: BoardDensity) -> some View {
         HStack(spacing: 18) {
-            Text("TIME").wallColumn(126, .leading)
+            Text("TIME").wallColumn(density.timeColumn, .leading)
             Text("DESTINATION").frame(maxWidth: .infinity, alignment: .leading)
-            Text("TRAIN").wallColumn(150, .leading)
-            Text("STATUS").wallColumn(132, .trailing)
+            if density == .full {
+                Text("TRAIN").wallColumn(150, .leading)
+                Text("STATUS").wallColumn(132, .trailing)
+            } else {
+                Text("STATUS")
+            }
         }
+        .lineLimit(1)
         .font(.mono(11, weight: .semibold)).tracking(1.6).foregroundStyle(Color.inkSecondary)
-        .padding(.horizontal, 22).padding(.vertical, 14)
+        .padding(.horizontal, density.inset).padding(.vertical, 14)
         .overlay(alignment: .bottom) { Color.white.opacity(0.07).frame(height: 1) }
     }
 
-    private func boardRows(_ trains: [TrainDeparture], liveNow: Date) -> some View {
+    private func boardRows(_ trains: [TrainDeparture], liveNow: Date, density: BoardDensity) -> some View {
         // Rows drop off as their train leaves, without waiting for the next fetch. The soonest one still to
         // run is the "next" — a cancelled row is never it — with the amber tint and a green countdown; once
         // tonight is over that is the morning's first, under the split. The station board answers the whole
@@ -275,22 +576,22 @@ struct WallModeView: View {
         let next = upcoming.first { !$0.isCancelled } ?? tomorrow.first { !$0.isCancelled }
         return VStack(spacing: 0) {
             ForEach(Array(upcoming.enumerated()), id: \.offset) { _, train in
-                row(train, isNext: train == next, isTomorrow: false, liveNow: liveNow)
+                row(train, isNext: train == next, isTomorrow: false, liveNow: liveNow, density: density)
             }
             if !tomorrow.isEmpty {
                 TomorrowSplit(lastTonight: BoardReading.lastTonight(shownState), fontSize: 13, inset: 22)
                 ForEach(Array(tomorrow.enumerated()), id: \.offset) { _, train in
-                    row(train, isNext: train == next, isTomorrow: true, liveNow: liveNow)
+                    row(train, isNext: train == next, isTomorrow: true, liveNow: liveNow, density: density)
                 }
             }
         }
     }
 
-    private func row(_ train: TrainDeparture, isNext: Bool, isTomorrow: Bool, liveNow: Date) -> some View {
+    private func row(_ train: TrainDeparture, isNext: Bool, isTomorrow: Bool, liveNow: Date, density: BoardDensity) -> some View {
         VStack(spacing: 0) {
             WallBoardRow(train: train, isNext: isNext,
                          fallbackDestination: current?.leg.to.name ?? station?.name,
-                         showsArrival: current != nil, isTomorrow: isTomorrow, liveNow: liveNow)
+                         showsArrival: current != nil, isTomorrow: isTomorrow, liveNow: liveNow, density: density)
             Color.white.opacity(0.06).frame(height: 1)
         }
     }
@@ -302,31 +603,40 @@ struct WallModeView: View {
             // Always there, even with no train left to catch: a card that came and went shoved the whole
             // column up and down on every journey switch. Its tiles spin to "--" instead.
             leaveCard(to: leaveLeg?.to.name, liveNow: liveNow)
-            Text("YOUR JOURNEYS")
-                .font(.mono(11, weight: .semibold)).tracking(1.6)
-                .foregroundStyle(Color.inkSecondary).padding(.horizontal, 6).padding(.top, 4)
+            journeysCaption
             ScrollView {
-                VStack(spacing: 16) {
-                    ForEach(Array(journeys.enumerated()), id: \.offset) { _, journey in
-                        let key = Self.key(for: journey.journey)
-                        let selected = current?.journey == journey.journey
-                        Button { selection = key } label: {
-                            WallJourneyCard(leg: journey.leg, state: journey.state, tomorrow: journey.tomorrow,
-                                            liveNow: liveNow, selected: selected)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected ? .isSelected : [])
-                    }
-                    // Last, because the journeys are what a wall is mostly for; the station board is the
-                    // one-off "what leaves from here" view.
-                    Button { selection = Self.stationKey } label: {
-                        WallStationCard(name: station?.name, pinned: stationIsPinned, selected: current == nil)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(current == nil ? .isSelected : [])
-                }
+                VStack(spacing: 16) { journeyCards(liveNow: liveNow, width: nil) }
             }
         }
+    }
+
+    private var journeysCaption: some View {
+        Text("YOUR JOURNEYS")
+            .font(.mono(11, weight: .semibold)).tracking(1.6)
+            .foregroundStyle(Color.inkSecondary).padding(.horizontal, 6).padding(.top, 4)
+    }
+
+    /// One card per saved journey, then the station's. `width` fixes each card for a horizontal row.
+    @ViewBuilder private func journeyCards(liveNow: Date, width: CGFloat?) -> some View {
+        ForEach(Array(journeys.enumerated()), id: \.offset) { _, journey in
+            let key = Self.key(for: journey.journey)
+            let selected = current?.journey == journey.journey
+            Button { selection = key } label: {
+                WallJourneyCard(leg: journey.leg, state: journey.state, tomorrow: journey.tomorrow,
+                                liveNow: liveNow, selected: selected)
+            }
+            .buttonStyle(.plain)
+            .frame(width: width)
+            .accessibilityAddTraits(selected ? .isSelected : [])
+        }
+        // Last, because the journeys are what a wall is mostly for; the station board is the one-off
+        // "what leaves from here" view.
+        Button { selection = Self.stationKey } label: {
+            WallStationCard(name: station?.name, pinned: stationIsPinned, selected: current == nil)
+        }
+        .buttonStyle(.plain)
+        .frame(width: width)
+        .accessibilityAddTraits(current == nil ? .isSelected : [])
     }
 
     /// The small line under the train time: where it goes, or why there is nothing to catch.
@@ -362,35 +672,39 @@ struct WallModeView: View {
         let digits = minutes.map { String(format: "%02d", inHours ? min(99, $0 / 60) : $0) } ?? "--"
         let trainTime = leave.map { WallFormat.time.string(from: $0.train.expectedDeparture) } ?? "--:--"
         let detail = leaveDetail(leave, tomorrow: shown?.tomorrow ?? false, to: destination)
+        let tiles = VStack(spacing: 6) {
+            HStack(spacing: 5) {
+                ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
+                    // A dark tile on the amber card, with the amber seam the mockup draws.
+                    FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
+                             tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
+                }
+            }
+            Text(inHours ? "H" : "MIN").font(.mono(15, weight: .bold)).tracking(2)
+        }
+        // Two glyphs with their numbers rather than a sentence: the train to catch, and the walk to it.
+        // Both rows stay in every state (a dash in place of a number), so the card never changes size.
+        let glyphs = VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "tram.fill").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(trainTime).font(.mono(24, weight: .bold))
+                    Text(detail).font(.system(size: 14, weight: .semibold)).opacity(0.7)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "figure.walk").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+                Text(leave.map { "\($0.walkMinutes) min" } ?? "-- min").font(.mono(24, weight: .bold))
+            }
+        }
         return VStack(alignment: .leading, spacing: 14) {
             Text("LEAVE HOME IN").font(.mono(12, weight: .bold)).tracking(2)
-            HStack(alignment: .center, spacing: 22) {
-                VStack(spacing: 6) {
-                    HStack(spacing: 5) {
-                        ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
-                            // A dark tile on the amber card, with the amber seam the mockup draws.
-                            FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
-                                     tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
-                        }
-                    }
-                    Text(inHours ? "H" : "MIN").font(.mono(15, weight: .bold)).tracking(2)
-                }
-                // Two glyphs with their numbers rather than a sentence: the train to catch, and the walk to it.
-                // Both rows stay in every state (a dash in place of a number), so the card never changes size.
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: "tram.fill").font(.system(size: 20, weight: .semibold)).frame(width: 26)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(trainTime).font(.mono(24, weight: .bold))
-                            Text(detail).font(.system(size: 14, weight: .semibold)).opacity(0.7)
-                                .lineLimit(1).minimumScaleFactor(0.7)
-                        }
-                    }
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: "figure.walk").font(.system(size: 20, weight: .semibold)).frame(width: 26)
-                        Text(leave.map { "\($0.walkMinutes) min" } ?? "-- min").font(.mono(24, weight: .bold))
-                    }
-                }
+            // Beside the tiles where the card is wide enough, under them where it is not (half a Duo, the
+            // desk clock): the same pieces, never smaller.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 22) { tiles; glyphs }
+                VStack(alignment: .leading, spacing: 14) { tiles; glyphs }
             }
         }
         .foregroundStyle(Color.onAmber)
@@ -404,26 +718,42 @@ struct WallModeView: View {
 
     // MARK: Footer
 
-    private func footer(liveNow: Date) -> some View {
-        HStack(spacing: 0) {
+    /// `tickerWidth` ends INFO and its line there (a fold's near edge) and puts the credit on the far side;
+    /// the desk clock's lying half has no room for the credit. The hazard block is inset from the edges so
+    /// a display's rounded corner never clips it.
+    private func footer(liveNow: Date, tickerWidth: CGFloat?, showsCredit: Bool = true) -> some View {
+        let ticker = HStack(spacing: 0) {
             ZStack {
                 HazardBackground(variant: .band, stripe: .amber, bandWidth: 10)
                 Text("INFO").font(.mono(13, weight: .heavy)).tracking(2).foregroundStyle(Color.amberText)
                     .padding(.horizontal, 9).padding(.vertical, 6)
                     .background(Color.wallGround, in: RoundedRectangle(cornerRadius: 6))
             }
-            .frame(width: 150)
-            .frame(maxHeight: .infinity)
+            .frame(width: 110)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.vertical, 12)
             Text(disruptions)
                 .font(.mono(16, weight: .medium)).foregroundStyle(Color.ink.opacity(0.85))
                 .lineLimit(1).truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24)
-            HStack(spacing: 8) {
-                Circle().fill(Color.soon).frame(width: 7, height: 7)
-                Text("Data © SNCF · \(WallFormat.time.string(from: liveNow))")
-                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20)
+        }
+        .padding(.leading, 24)
+        return HStack(spacing: 0) {
+            if let tickerWidth {
+                ticker.frame(width: max(0, tickerWidth))
+                Spacer(minLength: 0)
+            } else {
+                ticker
             }
-            .padding(.horizontal, 28)
+            if showsCredit {
+                HStack(spacing: 8) {
+                    Circle().fill(Color.soon).frame(width: 7, height: 7)
+                    Text("Data © SNCF · \(WallFormat.time.string(from: liveNow))")
+                        .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                }
+                .lineLimit(1)
+                .padding(.horizontal, 28)
+            }
         }
         .frame(height: 64)
         .background(Color.ground)
@@ -474,16 +804,22 @@ private struct WallBoardRow: View {
     /// A morning row under the split: "tomorrow" in place of a countdown hours long.
     let isTomorrow: Bool
     let liveNow: Date
+    let density: WallModeView.BoardDensity
     @State private var via: [String] = []
 
     var body: some View {
         HStack(spacing: 18) {
-            flap.wallColumn(126, .leading)
+            flap.wallColumn(density.timeColumn, .leading)
             destination.frame(maxWidth: .infinity, alignment: .leading)
-            trainCell.wallColumn(150, .leading)
-            status.wallColumn(132, .trailing)
+            if density == .full {
+                trainCell.wallColumn(150, .leading)
+                status.wallColumn(132, .trailing)
+            } else {
+                // No column to line up with any more: the status takes only what it needs.
+                status.fixedSize()
+            }
         }
-        .padding(.horizontal, 22).padding(.vertical, 15)
+        .padding(.horizontal, density.inset).padding(.vertical, 15)
         .background(isNext ? Color.amber.opacity(0.06) : Color.clear)
         // The station board carries no stopping pattern, so each row asks for its own "via …" as it
         // appears — all rows at once rather than one after another, and cached by the provider.
@@ -498,15 +834,26 @@ private struct WallBoardRow: View {
     private var flap: some View {
         FlapTime(date: train.scheduledDeparture,
                  digitColor: train.isCancelled ? .inkSecondary : .amber,
-                 tileWidth: 25, tileHeight: 38, tileColor: .raised,
-                 seamColor: train.isCancelled ? .raised : .wallGround, cornerRadius: 5)
+                 tileWidth: density.tile, tileHeight: density.tile * 38 / 25, tileColor: .raised,
+                 seamColor: train.isCancelled ? .raised : .wallGround, cornerRadius: density.tile / 5)
             .opacity(train.isCancelled ? 0.45 : 1)
     }
 
     private var secondLine: String {
-        guard showsArrival else { return via.isEmpty ? "direct" : "via " + via.joined(separator: " · ") }
-        guard let arrival = train.expectedArrival else { return "" }
-        return "arrives \(WallFormat.time.string(from: arrival)) · \(wallCountdown(to: arrival, from: train.expectedDeparture))"
+        var parts: [String] = []
+        if showsArrival {
+            if let arrival = train.expectedArrival {
+                parts.append("arrives \(WallFormat.time.string(from: arrival)) · \(wallCountdown(to: arrival, from: train.expectedDeparture))")
+            }
+        } else {
+            parts.append(via.isEmpty ? "direct" : "via " + via.joined(separator: " · "))
+        }
+        // Without its own column, the train goes under the destination, as the desk-clock mockup draws it.
+        let name = [train.mode, train.trainNumber].compactMap(\.self).joined(separator: " ")
+        if density != .full, !name.isEmpty {
+            parts.append(name)
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var destination: some View {

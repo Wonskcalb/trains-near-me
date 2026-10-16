@@ -22,19 +22,30 @@ struct JourneyBoardScreen: View {
 /// side by side, because only a split's detail column gets its bar stood up in the system strip.
 struct JourneysSplit: View {
     @Environment(BigScreenModel.self) private var model
+    @Environment(\.previewFold) private var previewFold
 
     var body: some View {
         @Bindable var model = model
+        // Re-read on every geometry pass: the region is a geometry value, so opening or closing the hinge
+        // moves the columns' edges here and nothing else (the hinge angle is never read).
         GeometryReader { proxy in
+            let split = Fold.split(width: proxy.size.width, region: Fold.region(in: proxy, preview: previewFold))
             NavigationSplitView(columnVisibility: .constant(.all)) {
                 NavigationStack(path: $model.journeyPath) { JourneysView() }
-                    .navigationSplitViewColumnWidth(Fold.leadingWidth(in: proxy))
+                    .padding(.trailing, split.leadingPadding)
+                    // All three bounds: a lone width is still clamped to the split's own sidebar maximum,
+                    // which on a 951 pt screen falls well short of the fold.
+                    .navigationSplitViewColumnWidth(min: split.leadingWidth, ideal: split.leadingWidth,
+                                                    max: split.leadingWidth)
             } detail: {
-                if let picked = model.detailTrain, !model.journeyPath.isEmpty {
-                    TrainDetail(picked: picked)
-                } else {
-                    LanesView()
+                Group {
+                    if let picked = model.detailTrain, !model.journeyPath.isEmpty {
+                        TrainDetail(picked: picked)
+                    } else {
+                        LanesView()
+                    }
                 }
+                .padding(.leading, split.detailPadding)
             }
             .navigationSplitViewStyle(.balanced)
         }
@@ -95,13 +106,17 @@ struct JourneyToolbar: ViewModifier {
             }
             .fullScreenCover(item: $cover) { route in
                 NavigationStack {
-                    Group {
-                        if route == .wall { WallModeView() } else { RoundTripView() }
-                    }
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close", systemImage: "xmark") { cover = nil }
-                        }
+                    if route == .wall {
+                        // The wall places its own Close: in the bottom bar with its other controls on the
+                        // desk clock, at the top otherwise.
+                        WallModeView(onClose: { cover = nil })
+                    } else {
+                        RoundTripView()
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button("Close", systemImage: "xmark") { cover = nil }
+                                }
+                            }
                     }
                 }
                 // Re-injected: the cover is its own presentation, and the live data must not fall back to
@@ -109,6 +124,9 @@ struct JourneyToolbar: ViewModifier {
                 .environment(\.bigScreenData, data)
                 .environment(model)
             }
+            #if DEBUG
+            .onAppear { if isEnabled, ScreenshotSupport.openWall { cover = .wall } }
+            #endif
     }
 }
 #endif

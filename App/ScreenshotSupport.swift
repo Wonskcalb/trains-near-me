@@ -28,5 +28,8 @@ enum ScreenshotSupport {
         guard ProcessInfo.processInfo.environment["SCREENSHOT_JOURNEY"] != nil else { return nil }
         return SharedSettings.favorites.first
     }
+
+    /// `SCREENSHOT_WALL` (with `SCREENSHOT_JOURNEY`) opens that board's Wall cover.
+    static var openWall: Bool { ProcessInfo.processInfo.environment["SCREENSHOT_WALL"] != nil }
 }
 #endif
