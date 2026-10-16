@@ -15,22 +15,27 @@ struct MenuBarLabel: View {
     /// A frozen clock for the preview; nil follows the real one.
     var now: Date?
     @State private var trains: [TrainDeparture] = []
+    @State private var clock = Date()
 
     var body: some View {
+        // No TimelineView here: macOS turns the label into the status item's image on every render, and
+        // that image swap asks SwiftUI for another update. A timeline restarting from `.now` on each render
+        // never settles, so the app spun at launch. A plain state tick, set once a minute, is all it needs.
+        HStack(spacing: 6) {
+            FlapMark()
+            Text(text(at: now ?? clock)).font(.mono(12.5, weight: .semibold))
+        }
         // The minute tick recounts "2′" and moves on to the next train once one leaves, from the trains
         // already held; only the delays need a fetch.
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            HStack(spacing: 6) {
-                FlapMark()
-                Text(text(at: now ?? context.date)).font(.mono(12.5, weight: .semibold))
-            }
-        }
         // ponytail: a fixed 15 min refetch for the delays, every saved journey per round (the boards memo
         // fetches them together) — about a hundred requests per journey a day while the app runs.
         .task {
+            var minutes = 0
             while !Task.isCancelled {
-                trains = await Self.primaryTrains(from: data, at: now ?? .now)
-                try? await Task.sleep(for: .seconds(15 * 60))
+                if minutes % 15 == 0 { trains = await Self.primaryTrains(from: data, at: now ?? .now) }
+                try? await Task.sleep(for: .seconds(60))
+                clock = .now
+                minutes += 1
             }
         }
     }
