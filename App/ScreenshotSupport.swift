@@ -28,5 +28,11 @@ enum ScreenshotSupport {
         guard ProcessInfo.processInfo.environment["SCREENSHOT_JOURNEY"] != nil else { return nil }
         return SharedSettings.favorites.first
     }
+
+    /// `SCREENSHOT_STATION` opens a station's line map in Near me, packed as `id|lat|lon|name` like the
+    /// widget's station entity: the map splits its lanes by bearing, so the station needs its coordinates.
+    static var station: Station? {
+        ProcessInfo.processInfo.environment["SCREENSHOT_STATION"].flatMap(Station.init(entityIdentifier:))
+    }
 }
 #endif

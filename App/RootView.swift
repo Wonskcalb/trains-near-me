@@ -21,7 +21,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            NavigationStack { BoardView(journey: nil) }
+            NavigationStack { nearMe }
                 .tabItem { Label("Near me", systemImage: "antenna.radiowaves.left.and.right") }
                 .tag(0)
             journeysTab
@@ -38,6 +38,18 @@ struct RootView: View {
             ScreenshotSupport.seedIfNeeded()
             if let journey = ScreenshotSupport.openJourney { model.journeyPath = [journey] }
         }
+        #endif
+    }
+
+    @ViewBuilder private var nearMe: some View {
+        #if DEBUG
+        if let station = ScreenshotSupport.station {
+            StationBoardView(station: station)
+        } else {
+            BoardView(journey: nil)
+        }
+        #else
+        BoardView(journey: nil)
         #endif
     }
 

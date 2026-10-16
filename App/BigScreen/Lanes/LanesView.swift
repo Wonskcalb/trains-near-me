@@ -90,6 +90,9 @@ struct LanesView: View {
     @State private var window: LaneWindow
     /// The bar whose popover is open, as "laneIndex-id"; one binding shared by every bar.
     @State private var selectedBar: String?
+    /// Under 700 pt (the Duo's columns, slide-over, a narrow Mac window) each journey's name goes above
+    /// its track: beside it, the 230 pt column left four hours about fifty points.
+    @State private var narrow = false
 
     // The service day the chart and the minimap are anchored on; Paris, because the trains run on it.
     private let calendar = SNCFTime.calendar
@@ -108,7 +111,7 @@ struct LanesView: View {
                 VStack(spacing: 12) {
                     ForEach(Array(boards.enumerated()), id: \.offset) { index, board in
                         LaneRow(board: board, index: index, now: now, window: window,
-                                calendar: calendar, isSelected: index == selectedJourney,
+                                calendar: calendar, isSelected: index == selectedJourney, narrow: narrow,
                                 selectedBar: $selectedBar) { selectedJourney = index }
                     }
                 }
@@ -118,6 +121,7 @@ struct LanesView: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: Bool.self) { $0.size.width < 700 } action: { narrow = $0 }
         .background(Color.ground.ignoresSafeArea())
         // A time chart drawn to fixed lane geometry (66 pt lanes, 30 pt bars): past this size the bar
         // labels would clip, so the type stops growing there.
@@ -144,17 +148,29 @@ struct LanesView: View {
 
     // MARK: Top chrome
 
+    // The picker's words never wrap: past its width the freshness drops under it.
     private var header: some View {
-        HStack {
-            rangePicker
-            Spacer()
-            HStack(spacing: 7) {
-                Circle().fill(freshDotColor).frame(width: 7, height: 7)
-                Text("Updated \(LanesFormat.hm.string(from: boards.first?.fetchedAt ?? now))")
-                    .font(.mono(12, weight: .medium))
-                    .foregroundStyle(Color.inkSecondary)
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                rangePicker.fixedSize()
+                Spacer()
+                freshness
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                rangePicker.fixedSize()
+                freshness
             }
         }
+    }
+
+    private var freshness: some View {
+        HStack(spacing: 7) {
+            Circle().fill(freshDotColor).frame(width: 7, height: 7)
+            Text("Updated \(LanesFormat.hm.string(from: boards.first?.fetchedAt ?? now))")
+                .font(.mono(12, weight: .medium))
+                .foregroundStyle(Color.inkSecondary)
+        }
+        .fixedSize()
     }
 
     private var freshDotColor: Color {
@@ -184,14 +200,21 @@ struct LanesView: View {
     }
 
     private var titleRow: some View {
-        HStack(alignment: .lastTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Lanes").font(.system(size: 34, weight: .bold))
-                Text("Every saved journey on one track. A bar runs from departure to arrival.")
-                    .font(.system(size: 14)).foregroundStyle(Color.inkSecondary)
+        let title = VStack(alignment: .leading, spacing: 4) {
+            Text("Lanes").font(.system(size: 34, weight: .bold))
+            Text("Every saved journey on one track. A bar runs from departure to arrival.")
+                .font(.system(size: 14)).foregroundStyle(Color.inkSecondary)
+        }
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .lastTextBaseline) {
+                title
+                Spacer()
+                legend
             }
-            Spacer()
-            legend
+            VStack(alignment: .leading, spacing: 10) {
+                title
+                legend
+            }
         }
     }
 
@@ -204,6 +227,7 @@ struct LanesView: View {
         }
         .font(.mono(11.5, weight: .medium))
         .foregroundStyle(Color.inkSecondary)
+        .fixedSize()
     }
 
     private func legendSwatch(_ fill: Color, ring: Color?, _ label: String) -> some View {
@@ -218,14 +242,17 @@ struct LanesView: View {
 
     private var axisHeader: some View {
         HStack(spacing: laneColumnGap) {
-            Text("JOURNEY")
-                .font(.mono(11, weight: .semibold)).tracking(1.4)
-                .foregroundStyle(Color.inkSecondary)
-                .frame(width: laneLabelWidth, alignment: .leading)
+            if !narrow {
+                Text("JOURNEY")
+                    .font(.mono(11, weight: .semibold)).tracking(1.4)
+                    .foregroundStyle(Color.inkSecondary)
+                    .frame(width: laneLabelWidth, alignment: .leading)
+            }
             GeometryReader { geo in
                 let w = geo.size.width
                 ZStack(alignment: .topLeading) {
-                    ForEach(hourMarks, id: \.self) { hour in
+                    // The NOW flag owns its stretch of the axis: on a narrow track an hour beside it overprinted.
+                    ForEach(hourMarks.filter { now < window.start || now > window.end || abs(window.x($0, in: w) - window.x(now, in: w)) > 56 }, id: \.self) { hour in
                         Text(LanesFormat.hm.string(from: hour))
                             .font(.mono(12, weight: .semibold)).foregroundStyle(Color.inkSecondary)
                             .fixedSize().position(x: window.x(hour, in: w), y: 20)
@@ -249,6 +276,8 @@ struct LanesView: View {
             }
             .frame(height: 28)
         }
+        // The rows' own insets, so the hours stand over the tracks' times.
+        .padding(.leading, 20).padding(.trailing, 12)
     }
 
     private var hourMarks: [Date] {
@@ -322,13 +351,20 @@ private struct LaneRow: View {
     let window: LaneWindow
     let calendar: Calendar
     let isSelected: Bool
+    let narrow: Bool
     @Binding var selectedBar: String?
     let onSelect: () -> Void
 
     var body: some View {
-        HStack(spacing: laneColumnGap) {
-            label.frame(width: laneLabelWidth, alignment: .leading)
-            track
+        Group {
+            if narrow {
+                VStack(alignment: .leading, spacing: 10) { label; track }
+            } else {
+                HStack(spacing: laneColumnGap) {
+                    label.frame(width: laneLabelWidth, alignment: .leading)
+                    track
+                }
+            }
         }
         .padding(.vertical, 16).padding(.leading, 20).padding(.trailing, 12)
         .background(Color.surface, in: RoundedRectangle(cornerRadius: 18))

@@ -281,6 +281,43 @@ import Testing
         #expect(whole.gap?.start == at(23, 5))
     }
 
+    // MARK: Map size
+
+    /// Châtelet's eight lanes on one side of the line, on the folded Duo's ~420 pt of map: squeezing them
+    /// in would put each chip on the next lane, so the pitch holds and the map grows past the viewport.
+    @Test func aBusyStationScrollsRatherThanSqueeze() {
+        let pitch = StationLines.pitch(rows: 9, height: 420 - 120)
+        #expect(pitch == StationLines.minimumPitch)
+        #expect(pitch - 2 * StationLines.labelOffset > 40)
+        #expect(StationLines.pitch(rows: 9, height: 300, floor: StationLines.compactPitch) == 80)
+        // Every lane above: the capsule (138 pt for eight exits) and its name need room under the axis row.
+        let height = StationLines.mapHeight(above: 8, below: 0, pitch: pitch, capsuleHeight: 138)
+        #expect(height == 60 + 8 * 96 + 129)
+        #expect(height > 420)
+        // A roomy screen spreads the rows, never past the mockup's pitch.
+        #expect(StationLines.pitch(rows: 4, height: 900) == StationLines.maximumPitch)
+        #expect(StationLines.pitch(rows: 4, height: 330) == 110)
+        // Lanes on both sides cover the capsule: the plain 60 pt margins.
+        #expect(StationLines.mapHeight(above: 2, below: 2, pitch: 110, capsuleHeight: 96) == 120 + 4 * 110)
+    }
+
+    @Test func aNarrowAxisKeepsItsMinimumScale() {
+        let axis = StationLines.Axis(start: at(23, 54), end: at(23, 54).addingTimeInterval(150 * 60))
+        #expect(axis.span == 150 * 60)
+        #expect(StationLines.axisWidth(axis, available: 54, scale: StationLines.minimumScale) == 330)
+        #expect(StationLines.axisWidth(axis, available: 600, scale: StationLines.minimumScale) == 600)
+        #expect(StationLines.axisWidth(axis, available: 54, scale: 0) == 54)
+        // The folded night counts as its 25 minutes of track, not seven hours.
+        let folded = StationLines.Axis(start: at(23, 0), end: at(7, 0).addingTimeInterval(86_400),
+                                       gap: DateInterval(start: at(23, 30), end: at(5, 0).addingTimeInterval(86_400)))
+        #expect(folded.span == (30 + 25 + 120) * 60)
+    }
+
+    @Test func aNarrowCurveBandStillPeelsInsideIt() {
+        let path = StationLines.LanePath(stationX: 22, exitY: 400, y: 380, curveEnd: 94, laneEnd: 600)
+        #expect(path.peel.x == 58)
+    }
+
     // MARK: Lane path
 
     @Test func theLanePathRunsFromTheCapsuleToTheTerminusByArcLength() {
