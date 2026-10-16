@@ -2,8 +2,10 @@ import SNCFCore
 import SwiftUI
 
 /// Station hall — the centre journey board and the right-hand train inspector of Main.dc.html. The
-/// sidebar lives in `BigScreenRoot`; this is the two columns the detail area fills. Fake data only:
-/// everything comes through `BigScreenData`, never `SNCFClient`.
+/// sidebar lives in `BigScreenRoot`; this is the two columns the detail area fills. Everything comes
+/// through `BigScreenData` (live in the app, the mockup in previews), never `SNCFClient`. Always on the
+/// Board (dark) palette, like Wall and Round trip: its times, NEXT tags and hero digits are amber text,
+/// which the Timetable (light) palette forbids on paper.
 struct StationHallView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -39,7 +41,10 @@ struct StationHallView: View {
                 .frame(width: 360)
         }
         .background(Color.ground.ignoresSafeArea())
+        .environment(\.colorScheme, .dark)
         .task(id: reloadKey) { await load() }
+        // Keyed on the train so a quick ↑↓ run cancels the lookups it has already left behind.
+        .task(id: selected) { await loadStops() }
     }
 
     /// Re-fetch when the picked journey or ⌘R changes.
@@ -49,7 +54,6 @@ struct StationHallView: View {
         boards = await data.journeyBoards.boards(at: now)
         if let leg = board?.leg { summary = await data.serviceDay.summary(for: leg, at: now) } else { summary = nil }
         resetSelection()
-        await loadStops()
     }
 
     /// Default to the next upcoming train; the inspector's full stopping pattern only exists for trains
@@ -78,8 +82,10 @@ struct StationHallView: View {
                 case .noService:
                     noService
                 case .endOfService(let first):
-                    stateCard("End of service", "Back tomorrow at \(HallFormat.hm(first)).")
-                case .noTrains, .unavailable, nil:
+                    endOfService(first)
+                case .unavailable(let error):
+                    stateCard("Board unavailable", error.appDescription)
+                case .noTrains, nil:
                     stateCard("No board", "Nothing to show for this journey right now.")
                 }
             }
@@ -102,7 +108,8 @@ struct StationHallView: View {
                     .frame(width: 14, height: 46)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(board?.leg.from.name ?? " ").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink.opacity(0.7))
-                    Text(board?.leg.to.name ?? "Journey").font(.system(size: 38, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
+                    Text(board?.leg.to.name ?? "Journey").font(.system(size: 38, weight: .bold)).foregroundStyle(Color.ink)
+                        .lineLimit(1).minimumScaleFactor(0.6)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -162,7 +169,8 @@ struct StationHallView: View {
         HStack(spacing: 8) {
             chip("DIRECT ONLY", color: Color.ink.opacity(0.85), fill: Color.raised)
             if let journey = board?.journey { chip(HallFormat.directionCapsChip(journey), color: Color.ink.opacity(0.85), fill: Color.raised) }
-            if let disrupted = summary?.disruptedCount, disrupted > 0 {
+            // Real time, so read off the live board rather than the day's cached summary.
+            if case let disrupted = trains.filter(\.isRunningLate).count, disrupted > 0 {
                 chip("\(disrupted) DISRUPTED TONIGHT", color: Color.caution, fill: Color.cautionBg)
             }
         }
@@ -192,7 +200,7 @@ struct StationHallView: View {
                             .font(.mono(15, weight: .semibold)).foregroundStyle(Color.soon)
                     }
                     Spacer(minLength: 0)
-                    RemindButton(train: next)
+                    if let leg = board?.leg { RemindButton(train: next, leg: leg) }
                 }
                 TimeTrack(trains: trains, now: now, axis: .horizontal, minutesSpan: 200, length: 672, metrics: .board)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -210,11 +218,14 @@ struct StationHallView: View {
         return VStack(spacing: 0) {
             BoardTableHeader()
             ForEach(Array(trains.enumerated()), id: \.offset) { index, train in
-                BoardRow(train: train, now: now, longestTrip: longest,
-                         isNext: train == BoardReading.nextUpcoming(board?.state, after: now),
-                         isSelected: train == selected, isPinned: pins.contains(train))
-                    .contentShape(Rectangle())
-                    .onTapGesture { select(train) }
+                Button { select(train) } label: {
+                    BoardRow(train: train, now: now, longestTrip: longest,
+                             isNext: train == BoardReading.nextUpcoming(board?.state, after: now),
+                             isSelected: train == selected, isPinned: pins.contains(train))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(train == selected ? .isSelected : [])
                 if index < trains.count - 1 { Divider().overlay(Color.ink.opacity(0.07)) }
             }
         }
@@ -246,6 +257,24 @@ struct StationHallView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24))
     }
 
+    /// The widget's end-of-service treatment: the fixed night gradient and the moon, the first train in
+    /// amber mono. Fixed dark whatever the scheme, so the text on it stays light.
+    private func endOfService(_ first: Date) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "moon.zzz.fill").font(.system(size: 30)).foregroundStyle(Color.white.opacity(0.8))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("End of service").font(.headline).foregroundStyle(.white)
+                (Text("First train at ") + Text(HallFormat.hm(first)).font(.mono(15, weight: .bold)).foregroundStyle(Color.amber))
+                    .font(.subheadline).foregroundStyle(Color.white.opacity(0.75))
+            }
+        }
+        .padding(22).frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
+                                   startPoint: .top, endPoint: .bottom),
+                    in: RoundedRectangle(cornerRadius: 24))
+    }
+
     private func stateCard(_ title: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.headline).foregroundStyle(Color.ink)
@@ -274,7 +303,6 @@ struct StationHallView: View {
 
     private func select(_ train: TrainDeparture) {
         selected = train
-        Task { await loadStops() }
     }
 
     private func move(_ delta: Int) {
@@ -292,13 +320,23 @@ struct StationHallView: View {
 
 // MARK: - Board table rows
 
+/// The table's fixed columns, grown with Dynamic Type so a larger mono time never clips. Header and rows
+/// each hold one, scaled from the same base, so they stay on one grid.
+private struct BoardColumns: DynamicProperty {
+    @ScaledMetric(relativeTo: .body) var departArrive: CGFloat = 172
+    @ScaledMetric(relativeTo: .body) var train: CGFloat = 150
+    @ScaledMetric(relativeTo: .body) var status: CGFloat = 128
+}
+
 private struct BoardTableHeader: View {
+    private let columns = BoardColumns()
+
     var body: some View {
         HStack(spacing: 14) {
-            cell("DEPART → ARRIVE", width: 172)
-            cell("TRAIN", width: 150)
+            cell("DEPART → ARRIVE", width: columns.departArrive)
+            cell("TRAIN", width: columns.train)
             Text("TIME ON BOARD").frame(maxWidth: .infinity, alignment: .leading)
-            Text("STATUS").frame(width: 128, alignment: .trailing)
+            Text("STATUS").frame(width: columns.status, alignment: .trailing)
         }
         .font(.mono(10.5, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
         .padding(.horizontal, 20).padding(.vertical, 12)
@@ -319,17 +357,34 @@ private struct BoardRow: View {
     let isNext: Bool
     let isSelected: Bool
     let isPinned: Bool
+    private let columns = BoardColumns()
 
     var body: some View {
         HStack(spacing: 14) {
-            departArrive.frame(width: 172, alignment: .leading)
-            trainCell.frame(width: 150, alignment: .leading)
+            departArrive.frame(width: columns.departArrive, alignment: .leading)
+            trainCell.frame(width: columns.train, alignment: .leading)
             onBoard.frame(maxWidth: .infinity, alignment: .leading)
-            status.frame(width: 128, alignment: .trailing)
+            status.frame(width: columns.status, alignment: .trailing)
         }
         .padding(.horizontal, 20).padding(.vertical, 14)
         .background(isSelected ? Color.amber.opacity(0.07) : .clear)
         .overlay { if isSelected { Rectangle().strokeBorder(Color.amber.opacity(0.45), lineWidth: 1.5) } }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+    }
+
+    /// The row as one sentence: "17:42 to 18:07, TER 17653, next, in 2 min" / "18:12 to 18:36, plus 12, leaves 18:24".
+    private var spoken: String {
+        var parts = [HallFormat.hm(train.scheduledDeparture) + (train.scheduledArrival.map { " to \(HallFormat.hm($0))" } ?? "")]
+        parts.append([train.mode, train.trainNumber].compactMap { $0 }.joined(separator: " "))
+        if isPinned { parts.append("pinned") }
+        switch train.status {
+        case .onTime: parts.append((isNext ? "next, " : "") + "in \(HallFormat.relative(train.expectedDeparture, from: now))")
+        case .delayed, .severelyDelayed: parts.append("plus \(train.delayMinutes ?? 0), leaves \(HallFormat.hm(train.expectedDeparture))")
+        case .cancelled: parts.append("cancelled")
+        case .unknown: parts.append("delay unknown")
+        }
+        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
     }
 
     private var departArrive: some View {
@@ -383,7 +438,7 @@ private struct BoardRow: View {
         case .onTime:
             if isNext {
                 HStack(spacing: 8) {
-                    Text("NEXT").font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.ground)
+                    Text("NEXT").font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.onAmber)
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(Color.amber, in: RoundedRectangle(cornerRadius: 5))
                     Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
@@ -417,19 +472,21 @@ private struct DashLine: View {
     }
 }
 
-/// The hero's "Remind me" button, mirroring the watch state through `data.watching`.
+/// The hero's "Remind me" button, mirroring the watch state through `data.watching`. Watches the train
+/// itself, not just its identity, so the reminder is scheduled and the first delay change is measured.
 struct RemindButton: View {
     @Environment(\.bigScreenData) private var data
     let train: TrainDeparture
+    let leg: Leg
     @State private var watched = false
 
-    private var identity: TrainIdentity? { TrainIdentity(train, calendar: BigScreenFixtures.calendar) }
+    private var identity: TrainIdentity? { TrainIdentity(train, calendar: SNCFTime.calendar) }
 
     var body: some View {
         Button {
             guard let identity else { return }
             Task {
-                if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(identity) }
+                if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(train, to: leg) }
                 watched = await data.watching.isWatched(identity)
             }
         } label: {
@@ -443,6 +500,7 @@ struct RemindButton: View {
         }
         .buttonStyle(.plain)
         .disabled(identity == nil)
+        .accessibilityValue(watched ? "On" : "Off")
         .task(id: identity) { if let identity { watched = await data.watching.isWatched(identity) } }
     }
 }
@@ -469,7 +527,7 @@ enum BoardReading {
 /// The big-screen time/words helpers. A namespace rather than free functions so they never clash with
 /// the iOS-only `relativeTime`/`clock` in `BoardView`, and so they work on macOS too.
 enum HallFormat {
-    /// The fake world is Europe/Paris; format there so 17:42 reads as 17:42 whatever the device clock is.
+    /// SNCF runs on Europe/Paris; format there so 17:42 reads as 17:42 whatever the device clock is.
     private static let paris: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")

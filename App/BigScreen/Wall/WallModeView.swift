@@ -23,7 +23,6 @@ struct WallModeView: View {
 
     @State private var station: Station?
     @State private var board: BoardState = .noTrains
-    @State private var vias: [String: [String]] = [:]
     @State private var journeys: [JourneyBoard] = []
     @State private var leave: LeaveBy?
     @State private var leaveLeg: Leg?
@@ -38,9 +37,21 @@ struct WallModeView: View {
         // One TimelineView ticks the whole board every minute: the clock advances, the "LEAVE HOME IN"
         // countdown drops, and the per-row "6 min" times recount — all from `context.date`, the live now.
         TimelineView(.periodic(from: now, by: 60)) { context in
-            wall(liveNow: context.date)
+            // Previews and screenshots stay on the frozen mockup clock instead of the real one.
+            wall(liveNow: frozenNow ?? context.date)
         }
-        .task(id: model.refreshTick) { await load() }
+        // A wall is left running for hours: refetch every five minutes (the free tier's 5 000 requests a
+        // day allow it; one station board and the journeys each round), on ⌘R, and on appear. Between
+        // rounds the minute tick drops departed rows and recounts the countdowns from what is held.
+        .task(id: model.refreshTick) {
+            await load()
+            guard frozenNow == nil else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(300))
+                if Task.isCancelled { break }
+                await load()
+            }
+        }
         // Esc is wired globally by the shell; a tap anywhere leaves too (a wall is glanceable, not clicky).
         .onTapGesture { model.escape() }
         .keepScreenAwake(enter: enterKeepAwake, leave: leaveKeepAwake)
@@ -61,15 +72,6 @@ struct WallModeView: View {
         if let primary = journeys.first?.leg {
             leaveLeg = primary
             leave = await data.leaveBy.leaveBy(toCatch: primary, at: now)
-        }
-        // The station board carries no stopping pattern, so each row's "via …" is a separate lookup.
-        if case .departures(let trains) = board {
-            var map: [String: [String]] = [:]
-            for train in trains {
-                guard let id = train.vehicleJourneyID else { continue }
-                map[id] = await data.stationBoard.via(forVehicleJourneyID: id)
-            }
-            vias = map
         }
     }
 
@@ -138,7 +140,7 @@ struct WallModeView: View {
                     .font(.mono(14, weight: .semibold)).tracking(2)
                     .foregroundStyle(Color.inkSecondary).padding(.bottom, 6)
                 FlapTime(date: liveNow, digitColor: .ink, tileWidth: 52, tileHeight: 74,
-                         tileColor: .wallClockTile, seamColor: .wallGround, cornerRadius: 9)
+                         tileColor: .wallClockTile, seamColor: .wallGround, cornerRadius: 9, colonColor: .inkSecondary)
             }
         }
     }
@@ -184,11 +186,13 @@ struct WallModeView: View {
     }
 
     private func boardRows(_ trains: [TrainDeparture], liveNow: Date) -> some View {
-        // The soonest upcoming departure is the "next": its row gets the amber tint and a green countdown.
-        VStack(spacing: 0) {
-            ForEach(Array(trains.enumerated()), id: \.offset) { index, train in
-                WallBoardRow(train: train, via: train.vehicleJourneyID.flatMap { vias[$0] } ?? [],
-                             isNext: index == 0, fallbackDestination: station?.name, liveNow: liveNow)
+        // Rows drop off as their train leaves, without waiting for the next fetch. The soonest one still to
+        // run is the "next" — a cancelled row is never it — with the amber tint and a green countdown.
+        let upcoming = trains.filter { $0.expectedDeparture > liveNow }
+        let next = upcoming.first { !$0.isCancelled }
+        return VStack(spacing: 0) {
+            ForEach(Array(upcoming.enumerated()), id: \.offset) { _, train in
+                WallBoardRow(train: train, isNext: train == next, fallbackDestination: station?.name, liveNow: liveNow)
                 Color.white.opacity(0.06).frame(height: 1)
             }
         }
@@ -232,7 +236,7 @@ struct WallModeView: View {
             Text("for the \(WallFormat.time.string(from: leave.train.expectedDeparture)) to \(destination).\n\(leave.walkMinutes) min walk to the platform.")
                 .font(.system(size: 16, weight: .semibold)).lineSpacing(3)
         }
-        .foregroundStyle(Color.ground)
+        .foregroundStyle(Color.onAmber)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24).padding(.vertical, 22)
         .background(Color.amber, in: RoundedRectangle(cornerRadius: 26))
@@ -299,11 +303,12 @@ private func wallCountdown(to date: Date, from now: Date) -> String {
 }
 
 private struct WallBoardRow: View {
+    @Environment(\.bigScreenData) private var data
     let train: TrainDeparture
-    let via: [String]
     let isNext: Bool
     let fallbackDestination: String?
     let liveNow: Date
+    @State private var via: [String] = []
 
     var body: some View {
         HStack(spacing: 18) {
@@ -314,6 +319,12 @@ private struct WallBoardRow: View {
         }
         .padding(.horizontal, 22).padding(.vertical, 15)
         .background(isNext ? Color.amber.opacity(0.06) : Color.clear)
+        // The station board carries no stopping pattern, so each row asks for its own "via …" as it
+        // appears — all rows at once rather than one after another, and cached by the provider.
+        .task(id: train.vehicleJourneyID) {
+            guard let id = train.vehicleJourneyID else { return }
+            via = await data.stationBoard.via(forVehicleJourneyID: id)
+        }
     }
 
     /// The timetabled time as four flap tiles — amendments live in the status column, never the flap. A
@@ -452,7 +463,8 @@ private struct WallFlapTile: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 11).fill(Color.ground)
-            Text(String(digit)).font(.monoFixed(62 * 0.65, weight: .bold)).foregroundStyle(Color.amber)
+            // Sized from the tile height like `FlapTime`'s digits (88 × 0.65 ≈ 57 pt; the mockup draws 62).
+            Text(String(digit)).font(.monoFixed(88 * 0.65, weight: .bold)).foregroundStyle(Color.amber)
             Color.amber.opacity(0.35).frame(height: 1.5)
         }
         .frame(width: 62, height: 88)

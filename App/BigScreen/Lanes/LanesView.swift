@@ -3,7 +3,8 @@ import SwiftUI
 
 // Lanes — every saved journey on one time axis, with the service-day minimap (Lanes.dc.html). Drawn as
 // the light "Timetable" chart in the mockup, but it only ever reads theme tokens, so it follows the app's
-// Light/Dark setting. All values come from the fake `BigScreenData` in the environment; no `SNCFClient`.
+// Light/Dark setting; the ink popover and the NO SERVICE plate are fixed dark in both. Every value comes
+// from `BigScreenData` in the environment (live in the app, the mockup in previews); no `SNCFClient`.
 
 // Fixed geometry, matching the mockup's 260/20/960 grid and 66 pt lanes. The track width itself is read
 // from the layout (a `GeometryReader`), so every lane and the axis share one time-to-x mapping.
@@ -54,11 +55,11 @@ struct LanesView: View {
     @State private var selectedBar: String?
 
     // The service day the chart and the minimap are anchored on; Paris, because the trains run on it.
-    private let calendar = BigScreenFixtures.calendar
+    private let calendar = SNCFTime.calendar
 
     init(now: Date = Date()) {
         self.now = now
-        _window = State(initialValue: LanesView.window(for: .next4h, now: now, calendar: BigScreenFixtures.calendar))
+        _window = State(initialValue: LanesView.window(for: .next4h, now: now, calendar: SNCFTime.calendar))
     }
 
     var body: some View {
@@ -81,6 +82,9 @@ struct LanesView: View {
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.ground.ignoresSafeArea())
+        // A time chart drawn to fixed lane geometry (66 pt lanes, 30 pt bars): past this size the bar
+        // labels would clip, so the type stops growing there.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .task { await load() }
         .onChange(of: model?.refreshTick) { Task { await load() } }
         .onChange(of: selectedJourney) { Task { await loadSummary() } }
@@ -189,7 +193,7 @@ struct LanesView: View {
                     }
                     if now >= window.start && now <= window.end {
                         Text("NOW \(LanesFormat.hm.string(from: now))")
-                            .font(.mono(11, weight: .bold)).tracking(0.8).foregroundStyle(Color.ink)
+                            .font(.mono(11, weight: .bold)).tracking(0.8).foregroundStyle(Color.onAmber)
                             .padding(.horizontal, 7).padding(.vertical, 4)
                             .background(Color.amber, in: RoundedRectangle(cornerRadius: 6))
                             .fixedSize().position(x: window.x(now, in: w), y: 10)
@@ -364,19 +368,27 @@ private struct LaneRow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // The whole lane is hazard stripes from NOW on, with a black NO SERVICE plate (Lanes.dc.html lane 3).
+    // The lane from NOW on is muted stripes — amber at about half strength crossed by thin ink hatching,
+    // inset from the lane edges — under a black NO SERVICE plate (Lanes.dc.html lane 3). The full-strength
+    // hazard band is for a whole screen; in one lane of a chart it drowned the bars around it.
     private func noService(_ w: CGFloat) -> some View {
         let left = window.x(now, in: w)
         return ZStack(alignment: .leading) {
-            HazardBackground(variant: .band)
-                .frame(width: max(0, w - left)).offset(x: left)
+            Color.amber.opacity(0.55)
+                .overlay(Hatch(color: .ink))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.vertical, 6)
+                .frame(width: max(0, w - left - 6)).offset(x: left + 3)
             HStack(spacing: 12) {
                 Text("NO SERVICE").font(.mono(14, weight: .bold)).tracking(2).foregroundStyle(Color.amber)
                 Text("No trains until \(LanesFormat.hm.string(from: window.end))")
-                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.ground.opacity(0.7))
+                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
             }
             .padding(.horizontal, 16).frame(height: 36)
-            .background(Color.ink, in: RoundedRectangle(cornerRadius: 9))
+            .background(Color.ground, in: RoundedRectangle(cornerRadius: 9))
+            // The plate is ink in both schemes; on the dark palette `ground` is that ink and the amber
+            // label stays amber text on a dark plate, never on paper.
+            .environment(\.colorScheme, .dark)
             .offset(x: left + 24, y: (laneHeight - 36) / 2)
         }
     }
@@ -405,13 +417,16 @@ private struct LaneRow: View {
                 ghostBar(train.scheduledDeparture, color: status.tableauInk, frame: slot, rowY: rowY)
             }
             if let box = frame(departureX(train), arrivalX(train), w) {
-                mainBar(train, status: status, isNext: isNext, box: box, rowY: rowY, selected: selectedBar == barID)
-                    .onTapGesture { selectedBar = selectedBar == barID ? nil : barID }
-                    .popover(isPresented: Binding(
-                        get: { selectedBar == barID },
-                        set: { if !$0, selectedBar == barID { selectedBar = nil } })) {
-                        LaneTrainPopover(train: train, leg: board.leg)
-                    }
+                Button { selectedBar = selectedBar == barID ? nil : barID } label: {
+                    mainBar(train, status: status, isNext: isNext, box: box, selected: selectedBar == barID)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: Binding(
+                    get: { selectedBar == barID },
+                    set: { if !$0, selectedBar == barID { selectedBar = nil } })) {
+                    LaneTrainPopover(train: train, leg: board.leg)
+                }
+                .offset(x: box.left, y: rowY)
             }
         }
     }
@@ -449,7 +464,7 @@ private struct LaneRow: View {
     }
 
     @ViewBuilder private func mainBar(_ train: TrainDeparture, status: DepartureStatus, isNext: Bool,
-                                      box: (left: CGFloat, width: CGFloat, overflow: Bool), rowY: CGFloat, selected: Bool) -> some View {
+                                      box: (left: CGFloat, width: CGFloat, overflow: Bool), selected: Bool) -> some View {
         let amber = isNext && status == .onTime
         let content = HStack(spacing: 4) {
             Text(LanesFormat.hm.string(from: departureX(train)))
@@ -469,7 +484,6 @@ private struct LaneRow: View {
             .background { barFill(status: status, amber: amber) }
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(barBorder(status: status, amber: amber, selected: selected))
-            .offset(x: box.left, y: rowY)
             .accessibilityElement()
             .accessibilityLabel(accessibilityLabel(train, status: status))
     }
@@ -484,7 +498,7 @@ private struct LaneRow: View {
     }
 
     private func barInk(status: DepartureStatus, amber: Bool) -> Color {
-        if amber { return .ink }
+        if amber { return .onAmber }
         switch status {
         case .onTime: return .ground
         case .delayed, .unknown: return .caution
@@ -580,6 +594,8 @@ private struct Hatch: View {
 
 // MARK: - The ink popover on a bar
 
+/// Always the dark ink card the mockup draws, whatever the chart's scheme: the subtree is forced dark,
+/// so `ground` is the ink surface and `ink` its light text, and the mode chip's outline stays visible.
 private struct LaneTrainPopover: View {
     @Environment(\.bigScreenData) private var data
     let train: TrainDeparture
@@ -595,12 +611,13 @@ private struct LaneTrainPopover: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             times
-            Text(detailLine).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.ground.opacity(0.6))
+            Text(detailLine).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.ink.opacity(0.6))
             buttons
             if showStops { stopList }
         }
         .padding(16).frame(width: 280)
-        .background(Color.ink)
+        .background(Color.ground)
+        .environment(\.colorScheme, .dark)
         .task {
             if let identity { watched = await data.watching.isWatched(identity) }
             stops = (try? await data.trainStops.stops(forVehicleJourneyID: train.vehicleJourneyID ?? "")) ?? []
@@ -612,7 +629,7 @@ private struct LaneTrainPopover: View {
             HStack(spacing: 7) {
                 if let mode = train.mode { ModeChip(mode) }
                 if let number = train.trainNumber {
-                    Text("N° \(number)").font(.mono(13, weight: .semibold)).foregroundStyle(Color.ground)
+                    Text("N° \(number)").font(.mono(13, weight: .semibold)).foregroundStyle(Color.ink)
                 }
             }
             Spacer()
@@ -628,13 +645,13 @@ private struct LaneTrainPopover: View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             Text(LanesFormat.hm.string(from: train.expectedDeparture))
                 .font(.mono(22, weight: .bold)).foregroundStyle(Color.amber)
-            Text("–").foregroundStyle(Color.ground.opacity(0.5))
+            Text("–").foregroundStyle(Color.ink.opacity(0.5))
             if let arrival = train.expectedArrival {
                 Text(LanesFormat.hm.string(from: arrival))
-                    .font(.mono(16, weight: .medium)).foregroundStyle(Color.ground.opacity(0.85))
+                    .font(.mono(16, weight: .medium)).foregroundStyle(Color.ink.opacity(0.85))
             }
             Spacer()
-            Text(leg.to.name).font(.system(size: 13)).foregroundStyle(Color.ground.opacity(0.55))
+            Text(leg.to.name).font(.system(size: 13)).foregroundStyle(Color.ink.opacity(0.55))
         }
     }
 
@@ -653,34 +670,35 @@ private struct LaneTrainPopover: View {
             popoverButton(watched ? "Watching" : "Watch") {
                 guard let identity else { return }
                 Task {
-                    if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(identity) }
-                    watched.toggle()
+                    if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(train, to: leg) }
+                    watched = await data.watching.isWatched(identity)
                 }
             }
+            .accessibilityValue(watched ? "On" : "Off")
             popoverButton(showStops ? "Hide stops" : "Stops") { showStops.toggle() }
         }
     }
 
     private func popoverButton(_ title: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ground)
-                .frame(maxWidth: .infinity).frame(height: 36)
-                .background(Color.ground.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
+                .frame(maxWidth: .infinity).frame(minHeight: 36)
+                .background(Color.ink.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
     }
 
     @ViewBuilder private var stopList: some View {
         if stops.isEmpty {
-            Text("No stop list available.").font(.mono(11.5)).foregroundStyle(Color.ground.opacity(0.5))
+            Text("No stop list available.").font(.mono(11.5)).foregroundStyle(Color.ink.opacity(0.5))
         } else {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(stops, id: \.name) { stop in
                     HStack {
                         Text(stop.name).strikethrough(stop.isSkipped)
-                            .font(.system(size: 12)).foregroundStyle(Color.ground.opacity(stop.isSkipped ? 0.4 : 0.85))
+                            .font(.system(size: 12)).foregroundStyle(Color.ink.opacity(stop.isSkipped ? 0.4 : 0.85))
                         Spacer()
-                        Text(stop.time).font(.mono(12, weight: .medium)).foregroundStyle(Color.ground.opacity(0.6))
+                        Text(stop.time).font(.mono(12, weight: .medium)).foregroundStyle(Color.ink.opacity(0.6))
                     }
                 }
             }

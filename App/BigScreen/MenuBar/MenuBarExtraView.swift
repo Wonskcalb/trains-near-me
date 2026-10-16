@@ -4,34 +4,45 @@ import SNCFCore
 import SwiftUI
 
 // The macOS menu-bar extra (MenuBar.dc.html): a bar label and a window-style popover. Everything is
-// driven by `data.journeyBoards`, which defaults to `.fake`, so the popover draws the mockup with no
-// injection. macOS only — the menu bar is the one place this scene exists.
+// driven by `data.journeyBoards` — live from the app's scene, the mockup `.fake` in the previews.
+// macOS only — the menu bar is the one place this scene exists.
 
 /// The bar item: the amber "A Flap" mark and the next train's time + minutes-until ("17:42 · 2′").
 /// A single flap mark rather than a four-tile `FlapTime`, because the menu bar has room for one glyph
 /// and the time is already spelled out in the text beside it (MenuBar.dc.html's label).
 struct MenuBarLabel: View {
     @Environment(\.bigScreenData) private var data
-    var now: Date = .now
-    @State private var next: TrainDeparture?
+    /// A frozen clock for the preview; nil follows the real one.
+    var now: Date?
+    @State private var trains: [TrainDeparture] = []
 
     var body: some View {
-        HStack(spacing: 6) {
-            FlapMark()
-            Text(text).font(.mono(12.5, weight: .semibold))
+        // The minute tick recounts "2′" and moves on to the next train once one leaves, from the trains
+        // already held; only the delays need a fetch.
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            HStack(spacing: 6) {
+                FlapMark()
+                Text(text(at: now ?? context.date)).font(.mono(12.5, weight: .semibold))
+            }
         }
-        .task { next = await Self.nextTrain(from: data, at: now) }
+        // ponytail: a fixed 15 min refetch for the delays, every saved journey per round (the boards memo
+        // fetches them together) — about a hundred requests per journey a day while the app runs.
+        .task {
+            while !Task.isCancelled {
+                trains = await Self.primaryTrains(from: data, at: now ?? .now)
+                try? await Task.sleep(for: .seconds(15 * 60))
+            }
+        }
     }
 
-    private var text: String {
-        guard let next else { return "—" }
-        return "\(MenuBarFormat.hm.string(from: next.expectedDeparture)) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now))′"
+    private func text(at clock: Date) -> String {
+        guard let next = MenuBarFormat.next(in: trains, after: clock) else { return "—" }
+        return "\(MenuBarFormat.hm.string(from: next.expectedDeparture)) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: clock))′"
     }
 
-    /// The primary (first saved) journey's soonest departure — the one the bar always watches.
-    static func nextTrain(from data: BigScreenData, at now: Date) async -> TrainDeparture? {
-        guard case .departures(let trains) = await data.journeyBoards.boards(at: now).first?.state else { return nil }
-        return trains.first
+    /// The primary (first saved) journey's trains — the ones the bar always watches.
+    static func primaryTrains(from data: BigScreenData, at now: Date) async -> [TrainDeparture] {
+        BoardReading.departures(await data.journeyBoards.boards(at: now).first?.state)
     }
 }
 
@@ -42,23 +53,30 @@ struct MenuBarExtraView: View {
     @Environment(\.openWindow) private var openWindow
     // Shared with the main window's BigScreenRoot: ⌘3 leaves "wall" here and that window switches route.
     @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
-    var now: Date = .now
+    /// A frozen clock for the preview; nil follows the real one.
+    var frozenNow: Date?
+    @State private var clock = Date()
+    private var now: Date { frozenNow ?? clock }
 
     @State private var boards: [JourneyBoard] = []
     @State private var selected = 0
 
     private var board: JourneyBoard? { boards.indices.contains(selected) ? boards[selected] : nil }
 
+    init(now: Date? = nil) { frozenNow = now }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            if let board, case .departures(let trains) = board.state {
-                hero(trains.first!)
-                // The hero already carries the imminent train, so the track and list show the ones after
-                // it: `dropFirst`. The track's own "now" flag then stands alone at the window start.
-                TimeTrack(trains: Array(trains.dropFirst()), now: now, axis: .horizontal,
-                          minutesSpan: 200, length: 324, metrics: .board)
-                nextTrains(Array(trains.dropFirst().prefix(3)))
+            // Trains that have left, or a cancelled first row, never become the hero.
+            let trains = BoardReading.departures(board?.state).filter { $0.expectedDeparture > now }
+            if let next = MenuBarFormat.next(in: trains, after: now) {
+                let after = trains.filter { $0 != next && $0.expectedDeparture >= next.expectedDeparture }
+                hero(next)
+                // The hero already carries the imminent train, so the track and list show the ones after it.
+                TimeTrack(trains: after, now: now, axis: .horizontal,
+                          minutesSpan: 200, length: 324, metrics: .compact)
+                nextTrains(Array(after.prefix(3)))
             } else {
                 noDepartures
             }
@@ -67,8 +85,17 @@ struct MenuBarExtraView: View {
         }
         .padding(16)
         .frame(width: 372, alignment: .leading)
-        .background(Color.ground)
-        .task { boards = await data.journeyBoards.boards(at: now) }
+        .background(Color.surface)
+        // Board (dark) palette like the main window's station hall: the times here are amber text.
+        .environment(\.colorScheme, .dark)
+        .task {
+            boards = await data.journeyBoards.boards(at: now)
+            // The open popover keeps its countdowns and its hero current from what it holds.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                clock = Date()
+            }
+        }
     }
 
     // MARK: Header
@@ -118,7 +145,7 @@ struct MenuBarExtraView: View {
     private func hero(_ next: TrainDeparture) -> some View {
         HStack(spacing: 14) {
             FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 30, tileHeight: 44,
-                     tileColor: .raised, seamColor: .ground, cornerRadius: 6)
+                     tileColor: .raised, seamColor: .surface, cornerRadius: 6)
             VStack(alignment: .leading, spacing: 3) {
                 Text("in \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now)) min")
                     .font(.mono(14, weight: .semibold))
@@ -139,7 +166,7 @@ struct MenuBarExtraView: View {
                 row(train)
             }
         }
-        .background(Color.surface, in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.raised, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func row(_ train: TrainDeparture) -> some View {
@@ -148,7 +175,8 @@ struct MenuBarExtraView: View {
                 .font(.mono(15, weight: .bold))
                 .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                 .strikethrough(train.isCancelled)
-                .frame(width: 52, alignment: .leading)
+                .fixedSize()
+                .frame(minWidth: 52, alignment: .leading)
             Text(subtitle(train, arrival: false))
                 .font(.mono(12))
                 .foregroundStyle(Color.inkSecondary)
@@ -166,9 +194,8 @@ struct MenuBarExtraView: View {
         case .delayed, .severelyDelayed: StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
         case .unknown: StatusPill("delay ?", status: .unknown)
         case .onTime:
-            if let duration = train.duration {
-                Text(MenuBarFormat.duration(duration)).font(.mono(12)).foregroundStyle(Color.inkSecondary)
-            }
+            Text(MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
+                .font(.mono(12)).foregroundStyle(Color.inkSecondary)
         }
     }
 
@@ -230,7 +257,7 @@ struct MenuBarExtraView: View {
                 }
                 Text(board.leg.to.name).font(.system(size: 12, weight: .semibold))
             }
-            .foregroundStyle(isSelected ? Color.ground : Color.ink)
+            .foregroundStyle(isSelected ? Color.surface : Color.ink)
             .padding(.horizontal, 10)
             .frame(height: 30)
             .background(isSelected ? Color.ink : Color.clear, in: Capsule())
@@ -288,7 +315,11 @@ struct MenuBarExtraView: View {
     }
 
     private func refresh() {
-        Task { boards = await data.journeyBoards.boards(at: now) }
+        Task {
+            clock = Date()
+            await data.journeyBoards.invalidate()
+            boards = await data.journeyBoards.boards(at: now)
+        }
     }
 
     // Open (or raise) the main window and bring the app forward. ⌘3 also sets the pending route so the
@@ -327,6 +358,11 @@ enum MenuBarFormat {
 
     static func minutesUntil(_ date: Date, from now: Date) -> Int {
         max(0, Int((date.timeIntervalSince(now) / 60).rounded()))
+    }
+
+    /// The first train still to leave that is not cancelled — the one the label and the hero name.
+    static func next(in trains: [TrainDeparture], after now: Date) -> TrainDeparture? {
+        trains.first { !$0.isCancelled && $0.expectedDeparture > now }
     }
 
     static func duration(_ seconds: TimeInterval) -> String {
