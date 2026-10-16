@@ -55,8 +55,8 @@ struct BoardView: View {
         }
     }
 
-    /// Opens the full-trip sheet, but only for a row that carries a vehicle_journey id — journey
-    /// rows have none, so a tap there does nothing rather than open an empty sheet.
+    /// Opens the full-trip sheet, but only for a row that carries a vehicle_journey id — a board cached
+    /// by an older build has none, so a tap there does nothing rather than open an empty sheet.
     private func showTrip(_ train: TrainDeparture) {
         guard train.vehicleJourneyID != nil else { return }
         trip = TripRequest(train: train, boarding: origin?.name)

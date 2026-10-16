@@ -722,7 +722,8 @@ struct LaneTrainPopover: View {
         .environment(\.colorScheme, .dark)
         .task {
             if let identity { watched = await data.watching.isWatched(identity) }
-            stops = (try? await data.trainStops.stops(forVehicleJourneyID: train.vehicleJourneyID ?? "")) ?? []
+            guard let id = train.vehicleJourneyID, !id.isEmpty else { return }
+            stops = (try? await data.trainStops.stops(forVehicleJourneyID: id)) ?? []
         }
     }
 

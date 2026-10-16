@@ -145,6 +145,19 @@ import Testing
         #expect(await watcher.lastSeen[TrainIdentity(train)!]?.status == .delayed)
     }
 
+    @Test func aNumberedWatchFromAnOlderBuildFollowsItsTrain() async {
+        let name = suite()
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let train = BigScreenFixtures.grenobleVoironTrains[0]                // 17653, now with its vehicle journey
+        let legacy = TrainIdentity.numbered(train.trainNumber!, serviceDay: BoardState.serviceDay(of: train.scheduledDeparture, calendar: cal))
+        let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false)
+        await watcher.watch(legacy)
+
+        await watcher.reevaluate(against: [train], calendar: cal, now: BigScreenFixtures.now)
+        #expect(await watcher.watched() == [TrainIdentity(train, calendar: cal)!])
+        #expect(await watcher.lastSeen[TrainIdentity(train, calendar: cal)!]?.status == .onTime)
+    }
+
     @Test func watchesFromAServiceDayThatIsOverArePruned() async {
         let name = suite()
         defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }

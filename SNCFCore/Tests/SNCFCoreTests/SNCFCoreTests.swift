@@ -151,6 +151,21 @@ func fixture(_ name: String) throws -> Data {
         #expect(board[1].vehicleJourneyID == nil)
     }
 
+    @Test func journeyRowCarriesTheVehicleJourneyID() throws {
+        let trains = try mixed()
+        // Read from the section's own links, the same id a station board would give the train.
+        #expect(trains[0].vehicleJourneyID == "vehicle_journey:SNCF:2026-10-08:17601:1187:Train")
+        #expect(trains[1].vehicleJourneyID == "vehicle_journey:SNCF:2026-10-08:17603:1187:Train")
+        #expect(trains[2].vehicleJourneyID == nil)
+    }
+
+    @Test func tripStopIsAtItsStationDespiteSpelling() {
+        let partDieu = Station(id: "stop_area:SNCF:87723197", name: "Lyon Part Dieu", latitude: 45.76, longitude: 4.86)
+        #expect(TripStop(name: "Lyon Part-Dieu", time: "18:40", isSkipped: false).isAt(partDieu))
+        #expect(TripStop(name: "Grenoble", time: "17:42", isSkipped: false).isAt(grenoble))
+        #expect(!TripStop(name: "Voiron", time: "18:07", isSkipped: false).isAt(grenoble))
+    }
+
     @Test func tripStopsListEveryCallingPoint() throws {
         let stops = try NavitiaParser.tripStops(from: fixture("vehicle_journey"))
         #expect(stops.count == 10)

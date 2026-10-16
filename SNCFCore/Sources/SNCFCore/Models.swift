@@ -47,8 +47,8 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     public let delayMinutes: Int?
     public let isCancelled: Bool
     public let trainNumber: String?
-    /// The train's Navitia vehicle_journey id, carried by a station board so its full list of stops
-    /// can be fetched on tap. nil on a journey row, and on boards cached by an older build.
+    /// The train's Navitia vehicle_journey id, carried by station-board and journey rows alike so its
+    /// full list of stops can be fetched on tap. nil on boards cached by an older build.
     public let vehicleJourneyID: String?
     /// The stop_area the train runs to, on a station board asked at `depth=2`: what a journey to that
     /// terminus is opened with. Optional so boards cached by an older build, which never had it, decode.
@@ -88,6 +88,12 @@ public struct TripStop: Hashable, Codable, Sendable {
         self.name = name
         self.time = time
         self.isSkipped = isSkipped
+    }
+
+    /// Whether this stop is that station. The stop is named by its stop_point and the station by its
+    /// stop_area, which SNCF does not always spell alike ("Part-Dieu" / "Part Dieu"), so names are folded.
+    public func isAt(_ station: Station) -> Bool {
+        NavitiaParser.folded(name) == NavitiaParser.folded(station.name)
     }
 }
 
