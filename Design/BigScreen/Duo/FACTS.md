@@ -92,9 +92,11 @@ Read this before touching a Duo layout.
 
 ## Our layout decisions
 
-- **Navigation**: the three tabs (Near me, Journeys, Settings) stay the only top-level navigation.
-  Big-screen views are detail columns and toolbar items inside them: Journeys list | Lanes,
-  board | train, Near me list | river; Round trip and Wall are toolbar items. No sidebar.
+- **Navigation**: four tabs (Near me, Journeys, Wall, Settings) are the only top-level navigation.
+  Folded, Near me and Journeys carry a List | Lines and a List | Lanes switch at the top of their
+  content; on the inner display both halves are side by side (Journeys list | Lanes, board | train,
+  Near me list | line map) and the switch is hidden. Round trip is a toolbar item on a journey board.
+  Entering tabletop selects the Wall tab once. No sidebar.
 - Two-column screens split at the fold with `NavigationSplitView`, the leading column's width pinned to
   the division's position (`frame.midX` of the inactive region, or `width / 2`).
 - The trailing column's content is 372 pt wide (495 → 867), within 10 pt of the folded content

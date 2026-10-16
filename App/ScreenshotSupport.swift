@@ -6,10 +6,15 @@ import SNCFCore
 /// images are captured from the real screens without any UI automation: one launch per tab, each
 /// one seeded and pointed at a known tab, then `simctl io screenshot`. Compiled out of Release.
 enum ScreenshotSupport {
-    /// `SCREENSHOT_TAB` picks which tab opens: 0 Near me, 1 Journeys, 2 Settings. Absent → Near me.
+    /// `SCREENSHOT_TAB` picks which tab opens: 0 Near me, 1 Journeys, 2 Wall, 3 Settings. Absent → Near me,
+    /// or the Wall with `SCREENSHOT_WALL`.
     static var initialTab: Int {
-        Int(ProcessInfo.processInfo.environment["SCREENSHOT_TAB"] ?? "") ?? 0
+        Int(ProcessInfo.processInfo.environment["SCREENSHOT_TAB"] ?? "") ?? (openWall ? RootView.wallTab : 0)
     }
+
+    /// `SCREENSHOT_LINES` turns Near me's switch to Lines, `SCREENSHOT_LANES` Journeys' to Lanes.
+    static var showsLines: Bool { ProcessInfo.processInfo.environment["SCREENSHOT_LINES"] != nil }
+    static var showsLanes: Bool { ProcessInfo.processInfo.environment["SCREENSHOT_LANES"] != nil }
 
     /// `SCREENSHOT_SEED` plants one saved journey so the Journeys tab has a card to show. Real SNCF
     /// stop_area ids, so the board actually loads trains from the API.
@@ -29,7 +34,7 @@ enum ScreenshotSupport {
         return SharedSettings.favorites.first
     }
 
-    /// `SCREENSHOT_WALL` (with `SCREENSHOT_JOURNEY`) opens that board's Wall cover.
+    /// `SCREENSHOT_WALL` opens the Wall tab.
     static var openWall: Bool { ProcessInfo.processInfo.environment["SCREENSHOT_WALL"] != nil }
 
     /// `SCREENSHOT_STATION` opens a station's line map in Near me, packed as `id|lat|lon|name` like the

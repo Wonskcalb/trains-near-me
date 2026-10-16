@@ -73,12 +73,6 @@ struct BoardView: View {
                         .disabled(loading)
                 }
             }
-            if journey == nil, !isColumn {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lines", systemImage: "point.3.connected.trianglepath.dotted") { nearMe.path.append(.lines) }
-                        .disabled(origin == nil)
-                }
-            }
             if isUnsaved, let journey {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Add to my journeys", systemImage: "star") {
@@ -88,8 +82,10 @@ struct BoardView: View {
                 }
             }
         }
-        // Round trip and Wall read the saved journeys, so an unsaved one gets them once it is added.
-        .modifier(JourneyToolbar(isEnabled: journey != nil && !isUnsaved, swap: {
+        // Round trip reads the saved journeys, so an unsaved one gets it once it is added.
+        .modifier(JourneyToolbar(isEnabled: journey != nil && !isUnsaved,
+                                 leg: origin.flatMap { from in destination.map { Leg(from: from, to: $0) } },
+                                 swap: {
             swapped.toggle()
             Task { await load() }
         }))

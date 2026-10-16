@@ -31,6 +31,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
 - iPhone Duo: on its side like a desk clock, Wall mode puts the clock and LEAVE HOME IN on top and the trains and controls below.
 
+### Changed
+- iPhone and iPhone Duo: four tabs (Near me, Journeys, Wall, Settings), with List | Lines and List | Lanes switches in place of hidden toolbar icons; the Duo turns to Wall when set down half-open.
+
 ### Fixed
 - Tapping a terminus on the line map opens its journey inside the iPhone tabs too.
 - iPhone Duo: Journeys stays readable half open, with its columns kept clear of the fold.

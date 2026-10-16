@@ -94,7 +94,7 @@ private struct StationHallBoard: View {
             .onChange(of: selected) { publishSelection() }
             .onAppear { publishSelection() }
         #if os(iOS)
-        board.modifier(JourneyToolbar(swap: reverseJourney.map { reverse in { model.journeyPath = [reverse] } }))
+        board.modifier(JourneyToolbar(leg: self.board?.leg, swap: reverseJourney.map { reverse in { model.journeyPath = [reverse] } }))
         #else
         board
         #endif

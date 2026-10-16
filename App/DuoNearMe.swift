@@ -3,39 +3,43 @@ import SNCFCore
 import SwiftUI
 
 /// Where the Near me tab stands. Held by `RootView` rather than the tab, so folding a Duo, which swaps the
-/// tab between a plain stack and the list | map split, keeps the station, the picked row and what is pushed.
+/// tab between a plain stack and the list | map split, keeps the station, the picked row, the List | Lines
+/// switch and what is pushed.
 struct NearMeState {
     /// The station the radar last found: the line map's station.
     var station: Station?
     /// The row picked in the split's list; on a plain iPhone a tap opens the trip instead.
     var selected: TrainDeparture?
-    /// The folded stack: Lines, then a journey a terminus opened. Unfolded the map is the detail column's
-    /// root, so that column only shows what comes after `.lines`.
-    var path: [NearMeRoute] = []
+    /// The folded tab's List | Lines switch. Unfolded both are on screen and the switch is hidden.
+    var showsLines = false
+    /// Journeys a terminus of the map opened, pushed over the map: the folded stack's path and the split's
+    /// detail column's alike, so folding keeps the board you had open.
+    var path: [JourneyConfiguration] = []
 
-    /// The journey station → terminus a lane of the map asked for, pushed over the map.
+    /// The journey station → terminus a lane of the map asked for, pushed over the map. Unsaved: its board
+    /// offers "Add to my journeys".
     mutating func open(_ leg: Leg) {
-        path = [.lines, .journey(JourneyConfiguration(stationA: leg.from, stationB: leg.to))]
+        showsLines = true
+        path = [JourneyConfiguration(stationA: leg.from, stationB: leg.to)]
     }
 }
 
-enum NearMeRoute: Hashable {
-    case lines
-    /// Unsaved: its board offers "Add to my journeys".
-    case journey(JourneyConfiguration)
-}
-
-/// What a Near me route opens, in the folded stack and in the split's detail column alike. Takes the
-/// binding rather than the station: a `navigationDestination` closure is not re-run when a value it reads
-/// changes, so a station passed in there stayed the nil it was at launch.
-struct NearMeDestination: View {
-    let route: NearMeRoute
+/// The radar station's line map, or a placeholder until there is one. Looks the station up itself when
+/// Lines is picked before the radar has found it, which would otherwise leave the placeholder up for good.
+struct NearMeLines: View {
     @Binding var nearMe: NearMeState
+    @Environment(\.bigScreenData) private var data
 
     var body: some View {
-        switch route {
-        case .lines: if let station = nearMe.station { NearMeMap(station: station, highlighted: nearMe.selected) }
-        case .journey(let journey): BoardView(journey: journey)
+        if let station = nearMe.station {
+            NearMeMap(station: station, highlighted: nearMe.selected)
+        } else {
+            ContentUnavailableView("Looking for the nearest station", systemImage: "antenna.radiowaves.left.and.right")
+                .task {
+                    if let station = try? await data.stationSearch.nearest().station, nearMe.station == nil {
+                        nearMe.station = station
+                    }
+                }
         }
     }
 }
@@ -69,27 +73,33 @@ struct NearMeSplit: View {
                 BoardView(journey: nil, nearMe: $nearMe)
                     .navigationSplitViewColumnWidth(Fold.leadingWidth(in: proxy))
             } detail: {
-                NavigationStack(path: detailPath) {
-                    Group {
-                        if nearMe.station != nil {
-                            NearMeDestination(route: .lines, nearMe: $nearMe)
-                        } else {
-                            ContentUnavailableView("Looking for the nearest station",
-                                                   systemImage: "antenna.radiowaves.left.and.right")
-                        }
-                    }
-                    .navigationDestination(for: NearMeRoute.self) { NearMeDestination(route: $0, nearMe: $nearMe) }
+                NavigationStack(path: $nearMe.path) {
+                    NearMeLines(nearMe: $nearMe)
+                        .navigationDestination(for: JourneyConfiguration.self) { BoardView(journey: $0) }
                 }
             }
             .navigationSplitViewStyle(.balanced)
         }
     }
+}
 
-    /// The folded path minus Lines, which this column always shows. Popping back to the map here leaves
-    /// Lines pushed, so folding then lands on the map you were reading.
-    private var detailPath: Binding<[NearMeRoute]> {
-        Binding(get: { nearMe.path.filter { $0 != .lines } },
-                set: { nearMe.path = [.lines] + $0 })
+extension View {
+    /// The folded tabs' top switch (Near me's List | Lines, Journeys' List | Lanes). In the content rather
+    /// than the toolbar: the folded Duo stands its bar up in the trailing strip, where a segmented control
+    /// has no place, while a bar in the safe area stays on top in every pose.
+    @ViewBuilder func modeSwitch(_ selection: Binding<Bool>, _ off: String, _ on: String) -> some View {
+        let picker = Picker("View", selection: selection) {
+            Text(off).tag(false)
+            Text(on).tag(true)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        if #available(iOS 26, *) {
+            safeAreaBar(edge: .top) { picker }
+        } else {
+            safeAreaInset(edge: .top) { picker.background(Color.ground) }
+        }
     }
 }
 #endif
