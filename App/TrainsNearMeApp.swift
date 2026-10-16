@@ -40,6 +40,7 @@ struct TrainsNearMeApp: App {
         #else
         WindowGroup {
             BigScreenRoot().environment(\.bigScreenData, data)
+                .followsAppearance()
                 // Ask for a background re-evaluation of watched trains whenever the app leaves the foreground.
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background { BackgroundRefresh.schedule() }
@@ -65,7 +66,23 @@ enum AppGroupStore {
 /// leaves the window on the system appearance.
 private struct FollowsAppearance: ViewModifier {
     @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
-    func body(content: Content) -> some View { content.preferredColorScheme(appearance.colorScheme) }
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        // Not `.preferredColorScheme`: on macOS, going back to nil (System) leaves the window on the last
+        // forced appearance until it loses key status. The app-wide NSAppearance applies at once, to the
+        // main window, the Settings scene and the menu-bar popover alike.
+        content.onChange(of: appearance, initial: true) { _, appearance in
+            NSApp.appearance = switch appearance {
+            case .system: nil
+            case .light: NSAppearance(named: .aqua)
+            case .dark: NSAppearance(named: .darkAqua)
+            }
+        }
+        #else
+        content.preferredColorScheme(appearance.colorScheme)
+        #endif
+    }
 }
 
 extension View {
