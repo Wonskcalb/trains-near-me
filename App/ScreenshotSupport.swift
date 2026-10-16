@@ -31,5 +31,11 @@ enum ScreenshotSupport {
 
     /// `SCREENSHOT_WALL` (with `SCREENSHOT_JOURNEY`) opens that board's Wall cover.
     static var openWall: Bool { ProcessInfo.processInfo.environment["SCREENSHOT_WALL"] != nil }
+
+    /// `SCREENSHOT_STATION` opens a station's line map in Near me, packed as `id|lat|lon|name` like the
+    /// widget's station entity: the map splits its lanes by bearing, so the station needs its coordinates.
+    static var station: Station? {
+        ProcessInfo.processInfo.environment["SCREENSHOT_STATION"].flatMap(Station.init(entityIdentifier:))
+    }
 }
 #endif

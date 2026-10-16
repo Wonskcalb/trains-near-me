@@ -36,6 +36,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - iPhone Duo: Journeys stays readable half open, with its columns kept clear of the fold.
 - Wall mode fits any screen: one scrolling column on an iPhone, the board and LEAVE HOME IN either side of the Duo's fold, and no more fixed widths spilling off both edges.
 - After the last train, a cancelled first train tomorrow no longer reads as "no service": the board shows the end of service and names the first train that runs.
+- The station line map scrolls instead of squeezing a busy station's lanes, fits narrow screens, and its time labels open the train like its dots.
 
 - Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
 - Big screen: NEAR ME shows the station nearest to you with its next departure and distance, or says why it cannot (location not allowed yet — with an **Allow location** button —, location off, no station within 20 km), falling back to the pinned station.

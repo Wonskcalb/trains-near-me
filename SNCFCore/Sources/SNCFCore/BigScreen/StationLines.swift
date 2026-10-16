@@ -24,7 +24,8 @@ public enum StationLines {
     public static let otherID = "other"
 
     /// Groups the trains leaving after `now` by terminus. Beyond `maxLanes` the termini with the fewest
-    /// trains share one "Other destinations" lane, because a lane under ~56 pt no longer holds its labels.
+    /// trains share one "Other destinations" lane: the map scrolls rather than squeeze, but past eight
+    /// lanes a busy station reads as a list, and the fan of curves out of the capsule turns to a wall.
     /// Ordered by terminus name, "Other" last: never by the soonest train, which changes every time one
     /// leaves. The map places termini with coordinates by bearing, but the rest keep this order, and a lane
     /// that swapped rows on each departure both jumped and cancelled the departure animation.
@@ -140,6 +141,9 @@ public enum StationLines {
             return span > 0 ? (folded(date) - folded(start)) / span : 0
         }
 
+        /// The axis's length in seconds of track, the night folded: what a minimum scale is applied to.
+        public var span: TimeInterval { folded(end) - folded(start) }
+
         /// Whether a mark falls inside the folded night, where it would only crowd the zig-zag.
         public func isFolded(_ date: Date) -> Bool { gap.map { date > $0.start && date < $0.end } ?? false }
 
@@ -197,6 +201,50 @@ public enum StationLines {
         return "EVERY \(minutes) MIN"
     }
 
+    // MARK: Map size
+
+    /// The floor under a lane's pitch: a dot, a label row `labelOffset` above and one below, well clear of
+    /// the next lane's so a chip reads as its own lane's, and room beside it for a two-line terminus and
+    /// its summary. Below this a chip lands on the neighbouring lane, so the map scrolls instead.
+    public static let minimumPitch = 96.0
+    /// The floor on a narrow screen, where the terminus name rides above its lane in place of the upper
+    /// label row: the name, the dot and one label row under it, 8 pt clear of the next lane's name.
+    public static let compactPitch = 80.0
+    /// The mockup's pitch, which a roomy screen never spreads past.
+    public static let maximumPitch = 130.0
+    /// How far a label row sits from its lane: just clear of the 20 pt next dot, closer to its own lane
+    /// than to the next one at any pitch.
+    public static let labelOffset = 26.0
+    /// Points per minute a narrow axis never goes under: two trains ten minutes apart then still sit a
+    /// label apart once the rows alternate, where the folded Duo piled 23:57 and 00:05 into one blot.
+    public static let minimumScale = 2.2
+
+    /// The pitch for `rows` rows (the lanes plus the axis row) sharing `height`, between `floor` and the
+    /// mockup's pitch.
+    public static func pitch(rows: Int, height: Double, floor: Double = minimumPitch) -> Double {
+        guard rows > 1 else { return maximumPitch }
+        return min(maximumPitch, max(floor, height / Double(rows - 1)))
+    }
+
+    /// The room the map needs round its rows: 60 pt past the outer lanes for their side label and label
+    /// row, and on a side with no lanes enough for half the capsule, and for its name under it.
+    public static func margins(above: Int, below: Int, pitch: Double, capsuleHeight: Double) -> (top: Double, bottom: Double) {
+        (max(60, capsuleHeight / 2 + 12 - Double(above) * pitch),
+         max(60, capsuleHeight / 2 + 60 - Double(below) * pitch))
+    }
+
+    /// How tall the map is at `pitch`, `above` lanes over the axis row and `below` under it, margins
+    /// included: past the viewport, the map scrolls.
+    public static func mapHeight(above: Int, below: Int, pitch: Double, capsuleHeight: Double) -> Double {
+        let margin = margins(above: above, below: below, pitch: pitch, capsuleHeight: capsuleHeight)
+        return margin.top + Double(above + below) * pitch + margin.bottom
+    }
+
+    /// How wide the axis is drawn: the room there is, or `scale` points a minute when that is wider.
+    public static func axisWidth(_ axis: Axis, available: Double, scale: Double) -> Double {
+        max(available, axis.span / 60 * scale)
+    }
+
     // MARK: Lane path
 
     /// One lane's track: level out of the station capsule, a straight run to `peel`, one horizontal-in,
@@ -215,8 +263,9 @@ public enum StationLines {
         private static let samples = 48
 
         public init(stationX: Double, exitY: Double, y: Double, curveEnd: Double, laneEnd: Double) {
-            // Peels off sooner the further it has to climb, so no two lanes ever cross.
-            let peelX = stationX + max(20, 92 - 0.17 * abs(y - exitY))
+            // Peels off sooner the further it has to climb, so no two lanes ever cross; never past half the
+            // curve band, which a narrow screen shrinks to a hundred points.
+            let peelX = stationX + min(max(20, 92 - 0.17 * abs(y - exitY)), (curveEnd - stationX) / 2)
             let mid = (curveEnd - peelX) / 2
             start = CGPoint(x: stationX, y: exitY)
             peel = CGPoint(x: peelX, y: exitY)

@@ -53,6 +53,18 @@ struct RootView: View {
     @State private var nearMe = NearMeState()
 
     @ViewBuilder private var nearMeTab: some View {
+        #if DEBUG
+        if let station = ScreenshotSupport.station {
+            NavigationStack { StationBoardView(station: station) }
+        } else {
+            nearMeBoards
+        }
+        #else
+        nearMeBoards
+        #endif
+    }
+
+    @ViewBuilder private var nearMeBoards: some View {
         if spansFold {
             NearMeSplit(nearMe: $nearMe)
         } else {

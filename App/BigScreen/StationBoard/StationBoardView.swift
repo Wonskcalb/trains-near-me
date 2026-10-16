@@ -8,11 +8,14 @@ import SwiftUI
 /// action that belongs to the station itself.
 struct StationBoardView: View {
     let station: Station
+    /// The train picked in a list beside the map (the Duo's Near me split): its stop is ringed.
+    let highlighted: TrainDeparture?
     /// A frozen anchor for the `#Preview`; nil follows the real clock.
     private let frozenNow: Date?
 
-    init(station: Station, now: Date? = nil) {
+    init(station: Station, now: Date? = nil, highlighted: TrainDeparture? = nil) {
         self.station = station
+        self.highlighted = highlighted
         frozenNow = now
     }
 
@@ -20,7 +23,7 @@ struct StationBoardView: View {
     // keyed on the station and ⌘R, not on the time, so a tick never costs a request.
     var body: some View {
         TimelineView(.everyMinute) { context in
-            StationLinesBoard(station: station, now: frozenNow ?? context.date)
+            StationLinesBoard(station: station, now: frozenNow ?? context.date, highlighted: highlighted)
         }
     }
 }
@@ -29,6 +32,19 @@ struct StationBoardView: View {
 private enum LinesRange: String, CaseIterable {
     case nextTwoHours = "NEXT 2 H"
     case tonight = "TONIGHT"
+}
+
+/// The pin's label: icon and title, or the icon alone where the header has no room for the words.
+private struct PinLabelStyle: LabelStyle {
+    let compact: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.icon
+        } else {
+            Label(configuration)
+        }
+    }
 }
 
 /// Headsigns that came without a stop_area, resolved through the station search the first time they are
@@ -42,12 +58,14 @@ private struct StationLinesBoard: View {
     @Environment(BigScreenModel.self) private var model
     let station: Station
     let now: Date
+    let highlighted: TrainDeparture?
 
     @State private var board: StationDayBoard?
     @State private var fetchedAt: Date?
     @State private var pinned: Station?
     @State private var range = LinesRange.nextTwoHours
     @State private var openFailure: String?
+    @State private var narrow = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -55,8 +73,11 @@ private struct StationLinesBoard: View {
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
             footer
         }
-        .padding(.horizontal, 44).padding(.top, 28).padding(.bottom, 18)
+        // Padding inside the safe area, never instead of it: the Duo stands its bars up in a strip on the
+        // trailing edge, and the safe area is what keeps the page out from under it.
+        .padding(.horizontal, narrow ? 16 : 44).padding(.top, narrow ? 12 : 28).padding(.bottom, narrow ? 10 : 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: Bool.self) { $0.size.width < 700 } action: { narrow = $0 }
         .background(Color.ground.ignoresSafeArea())
         // One request on open, on ⌘R and every five minutes: the whole evening comes in that one answer,
         // and the stops and countdowns are recomputed from `now` in between.
@@ -74,7 +95,8 @@ private struct StationLinesBoard: View {
     // MARK: Header
 
     // On a narrow column (iPad portrait, split view) the controls drop under the title instead of
-    // wrapping the picker's words.
+    // wrapping the picker's words; narrower still (the folded Duo, a phone) they and the legend take two
+    // rows each. A fixed-size row wider than the screen pushed the whole page past both edges.
     private var header: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 16) {
@@ -87,6 +109,17 @@ private struct StationLinesBoard: View {
                 controls
                 legend
             }
+            VStack(alignment: .leading, spacing: 10) {
+                title
+                HStack(spacing: 10) { freshness; rangePicker; pinButton(compact: true) }.fixedSize()
+                legendRow(0..<4, compact: true)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                title
+                HStack(spacing: 10) { rangePicker; pinButton(compact: true) }.fixedSize()
+                freshness
+                VStack(alignment: .leading, spacing: 8) { legendRow(0..<2, compact: true); legendRow(2..<4, compact: true) }
+            }
         }
     }
 
@@ -94,7 +127,7 @@ private struct StationLinesBoard: View {
         HStack(spacing: 14) {
             freshness
             rangePicker
-            pinButton
+            pinButton()
         }
         .fixedSize()
     }
@@ -125,14 +158,20 @@ private struct StationLinesBoard: View {
 
     private var isStale: Bool { fetchedAt.map { now.timeIntervalSince($0) > 30 * 60 } ?? false }
 
-    private var legend: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 6) { NextDot(size: 11, ring: 2); Text("next") }
-            HStack(spacing: 6) { LinePill(text: "+12", status: .delayed, size: 10.5); Text("late") }
-            HStack(spacing: 6) { LinePill(text: "+24", status: .severelyDelayed, size: 10.5); Text("very late") }
-            HStack(spacing: 6) { Text("19:05").strikethrough(); Text("cancelled") }
+    private var legend: some View { legendRow(0..<4) }
+
+    private func legendRow(_ items: Range<Int>, compact: Bool = false) -> some View {
+        HStack(spacing: compact ? 10 : 16) {
+            ForEach(items, id: \.self) { item in
+                switch item {
+                case 0: HStack(spacing: 6) { NextDot(size: 11, ring: 2); Text("next") }
+                case 1: HStack(spacing: 6) { LinePill(text: "+12", status: .delayed, size: 10.5); Text("late") }
+                case 2: HStack(spacing: 6) { LinePill(text: "+24", status: .severelyDelayed, size: 10.5); Text("very late") }
+                default: HStack(spacing: 6) { Text("19:05").strikethrough(); Text("cancelled") }
+                }
+            }
         }
-        .font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
+        .font(.mono(compact ? 10.5 : 11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
         .fixedSize()
         .accessibilityHidden(true)
     }
@@ -154,7 +193,8 @@ private struct StationLinesBoard: View {
         .padding(3).background(Color.raised, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private var pinButton: some View {
+    /// `compact` is the pin alone, for a phone-width header; VoiceOver still hears the full title.
+    private func pinButton(compact: Bool = false) -> some View {
         Button {
             Task {
                 let target: Station? = isPinned ? nil : station
@@ -163,8 +203,9 @@ private struct StationLinesBoard: View {
             }
         } label: {
             Label(isPinned ? "Pinned for Wall mode" : "Pin for Wall mode", systemImage: isPinned ? "pin.fill" : "pin")
+                .labelStyle(PinLabelStyle(compact: compact))
                 .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
-                .padding(.horizontal, 14).frame(height: 38)
+                .padding(.horizontal, compact ? 0 : 14).frame(minWidth: 38).frame(height: 38)
                 .background(Color.raised, in: Capsule())
         }
         .buttonStyle(.plain)
@@ -173,11 +214,26 @@ private struct StationLinesBoard: View {
 
     private var isPinned: Bool { pinned?.id == station.id }
 
+    /// ⌘R only where a keyboard is the rule; an iPhone refreshes from its toolbar.
+    #if os(macOS)
+    private static let refreshHint = " · ⌘R"
+    #else
+    private static let refreshHint = ""
+    #endif
+
     private var footer: some View {
-        HStack {
-            Text("Data © SNCF · Not affiliated with SNCF")
-            Spacer()
-            Text("Tap a terminus to open its journey · ⌘R")
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                Text("Data © SNCF · Not affiliated with SNCF")
+                Spacer()
+                Text("Tap a time for its train, a terminus for its journey" + Self.refreshHint)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .lineLimit(1)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Data © SNCF · Not affiliated with SNCF")
+                Text("A time opens its train, a terminus its journey")
+            }
         }
         .font(.mono(11, weight: .medium)).tracking(0.3).foregroundStyle(Color.inkSecondary)
     }
@@ -195,7 +251,8 @@ private struct StationLinesBoard: View {
                         Text("No service tonight · every remaining train is cancelled")
                             .font(.mono(12, weight: .semibold)).tracking(0.6).foregroundStyle(Color.stop)
                     }
-                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight), open: open)
+                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight),
+                            highlighted: highlighted, open: open)
                 }
             } else {
                 switch board.state {
@@ -267,7 +324,9 @@ private struct MapInput: Equatable {
 }
 
 /// Everything the map draws, in one coordinate space: the Canvas strokes the lanes and the axis from it,
-/// and the stops and labels are views positioned on the same numbers so they can be buttons.
+/// and the stops and labels are views positioned on the same numbers so they can be buttons. The space is
+/// the map's content, which grows past the viewport rather than squeeze a busy station: the lanes keep a
+/// readable pitch and a narrow axis its minimum scale, and the map scrolls.
 private struct MapGeometry {
     struct Lane {
         let lane: StationLane
@@ -293,21 +352,33 @@ private struct MapGeometry {
         /// just left of its dot, the others are centred on theirs. nil when the label is hidden.
         func labelCenter(x: CGFloat, laneY: CGFloat) -> CGPoint? {
             guard row != .hidden else { return nil }
-            return CGPoint(x: kind == .next ? x - 14 + (labelWidth + 40) / 2 : x, y: laneY + (row == .below ? 30 : -30))
+            let offset = CGFloat(StationLines.labelOffset)
+            return CGPoint(x: kind == .next ? x - 14 + (labelWidth + 40) / 2 : x, y: laneY + (row == .below ? offset : -offset))
         }
     }
 
+    /// The scroll view's size, and the content's: equal when everything fits.
+    let viewport: CGSize
     let size: CGSize
     let station: Station
     let lanes: [Lane]
-    let stationX: CGFloat = 34
+    let stationX: CGFloat
+    let capsuleWidth: CGFloat
     let stationY: CGFloat
     let capsuleHeight: CGFloat
     let x0: CGFloat, x1: CGFloat, curveEnd: CGFloat, laneEnd: CGFloat, terminusWidth: CGFloat
     let pitch: CGFloat
+    /// The hour labels and NOW flag leave the axis row for this band, pinned at the top, once the map
+    /// scrolls: in the middle they would scroll away with the rows. 0 when everything fits.
+    let axisBand: CGFloat
     let axis: StationLines.Axis
     let hours: [Date], quarters: [Date]
     let groupLabels: (above: String?, below: String?)
+    /// Under 700 pt: a slim station band, the names above the lanes, one label row, a minimum scale.
+    let narrow: Bool
+
+    /// How far the trailing terminus column sits past the viewport's edge, which pinning takes back.
+    var overhang: CGFloat { max(0, size.width - viewport.width) }
 
     func x(_ date: Date) -> CGFloat {
         x0 + CGFloat(axis.fraction(date)) * (x1 - x0)
@@ -316,12 +387,12 @@ private struct MapGeometry {
     var top: CGFloat { (lanes.first?.y ?? stationY) - 56 }
     var bottom: CGFloat { max(lanes.last?.y ?? stationY, stationY) + 56 }
 
-    init(_ input: MapInput, size: CGSize) {
-        self.init(station: input.station, lanes: input.lanes, now: input.now, tonight: input.tonight, size: size)
+    init(_ input: MapInput, viewport: CGSize) {
+        self.init(station: input.station, lanes: input.lanes, now: input.now, tonight: input.tonight, viewport: viewport)
     }
 
-    init(station: Station, lanes input: [StationLane], now: Date, tonight: Bool, size: CGSize) {
-        self.size = size
+    init(station: Station, lanes input: [StationLane], now: Date, tonight: Bool, viewport: CGSize) {
+        self.viewport = viewport
         self.station = station
         // Tomorrow's trains ride the same lanes; the axis folds the night between them and tonight's.
         let trains = input.flatMap(\.trains)
@@ -336,25 +407,52 @@ private struct MapGeometry {
         hours = marks.hours.filter { !axis.isFolded($0) }
         quarters = marks.quarters.filter { !axis.isFolded($0) }
 
-        // The mockup's proportions at 1288 pt, squeezed on a narrow column: the axis gives first.
-        terminusWidth = min(216, max(140, size.width * 0.17))
-        laneEnd = size.width - terminusWidth - 6
-        x1 = laneEnd - 30
-        x0 = min(386, max(150, size.width * 0.3))
+        // The mockup's proportions at 1288 pt. Under 700 (the folded Duo, a phone, slide-over) the capsule
+        // and its curves shrink to a band, the terminus names ride above their lanes instead of taking a
+        // column (which left the folded Duo forty minutes of axis), and the axis keeps a minimum scale and
+        // scrolls rather than pile a lane's stops into a few points.
+        let narrow = viewport.width < 700
+        self.narrow = narrow
+        stationX = narrow ? 18 : 34
+        capsuleWidth = narrow ? 28 : 40
+        terminusWidth = narrow ? 0 : min(216, max(140, viewport.width * 0.17))
+        x0 = narrow ? 118 : min(386, max(150, viewport.width * 0.3))
         curveEnd = x0 - 30
+        let tail = narrow ? 16 : 14 + terminusWidth
+        let available = Double(viewport.width - tail - 30 - x0)
+        x1 = x0 + CGFloat(StationLines.axisWidth(axis, available: available, scale: narrow ? StationLines.minimumScale : 0))
+        laneEnd = x1 + 30
+        let width = laneEnd + tail
 
         let bearings = input.map { lane in lane.terminus.map { StationLines.bearing(from: station, to: $0) } }
         let sides = StationLines.sides(for: bearings)
         let rows = sides.above.count + 1 + sides.below.count
-        // ~130 pt in the mockup, ~90 at eight lanes, never under 56, where a lane still holds one label row.
-        pitch = min(130, max(56, (size.height - 120) / CGFloat(rows - 1)))
-        let firstY = max(60, (size.height - CGFloat(rows - 1) * pitch) / 2)
-        stationY = firstY + CGFloat(sides.above.count) * pitch
-
         let order = sides.above + sides.below
         let n = order.count
         let exitGap: CGFloat = 14
         capsuleHeight = max(96, CGFloat(n - 1) * exitGap + 40)
+        let capsule = Double(capsuleHeight)
+
+        // ~130 pt in the mockup, ~100 at eight lanes, never under the minimum: past it the map scrolls, and
+        // the axis labels go up to the pinned band, which then takes its share of the height.
+        func fit(band: CGFloat) -> (pitch: CGFloat, height: CGFloat) {
+            let room = StationLines.margins(above: sides.above.count, below: sides.below.count,
+                                            pitch: StationLines.minimumPitch, capsuleHeight: capsule)
+            let pitch = StationLines.pitch(rows: rows, height: Double(viewport.height - band) - room.top - room.bottom,
+                                           floor: narrow ? StationLines.compactPitch : StationLines.minimumPitch)
+            let height = StationLines.mapHeight(above: sides.above.count, below: sides.below.count, pitch: pitch, capsuleHeight: capsule)
+            return (CGFloat(pitch), CGFloat(height) + band)
+        }
+        var layout = fit(band: 0)
+        axisBand = layout.height > viewport.height + 0.5 || width > viewport.width + 0.5 ? 40 : 0
+        if axisBand > 0 { layout = fit(band: axisBand) }
+        pitch = layout.pitch
+        size = CGSize(width: max(width, viewport.width), height: max(layout.height, viewport.height))
+        let margins = StationLines.margins(above: sides.above.count, below: sides.below.count,
+                                           pitch: Double(pitch), capsuleHeight: capsule)
+        // Centred in what is left over when it all fits; from the top when it scrolls.
+        let firstY = axisBand + max(0, size.height - layout.height) / 2 + CGFloat(margins.top)
+        stationY = firstY + CGFloat(sides.above.count) * pitch
 
         func label(_ fan: [Int]) -> String? {
             // Named after the fan's busiest terminus, and the compass point it lies at.
@@ -369,8 +467,6 @@ private struct MapGeometry {
         var lanes: [Lane] = []
         let (x0, x1) = (self.x0, self.x1)
         let scale = { (date: Date) in x0 + CGFloat(axis.fraction(date)) * (x1 - x0) }
-        let narrow = size.width < 700
-        let allowAbove = pitch >= 88
         for (k, index) in order.enumerated() {
             let above = k < sides.above.count
             let y = above ? firstY + CGFloat(k) * pitch : stationY + CGFloat(k - sides.above.count + 1) * pitch
@@ -386,13 +482,12 @@ private struct MapGeometry {
             }
             // The next train's label goes first, so it is never the one pushed up or hidden.
             let placement = stops.indices.sorted { (stops[$0].kind != .next ? 1 : 0, $0) < (stops[$1].kind != .next ? 1 : 0, $1) }
-                .filter { !narrow || stops[$0].kind == .next }
             let spans = placement.map { i -> ClosedRange<Double> in
                 let left = stops[i].kind == .next ? stops[i].x - 14 : stops[i].x - stops[i].labelWidth / 2
                 return Double(left)...Double(left + stops[i].labelWidth)
             }
             for i in stops.indices { stops[i].row = .hidden }
-            for (i, row) in zip(placement, StationLines.labelRows(spans, allowAbove: allowAbove)) { stops[i].row = row }
+            for (i, row) in zip(placement, StationLines.labelRows(spans, allowAbove: !narrow)) { stops[i].row = row }
             let path = StationLines.LanePath(stationX: Double(stationX), exitY: Double(exitY), y: Double(y),
                                              curveEnd: Double(curveEnd), laneEnd: Double(laneEnd))
             lanes.append(Lane(lane: lane, y: y, path: path, above: above, stops: stops,
@@ -441,6 +536,7 @@ private struct MapGeometry {
 /// view of `input`; nothing animates or schedules between departures, so an idle board costs nothing.
 private struct LineMap: View {
     let input: MapInput
+    let highlighted: TrainDeparture?
     let open: (Station?, String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -451,14 +547,25 @@ private struct LineMap: View {
     /// The frame a departure animates away from, while it runs.
     @State private var departedFrom: MapInput?
     @State private var elapsed: Double = 0
+    @State private var scroll = MapScroll()
 
     var body: some View {
         GeometryReader { geo in
-            MapFrame(map: MapGeometry(shown ?? input, size: geo.size),
-                     from: departedFrom.map { MapGeometry($0, size: geo.size) },
-                     elapsed: elapsed, reduceMotion: reduceMotion, selectedStop: $selectedStop, open: open)
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
-                .onChange(of: input) { old, new in advance(from: old, to: new, size: geo.size) }
+            let map = MapGeometry(shown ?? input, viewport: geo.size)
+            ScrollView([.horizontal, .vertical]) {
+                MapFrame(map: map, from: departedFrom.map { MapGeometry($0, viewport: geo.size) },
+                         elapsed: elapsed, reduceMotion: reduceMotion, scroll: scroll, highlighted: highlighted,
+                         selectedStop: $selectedStop, open: open)
+                    .frame(width: map.size.width, height: map.size.height, alignment: .topLeading)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
+            .onScrollGeometryChange(for: CGPoint.self) { geometry in
+                CGPoint(x: geometry.contentOffset.x + geometry.contentInsets.leading,
+                        y: geometry.contentOffset.y + geometry.contentInsets.top)
+            } action: { _, offset in
+                scroll.offset = offset
+            }
+            .onChange(of: input) { old, new in advance(from: old, to: new, size: geo.size) }
         }
     }
 
@@ -468,7 +575,7 @@ private struct LineMap: View {
         // redraws at once. ponytail: one departure at a time, a second landing mid-flight just jumps; the
         // two only meet when a reload lands within a second of a minute tick.
         guard departedFrom == nil, old.station == new.station, old.tonight == new.tonight else { return }
-        let before = MapGeometry(old, size: size), after = MapGeometry(new, size: size)
+        let before = MapGeometry(old, viewport: size), after = MapGeometry(new, viewport: size)
         let kept = Set(after.lanes.flatMap { $0.stops.map(\.id) })
         guard before.lanes.map(\.lane.id) == after.lanes.map(\.lane.id),
               before.lanes.contains(where: { $0.stops.contains { !kept.contains($0.id) } }) else { return }
@@ -481,6 +588,20 @@ private struct LineMap: View {
             elapsed = 0
         }
     }
+}
+
+/// Where the map is scrolled to. A reference the pinned layers read on their own, so a scroll re-renders
+/// those few views and never the map with its forty stops and their popovers.
+@Observable @MainActor private final class MapScroll {
+    var offset: CGPoint = .zero
+}
+
+/// A layer that reads the scroll offset, typically to stay put while the map moves under it.
+private struct WithScroll<Content: View>: View {
+    let scroll: MapScroll
+    @ViewBuilder let content: (CGPoint) -> Content
+
+    var body: some View { content(scroll.offset) }
 }
 
 /// Where a departure stands `elapsed` seconds in, and every timing the map reads from it: the label fades
@@ -512,13 +633,17 @@ private struct DepartureClock {
 
 /// One frame of the map, `elapsed` seconds into a departure when there is one. Animatable on that one
 /// number, so the body is re-run each frame only while a train leaves, and a frame can be drawn at any
-/// instant of it.
+/// instant of it. Drawn in layers so the map can scroll under its fixed parts: the station band (capsule
+/// and curves) keeps to the leading edge, the termini to the trailing one, and once the map scrolls the
+/// axis labels to a band along the top.
 private struct MapFrame: View, Animatable {
     let map: MapGeometry
     /// The frame a departure leaves from; nil at rest, when the map is just `map`.
     let from: MapGeometry?
     var elapsed: Double
     let reduceMotion: Bool
+    let scroll: MapScroll
+    let highlighted: TrainDeparture?
     @Binding var selectedStop: String?
     let open: (Station?, String) -> Void
 
@@ -535,19 +660,33 @@ private struct MapFrame: View, Animatable {
         let clock = from.map { _ in DepartureClock(elapsed: elapsed, reduceMotion: reduceMotion) }
         let blend = Blend(map: map, from: from, r: CGFloat(clock?.rebalance ?? 1))
         ZStack(alignment: .topLeading) {
-            Canvas { context, _ in draw(blend, in: &context) }.accessibilityHidden(true)
-            axisLabels(blend)
-            ForEach(map.lanes, id: \.lane.id) { lane in laneButton(lane) }
+            Canvas { context, _ in drawTrack(blend, in: &context) }.accessibilityHidden(true)
             ForEach(map.lanes, id: \.lane.id) { lane in
                 ForEach(lane.stops) { stop in
                     stopLabels(stop, lane: lane, blend: blend, clock: clock)
                     stopButton(stop, lane: lane, blend: blend, clock: clock)
                 }
             }
+            // Opaque, so whatever scrolls left goes under the capsule rather than through it.
+            WithScroll(scroll: scroll) { offset in stationBand.offset(x: offset.x) }
+            if map.axisBand == 0 { axisLabels(blend, y: map.stationY) }
             if let clock, let from {
-                ForEach(blend.departed, id: \.stop.id) { item in departing(item.stop, lane: item.lane, from: from, clock: clock) }
+                WithScroll(scroll: scroll) { offset in
+                    ForEach(blend.departed, id: \.stop.id) { item in
+                        departing(item.stop, lane: item.lane, from: from, clock: clock, scrolled: offset.x)
+                    }
+                }
             }
-            stationMark
+            WithScroll(scroll: scroll) { offset in
+                if map.narrow {
+                    ForEach(map.lanes, id: \.lane.id) { lane in laneName(lane).offset(x: offset.x) }
+                } else {
+                    terminusColumn.offset(x: map.laneEnd - 4 + offset.x - map.overhang)
+                }
+            }
+            if map.axisBand > 0 {
+                WithScroll(scroll: scroll) { offset in axisHeader(blend).offset(y: offset.y) }
+            }
         }
     }
 
@@ -558,7 +697,8 @@ private struct MapFrame: View, Animatable {
 
     // MARK: Canvas
 
-    private func draw(_ blend: Blend, in context: inout GraphicsContext) {
+    /// What scrolls: the hour lines, the folded night, the NOW line, each lane's row and its ghosts.
+    private func drawTrack(_ blend: Blend, in context: inout GraphicsContext) {
         let map = blend.map
         for hour in map.hours {
             let x = blend.x(hour)
@@ -595,18 +735,14 @@ private struct MapFrame: View, Animatable {
                        with: .color(.inkSecondary), style: StrokeStyle(lineWidth: 1.5, dash: [3, 4]))
 
         for lane in map.lanes {
-            let color = rail(lane)
-            // Each lane leaves the capsule level, peels off sooner the further it has to climb, and bends
-            // into its row with one horizontal-in, horizontal-out cubic, so no two lanes ever cross.
-            let track = lane.path
-            var path = Path()
-            path.move(to: track.start)
-            path.addLine(to: track.peel)
-            path.addCurve(to: track.curveEnd, control1: track.control1, control2: track.control2)
-            path.addLine(to: track.end)
-            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
-            context.stroke(Path { $0.move(to: CGPoint(x: map.laneEnd, y: lane.y - 14)); $0.addLine(to: CGPoint(x: map.laneEnd, y: lane.y + 14)) },
-                           with: .color(color), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            // The row only: its curve out of the capsule is the station band's.
+            context.stroke(Path { $0.move(to: lane.path.curveEnd); $0.addLine(to: lane.path.end) },
+                           with: .color(rail(lane)), style: StrokeStyle(lineWidth: 7, lineCap: .round))
+            if map.narrow {
+                // No terminus column to carry the buffer stop: it scrolls in with the lane's end.
+                context.stroke(Path { $0.move(to: CGPoint(x: map.laneEnd, y: lane.y - 14)); $0.addLine(to: CGPoint(x: map.laneEnd, y: lane.y + 14)) },
+                               with: .color(rail(lane)), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            }
 
             // The time-track grammar: a hollow ghost at the timetabled slot, a dashed arc to where it leaves.
             for stop in lane.stops {
@@ -622,30 +758,79 @@ private struct MapFrame: View, Animatable {
                 context.stroke(ghost, with: .color(ink), lineWidth: 1.8)
             }
         }
-
-        // The station on top of the lanes' roots, so they all seem to leave from inside it.
-        let capsule = Path(roundedRect: CGRect(x: map.stationX - 20, y: map.stationY - map.capsuleHeight / 2,
-                                               width: 40, height: map.capsuleHeight), cornerRadius: 20)
-        context.fill(capsule, with: .color(.amber))
-        context.stroke(capsule, with: .color(ring), lineWidth: scheme == .dark ? 5 : 3)
     }
 
-    // MARK: Axis and station
+    // MARK: Station band
 
-    @ViewBuilder private func axisLabels(_ blend: Blend) -> some View {
+    /// The capsule, the S-curves out of it, its name and the side labels: everything left of where the
+    /// lanes straighten, kept at the leading edge while the axis scrolls.
+    private var stationBand: some View {
+        ZStack(alignment: .topLeading) {
+            Canvas { context, size in
+                context.fill(Path(CGRect(x: 0, y: 0, width: map.curveEnd, height: size.height)), with: .color(.ground))
+                for lane in map.lanes {
+                    // Each lane leaves the capsule level, peels off sooner the further it has to climb, and
+                    // bends into its row with one horizontal-in, horizontal-out cubic, so no two lanes cross.
+                    let track = lane.path
+                    var path = Path()
+                    path.move(to: track.start)
+                    path.addLine(to: track.peel)
+                    path.addCurve(to: track.curveEnd, control1: track.control1, control2: track.control2)
+                    context.stroke(path, with: .color(rail(lane)), style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
+                }
+                // The station on top of the lanes' roots, so they all seem to leave from inside it.
+                let half = map.capsuleWidth / 2
+                let capsule = Path(roundedRect: CGRect(x: map.stationX - half, y: map.stationY - map.capsuleHeight / 2,
+                                                       width: map.capsuleWidth, height: map.capsuleHeight), cornerRadius: half)
+                context.fill(capsule, with: .color(.amber))
+                context.stroke(capsule, with: .color(ring), lineWidth: scheme == .dark ? 5 : 3)
+            }
+            .accessibilityHidden(true)
+            if let above = map.groupLabels.above, let first = map.lanes.first {
+                groupLabel(above).position(x: 4 + (map.curveEnd - 8) / 2, y: first.y - 40)
+            }
+            if let below = map.groupLabels.below, let last = map.lanes.last {
+                groupLabel(below).position(x: 4 + (map.curveEnd - 8) / 2, y: last.y + 40)
+            }
+            stationMark
+        }
+        // A few points past the band, so the curves' round ends meet the rows they hand over to.
+        .frame(width: map.curveEnd + 6, height: map.size.height, alignment: .topLeading)
+    }
+
+    /// Kept left of where the lanes straighten, so on a narrow column it wraps and truncates rather than
+    /// run into the first lane's time labels.
+    private func groupLabel(_ text: String) -> some View {
+        Text(text).font(.mono(11, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
+            .lineLimit(2).frame(width: map.curveEnd - 8, alignment: .leading).accessibilityAddTraits(.isHeader)
+    }
+
+    /// Under the capsule, wrapping inside the band: centred on a 40 pt capsule, a long name ran off the
+    /// map's leading edge.
+    private var stationMark: some View {
+        Text(station.name.uppercased()).font(.mono(13, weight: .bold)).tracking(1.6).foregroundStyle(Color.ink)
+            .lineLimit(3)
+            .frame(width: map.curveEnd - 8, height: 52, alignment: .topLeading)
+            .position(x: 4 + (map.curveEnd - 8) / 2, y: map.stationY + map.capsuleHeight / 2 + 12 + 26)
+            .accessibilityHidden(true)
+    }
+
+    // MARK: Axis
+
+    @ViewBuilder private func axisLabels(_ blend: Blend, y: CGFloat) -> some View {
         ForEach(map.hours, id: \.self) { hour in
             // The NOW flag owns its stretch of the axis.
             if blend.x(hour) - map.x0 > 80 {
                 Text(HallFormat.hm(hour)).font(.mono(12.5, weight: .semibold)).tracking(0.3)
                     .foregroundStyle(Color.inkSecondary).fixedSize()
-                    .position(x: blend.x(hour), y: map.stationY)
+                    .position(x: blend.x(hour), y: y)
             }
         }
         Text("NOW \(HallFormat.hm(now))").font(.mono(11, weight: .bold)).tracking(0.8)
             .foregroundStyle(Color.ground).fixedSize()
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(Color.ink, in: RoundedRectangle(cornerRadius: 6))
-            .position(x: map.x0, y: map.stationY)
+            .position(x: map.x0, y: y)
             .accessibilityLabel("Now \(HallFormat.hm(now))")
         if let gap = map.axis.gap {
             // The night's navy, as on the split row of the boards, so the break reads as the same cut. Held
@@ -655,54 +840,86 @@ private struct MapFrame: View, Animatable {
                 .padding(.horizontal, 7).padding(.vertical, 4)
                 .background(TomorrowSplit.navy, in: RoundedRectangle(cornerRadius: 6))
                 .fixedSize()
-                .position(x: max((blend.x(gap.start) + blend.x(gap.end)) / 2, map.x0 + 92), y: map.stationY)
+                .position(x: max((blend.x(gap.start) + blend.x(gap.end)) / 2, map.x0 + 92), y: y)
                 .accessibilityLabel("End of service. Tomorrow after the break")
         }
-        if let above = map.groupLabels.above, let first = map.lanes.first {
-            groupLabel(above).position(x: (map.curveEnd - 8) / 2, y: first.y - 40)
+    }
+
+    /// The axis labels once the map scrolls: a band along the top that only ever scrolls sideways, with
+    /// the hours, so the time of a stop is always readable above it.
+    private func axisHeader(_ blend: Blend) -> some View {
+        ZStack(alignment: .topLeading) {
+            Color.ground
+            Color.ink.opacity(0.08).frame(height: 1).offset(y: map.axisBand - 1)
+            axisLabels(blend, y: map.axisBand / 2)
         }
-        if let below = map.groupLabels.below, let last = map.lanes.last {
-            groupLabel(below).position(x: (map.curveEnd - 8) / 2, y: last.y + 40)
-        }
+        .frame(width: map.size.width, height: map.axisBand, alignment: .topLeading)
     }
 
-    /// Kept left of where the lanes straighten, so on a narrow column it truncates rather than run into
-    /// the bottom lane's time labels.
-    private func groupLabel(_ text: String) -> some View {
-        Text(text).font(.mono(11, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
-            .lineLimit(1).frame(width: map.curveEnd - 8, alignment: .leading).accessibilityAddTraits(.isHeader)
-    }
+    // MARK: Termini
 
-    private var stationMark: some View {
-        Text(station.name.uppercased()).font(.mono(13, weight: .bold)).tracking(1.6).foregroundStyle(Color.ink)
-            .fixedSize().position(x: map.stationX, y: map.stationY + map.capsuleHeight / 2 + 20)
-            .accessibilityHidden(true)
-    }
-
-    // MARK: Lanes
-
-    /// The lane's row and its terminus name, one button with the whole lane spoken as one sentence.
-    private func laneButton(_ lane: MapGeometry.Lane) -> some View {
-        let height = min(map.pitch - 8, 64)
-        return Button { if !lane.lane.isOther { open(lane.lane.terminus, lane.lane.name) } } label: {
-            HStack(spacing: 0) {
-                Color.clear.frame(width: map.laneEnd + 18 - map.curveEnd)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(lane.lane.name).font(.system(size: 21, weight: .semibold)).foregroundStyle(Color.ink)
-                        .lineLimit(2).minimumScaleFactor(0.75).lineSpacing(-2)
-                    if let summary = lane.summary {
-                        Text(summary.text).font(.mono(10.5, weight: .semibold)).tracking(1.1)
-                            .foregroundStyle(summary.color).lineLimit(1).minimumScaleFactor(0.7)
-                    }
+    /// The buffer stops and the terminus names, kept at the trailing edge while the axis scrolls under
+    /// them. Starts 4 pt before `laneEnd`, so the buffer stop is drawn whole.
+    private var terminusColumn: some View {
+        let width = map.size.width - map.laneEnd + 4
+        return ZStack(alignment: .topLeading) {
+            Canvas { context, size in
+                context.fill(Path(CGRect(x: 4, y: 0, width: size.width - 4, height: size.height)), with: .color(.ground))
+                for lane in map.lanes {
+                    context.stroke(Path { $0.move(to: CGPoint(x: 4, y: lane.y - 14)); $0.addLine(to: CGPoint(x: 4, y: lane.y + 14)) },
+                                   with: .color(rail(lane)), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 }
-                .frame(width: map.terminusWidth, alignment: .leading)
-                Spacer(minLength: 0)
             }
-            .frame(width: map.size.width - map.curveEnd, height: height)
+            .accessibilityHidden(true)
+            ForEach(map.lanes, id: \.lane.id) { lane in laneButton(lane, columnWidth: width) }
+        }
+        .frame(width: width, height: map.size.height, alignment: .topLeading)
+    }
+
+    /// The terminus name and its summary, one button with the whole lane spoken as one sentence. Two lines
+    /// then truncated in the middle, where "Marne la… Chessy" still says which branch it is.
+    private func laneButton(_ lane: MapGeometry.Lane, columnWidth: CGFloat) -> some View {
+        Button { if !lane.lane.isOther { open(lane.lane.terminus, lane.lane.name) } } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(lane.lane.name).font(.system(size: 21, weight: .semibold)).foregroundStyle(Color.ink)
+                    .lineLimit(2).truncationMode(.middle).minimumScaleFactor(0.85).lineSpacing(-2)
+                if let summary = lane.summary {
+                    Text(summary.text).font(.mono(10.5, weight: .semibold)).tracking(1.1)
+                        .foregroundStyle(summary.color).lineLimit(1).minimumScaleFactor(0.7)
+                }
+            }
+            .frame(width: map.terminusWidth, alignment: .leading)
+            .padding(.leading, 14)
+            .frame(width: columnWidth - 4, height: map.pitch - 8, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .position(x: (map.curveEnd + map.size.width) / 2, y: lane.y)
+        .position(x: 4 + (columnWidth - 4) / 2, y: lane.y)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(LineSpeech.lane(lane.lane, shown: lane.stops.map(\.train), now: now))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    /// The narrow screen's terminus: a small label riding above its lane, held at the leading edge of the
+    /// axis as it scrolls, so a lane is always named where its stops are read. The summary gives way first.
+    private func laneName(_ lane: MapGeometry.Lane) -> some View {
+        let width = map.viewport.width - map.curveEnd - 8
+        return Button { if !lane.lane.isOther { open(lane.lane.terminus, lane.lane.name) } } label: {
+            HStack(spacing: 8) {
+                Text(lane.lane.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
+                    .lineLimit(1).truncationMode(.middle)
+                if let summary = lane.summary {
+                    Text(summary.text).font(.mono(9.5, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(summary.color).lineLimit(1).layoutPriority(-1)
+                }
+            }
+            .padding(.horizontal, 6).frame(height: 22)
+            .background(Color.ground.opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(width: width, alignment: .leading)
+        .position(x: map.curveEnd + 2 + width / 2, y: lane.y - 22)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(LineSpeech.lane(lane.lane, shown: lane.stops.map(\.train), now: now))
         .accessibilityAddTraits(.isButton)
@@ -715,26 +932,44 @@ private struct MapFrame: View, Animatable {
         clock != nil && stop.kind == .next && before != nil && before?.kind != .next
     }
 
+    private func toggle(_ stop: MapGeometry.Stop) { selectedStop = selectedStop == stop.id ? nil : stop.id }
+
+    /// Matched on the vehicle journey, which a reload keeps, and on number and slot when a row has none:
+    /// the picked row comes from the radar's own fetch, never the very value this map holds.
+    private func isHighlighted(_ train: TrainDeparture) -> Bool {
+        guard let highlighted else { return false }
+        if let id = highlighted.vehicleJourneyID, train.vehicleJourneyID != nil { return id == train.vehicleJourneyID }
+        return highlighted.trainNumber == train.trainNumber && highlighted.scheduledDeparture == train.scheduledDeparture
+    }
+
+    /// The dot, which carries the popover and speaks for its label too: the label is the same button for
+    /// the finger, hidden from VoiceOver so a stop is one element.
     private func stopButton(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, blend: Blend, clock: DepartureClock?) -> some View {
         let before = blend.before[stop.id]
         let pops = pops(stop, before: before, clock: clock)
-        return Button { selectedStop = selectedStop == stop.id ? nil : stop.id } label: {
+        let destination = destination(stop.train, lane: lane.lane)
+        return Button { toggle(stop) } label: {
             ZStack {
                 // A stop that changes kind (the next one taking over) crossfades from the mark it had.
                 if let before, before.kind != stop.kind { mark(before, lane: lane).opacity(1 - blend.r) }
                 mark(stop, lane: lane)
                     .scaleEffect(pops ? clock?.pastilleScale ?? 1 : 1)
                     .opacity(pops ? clock?.pastilleOpacity ?? 1 : before?.kind == stop.kind ? 1 : blend.r)
+                if isHighlighted(stop.train) {
+                    Circle().stroke(Color.amber, lineWidth: 3).frame(width: 30, height: 30)
+                }
             }
-            .frame(width: 30, height: 30).contentShape(Circle())
+            .frame(width: 36, height: 36).contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isHighlighted(stop.train) ? .isSelected : [])
         .popover(isPresented: Binding(get: { selectedStop == stop.id },
                                       set: { if !$0, selectedStop == stop.id { selectedStop = nil } })) {
-            LaneTrainPopover(train: stop.train, leg: Leg(from: station, to: destination(stop.train, lane: lane.lane)))
+            LaneTrainPopover(train: stop.train, leg: Leg(from: station, to: destination))
         }
         .position(x: blend.x(stop), y: lane.y)
-        .accessibilityLabel(LineSpeech.stop(stop.train, to: destination(stop.train, lane: lane.lane).name))
+        .accessibilityLabel(LineSpeech.stop(stop.train, to: destination.name)
+            + (stop.kind == .next ? ", in \(LineSpeech.minutes(stop.train.expectedDeparture, from: now))" : ""))
     }
 
     /// The popover's "to …" and Watch's notification text only need a name, so a headsign-only terminus
@@ -774,7 +1009,7 @@ private struct MapFrame: View, Animatable {
         let old = before?.labelCenter(x: x, laneY: lane.y)
         let new = stop.labelCenter(x: x, laneY: lane.y)
         if let before, let old, let new, before.kind == stop.kind {
-            placedLabel(stop, lane: lane, now: now)
+            placedLabel(stop, lane: lane, now: now, tappable: true)
                 .position(x: new.x, y: old.y + (new.y - old.y) * blend.r)
         } else {
             if let before, let old, let from {
@@ -782,7 +1017,7 @@ private struct MapFrame: View, Animatable {
             }
             if let new {
                 let pops = pops(stop, before: before, clock: clock)
-                placedLabel(stop, lane: lane, now: now)
+                placedLabel(stop, lane: lane, now: now, tappable: true)
                     .scaleEffect(pops ? clock?.pastilleScale ?? 1 : 1, anchor: .leading)
                     .position(new)
                     .opacity(pops ? clock?.pastilleOpacity ?? 1 : blend.r)
@@ -791,26 +1026,35 @@ private struct MapFrame: View, Animatable {
     }
 
     /// The train that just left: its label fades where it stood, then its dot rides back along the lane
-    /// into the station, fading on the way. Only there for the eye, so VoiceOver never meets it.
-    private func departing(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, from: MapGeometry, clock: DepartureClock) -> some View {
-        let start = lane.path.distance(toX: Double(stop.x))
+    /// into the station, fading on the way. Only there for the eye, so VoiceOver never meets it. The curve
+    /// it rides into is the pinned band's, so the ride is measured from where the stop shows on screen,
+    /// `scrolled` points left of where it sits in the map.
+    private func departing(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, from: MapGeometry, clock: DepartureClock,
+                           scrolled: CGFloat) -> some View {
+        let start = lane.path.distance(toX: Double(stop.x - scrolled))
         return ZStack(alignment: .topLeading) {
             if let center = stop.labelCenter(x: stop.x, laneY: lane.y) {
                 placedLabel(stop, lane: lane, now: from.axis.start).position(center).opacity(clock.labelOpacity)
             }
             mark(stop, lane: lane)
                 .position(lane.path.point(atDistance: start * (1 - clock.slide)))
+                .offset(x: scrolled)
                 .opacity(clock.dotOpacity)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
-    private func placedLabel(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, now: Date) -> some View {
-        label(stop, other: lane.lane.isOther, now: now)
-            .frame(width: stop.labelWidth + 40, height: 28, alignment: stop.kind == .next ? .leading : .center)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    /// The label as a second way into its stop's popover: a time is a much bigger target than its dot.
+    /// Only the label's own box answers, not the slack round it, so neighbours on a row never steal taps.
+    private func placedLabel(_ stop: MapGeometry.Stop, lane: MapGeometry.Lane, now: Date, tappable: Bool = false) -> some View {
+        Button { toggle(stop) } label: {
+            label(stop, other: lane.lane.isOther, now: now).padding(.vertical, 6).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(width: stop.labelWidth + 40, height: 40, alignment: stop.kind == .next ? .leading : .center)
+        .allowsHitTesting(tappable)
+        .accessibilityHidden(true)
     }
 
     private func label(_ stop: MapGeometry.Stop, other: Bool, now: Date) -> some View {
@@ -954,7 +1198,7 @@ private enum LineSpeech {
         }
     }
 
-    private static func minutes(_ date: Date, from now: Date) -> String {
+    static func minutes(_ date: Date, from now: Date) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
         return minutes == 1 ? "1 minute" : "\(minutes) minutes"
     }
