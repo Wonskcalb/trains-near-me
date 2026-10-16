@@ -145,6 +145,37 @@ public enum BigScreenFixtures {
 
     public static let voironBoard = BoardState.from(voironStationTrains, now: now, calendar: calendar)
 
+    /// Voiron at 22:30 (`lateNow`), as the live station board answers once tonight is nearly done: two
+    /// trains to go, then the first of Fri 16 Oct on the same four lines, with a +12 and a cancellation.
+    private static func lateStationTrain(_ h: Int, _ m: Int, day: Int = 15, to terminus: Station, number: String,
+                                         delay: Int = 0, cancelled: Bool = false) -> TrainDeparture {
+        TrainDeparture(scheduledDeparture: at(h, m, day: day), direction: terminus.name, mode: "TER", delayMinutes: delay,
+                       isCancelled: cancelled, trainNumber: number, vehicleJourneyID: "vehicle_journey:fake:\(number)",
+                       terminus: terminus)
+    }
+
+    public static let voironLateTrains = [
+        lateStationTrain(22, 46, to: grenoble, number: "17669"),
+        lateStationTrain(23, 21, to: lyon, number: "17630"),
+    ]
+
+    /// Up the Lyon line with it, so the late river splits the way the 17:40 one does.
+    private static let standre = Station(id: "stop_area:SNCF:87747345", name: "St-André-le-Gaz", latitude: 45.545100, longitude: 5.528600)
+
+    public static let voironStationTomorrow = [
+        lateStationTrain(5, 16, day: 16, to: grenoble, number: "17601"),
+        lateStationTrain(5, 46, day: 16, to: lyon, number: "17602"),
+        lateStationTrain(5, 52, day: 16, to: valence, number: "17801"),
+        lateStationTrain(6, 16, day: 16, to: grenoble, number: "17603"),
+        lateStationTrain(6, 21, day: 16, to: lyon, number: "17604", delay: 12),
+        lateStationTrain(6, 31, day: 16, to: standre, number: "17701"),
+        lateStationTrain(6, 46, day: 16, to: grenoble, number: "17605"),
+        lateStationTrain(6, 52, day: 16, to: valence, number: "17803", cancelled: true),
+        lateStationTrain(7, 16, day: 16, to: grenoble, number: "17607"),
+        lateStationTrain(7, 21, day: 16, to: lyon, number: "17606"),
+        lateStationTrain(7, 31, day: 16, to: standre, number: "17703"),
+    ]
+
     public static let viaByVehicle: [String: [String]] = [
         "vehicle_journey:fake:17652": ["Moirans", "Saint-Égrève–St-Robert"],
         "vehicle_journey:fake:17614v": ["Rives", "La Tour-du-Pin", "Bourgoin-Jallieu"],
@@ -236,9 +267,10 @@ struct FakeJourneyBoards: JourneyBoardsProviding {
 /// One canned board (the pinned station); the `station` argument is ignored, there is only one in the fake.
 struct FakeStationBoard: StationBoardProviding {
     let state: BoardState
+    var tomorrow: [TrainDeparture] = []
     let viaByVehicle: [String: [String]]
     func board(for station: Station, at now: Date) async -> BoardState { state }
-    func serviceDayBoard(for station: Station, at now: Date) async -> BoardState { state }
+    func serviceDayBoard(for station: Station, at now: Date) async -> StationDayBoard { StationDayBoard(state: state, tomorrow: tomorrow) }
     func via(forVehicleJourneyID id: String) async -> [String] { viaByVehicle[id] ?? [] }
 }
 
@@ -342,8 +374,8 @@ struct FakeETA: ETAComposing {
 
 extension BigScreenData {
     /// The fake at 22:30 (`BigScreenFixtures.lateNow`): every journey board past or near its end of
-    /// service and carrying tomorrow's first trains. The other providers are the 17:40 ones, except that
-    /// LEAVE HOME IN points at the last train still to catch.
+    /// service and carrying tomorrow's first trains, and Voiron's station board the same. The other
+    /// providers are the 17:40 ones, except that LEAVE HOME IN points at the last train still to catch.
     public static let fakeLateEvening: BigScreenData = makeFake(late: true)
 
     static func makeFake(late: Bool = false) -> BigScreenData {
@@ -353,7 +385,11 @@ extension BigScreenData {
             : BigScreenFixtures.leaveBy
         return BigScreenData(
             journeyBoards: FakeJourneyBoards(all: late ? BigScreenFixtures.lateJourneyBoards : BigScreenFixtures.journeyBoards),
-            stationBoard: FakeStationBoard(state: BigScreenFixtures.voironBoard, viaByVehicle: BigScreenFixtures.viaByVehicle),
+            stationBoard: late
+                ? FakeStationBoard(state: BoardState.from(BigScreenFixtures.voironLateTrains, now: BigScreenFixtures.lateNow,
+                                                          calendar: BigScreenFixtures.calendar),
+                                   tomorrow: BigScreenFixtures.voironStationTomorrow, viaByVehicle: [:])
+                : FakeStationBoard(state: BigScreenFixtures.voironBoard, viaByVehicle: BigScreenFixtures.viaByVehicle),
             trainStops: FakeTrainStops(stopsByVehicle: BigScreenFixtures.stopsByVehicle),
             serviceDay: FakeServiceDay(main: BigScreenFixtures.serviceDaySummary),
             roundTrip: FakeRoundTrip(plan: BigScreenFixtures.roundTripPlan),

@@ -73,6 +73,20 @@ public struct SNCFClient {
         return try NavitiaParser.stopDepartures(from: data)
     }
 
+    /// The first `count` trains leaving one station from `date`, each with its terminus (`depth=2`): a
+    /// late big-screen board's next morning, where a count is enough and a window would have to guess
+    /// how long the first trains take to come.
+    public func departures(from station: Station, at date: Date, count: Int) async throws(TrainServiceError) -> [TrainDeparture] {
+        let data = try await get("stop_areas/\(station.id)/departures", [
+            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+            "data_freshness": "base_schedule",
+            "count": String(count),
+            "depth": "2",
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.stopDepartures(from: data)
+    }
+
     /// Every stop of one train's run, for the full-trip sheet. The id comes from a board row's
     /// `vehicleJourneyID`, which the parser lifts from the departure's links.
     public func trip(vehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop] {

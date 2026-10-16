@@ -113,6 +113,58 @@ public enum StationLines {
         return min(close, max(short, lastDeparture.addingTimeInterval(15 * 60)))
     }
 
+    /// The map's time axis, `start` (now) to `end`. Late in the evening it holds a break: the dead night
+    /// between tonight's last train and tomorrow's first, folded into `breakSpan` of track so the morning
+    /// sits beside the evening instead of seven empty hours away, as on Lanes.
+    public struct Axis: Equatable, Sendable {
+        public let start: Date
+        public let end: Date
+        public let gap: DateInterval?
+
+        /// How much track the break takes, in seconds of axis: enough for its zig-zag and "TOMORROW".
+        public static let breakSpan: TimeInterval = 25 * 60
+
+        public init(start: Date, end: Date, gap: DateInterval? = nil) {
+            self.start = start
+            self.end = end
+            self.gap = gap
+        }
+
+        /// How far along the axis `date` sits, 0 at `start` and 1 at `end`, the night folded.
+        public func fraction(_ date: Date) -> Double {
+            let span = folded(end) - folded(start)
+            return span > 0 ? (folded(date) - folded(start)) / span : 0
+        }
+
+        /// Whether a mark falls inside the folded night, where it would only crowd the zig-zag.
+        public func isFolded(_ date: Date) -> Bool { gap.map { date > $0.start && date < $0.end } ?? false }
+
+        private func folded(_ date: Date) -> TimeInterval {
+            let t = date.timeIntervalSinceReferenceDate
+            guard let gap else { return t }
+            let from = gap.start.timeIntervalSinceReferenceDate, to = gap.end.timeIntervalSinceReferenceDate
+            if t <= from { return t }
+            if t >= to { return t - (to - from) + Self.breakSpan }
+            return from + (t - from) / (to - from) * Self.breakSpan
+        }
+    }
+
+    /// The axis for a board that may carry tomorrow's first trains. Without a morning it is `windowEnd`'s.
+    /// With one, the break opens 25 minutes after tonight's last train, which leaves its "23:21 in 51′"
+    /// label clear of the zig-zag (at once when none is left, so the river starts at the break), closes a
+    /// quarter before the first, and about two hours of the morning follow it. NEXT 2 H keeps its plain
+    /// window while tonight still fills it.
+    public static func axis(now: Date, tonight: Bool, lastTonight: Date?, firstTomorrow: Date?, calendar: Calendar) -> Axis {
+        let plain = Axis(start: now, end: windowEnd(now: now, tonight: tonight, lastDeparture: lastTonight, calendar: calendar))
+        guard let first = firstTomorrow else { return plain }
+        let from = lastTonight.map { max(now, $0.addingTimeInterval(25 * 60)) } ?? now
+        let to = first.addingTimeInterval(-15 * 60)
+        // A night under half an hour is not worth a break, and a short look ahead that ends before tonight
+        // does has no morning to show.
+        guard to.timeIntervalSince(from) > 30 * 60, tonight || from < plain.end else { return plain }
+        return Axis(start: now, end: first.addingTimeInterval(2 * 3600), gap: DateInterval(start: from, end: to))
+    }
+
     /// The axis marks between `start` and `end`: whole hours, labelled, and the quarters between them.
     public static func marks(from start: Date, to end: Date, calendar: Calendar) -> (hours: [Date], quarters: [Date]) {
         var hours: [Date] = [], quarters: [Date] = []
@@ -139,6 +191,79 @@ public enum StationLines {
         if minutes == 60 { return "HOURLY" }
         if minutes % 60 == 0 { return "EVERY \(minutes / 60) H" }
         return "EVERY \(minutes) MIN"
+    }
+
+    // MARK: Lane path
+
+    /// One lane's track: level out of the station capsule, a straight run to `peel`, one horizontal-in,
+    /// horizontal-out cubic up or down to the lane's row, then straight on to the terminus. The map strokes
+    /// it and a departing train's dot rides back along it, so both read the same numbers.
+    public struct LanePath: Equatable, Sendable {
+        public let start: CGPoint
+        public let peel: CGPoint
+        public let control1: CGPoint
+        public let control2: CGPoint
+        public let curveEnd: CGPoint
+        public let end: CGPoint
+        /// Arc length along the cubic at each of `samples` even steps of its parameter: a cubic has no
+        /// closed-form length, and 48 chords are within a hair of it at this size.
+        private let curveLengths: [Double]
+        private static let samples = 48
+
+        public init(stationX: Double, exitY: Double, y: Double, curveEnd: Double, laneEnd: Double) {
+            // Peels off sooner the further it has to climb, so no two lanes ever cross.
+            let peelX = stationX + max(20, 92 - 0.17 * abs(y - exitY))
+            let mid = (curveEnd - peelX) / 2
+            start = CGPoint(x: stationX, y: exitY)
+            peel = CGPoint(x: peelX, y: exitY)
+            control1 = CGPoint(x: peelX + mid, y: exitY)
+            control2 = CGPoint(x: curveEnd - mid, y: y)
+            self.curveEnd = CGPoint(x: curveEnd, y: y)
+            end = CGPoint(x: laneEnd, y: y)
+            var lengths = [0.0]
+            var last = peel
+            for i in 1...Self.samples {
+                let point = Self.cubic(peel, control1, control2, self.curveEnd, Double(i) / Double(Self.samples))
+                lengths.append(lengths[i - 1] + Self.distance(last, point))
+                last = point
+            }
+            curveLengths = lengths
+        }
+
+        private var lead: Double { Double(peel.x - start.x) }
+        private var curveLength: Double { curveLengths[Self.samples] }
+        public var length: Double { lead + curveLength + Double(end.x - curveEnd.x) }
+
+        /// The arc length from the station to `x` on the lane's row, where every stop sits.
+        public func distance(toX x: Double) -> Double {
+            lead + curveLength + min(max(0, x - Double(curveEnd.x)), Double(end.x - curveEnd.x))
+        }
+
+        /// The point `t` of the way along the track by arc length, 0 at the station and 1 at the terminus.
+        public func point(at t: Double) -> CGPoint { point(atDistance: t * length) }
+
+        public func point(atDistance s: Double) -> CGPoint {
+            let s = min(max(0, s), length)
+            if s <= lead { return CGPoint(x: Double(start.x) + s, y: Double(start.y)) }
+            let along = s - lead
+            guard along < curveLength else { return CGPoint(x: Double(curveEnd.x) + along - curveLength, y: Double(end.y)) }
+            // The chord the distance falls in, then the parameter linearly within it.
+            let i = curveLengths.firstIndex { $0 >= along } ?? Self.samples
+            let below = curveLengths[i - 1], chord = curveLengths[i] - below
+            let u = (Double(i - 1) + (chord > 0 ? (along - below) / chord : 0)) / Double(Self.samples)
+            return Self.cubic(peel, control1, control2, curveEnd, u)
+        }
+
+        private static func cubic(_ p0: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ p3: CGPoint, _ u: Double) -> CGPoint {
+            let v = 1 - u
+            let a = v * v * v, b = 3 * v * v * u, c = 3 * v * u * u, d = u * u * u
+            return CGPoint(x: a * Double(p0.x) + b * Double(p1.x) + c * Double(p2.x) + d * Double(p3.x),
+                           y: a * Double(p0.y) + b * Double(p1.y) + c * Double(p2.y) + d * Double(p3.y))
+        }
+
+        private static func distance(_ a: CGPoint, _ b: CGPoint) -> Double {
+            hypot(Double(b.x - a.x), Double(b.y - a.y))
+        }
     }
 
     // MARK: Labels

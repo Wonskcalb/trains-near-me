@@ -11,6 +11,8 @@ public struct LiveStationBoard: StationBoardProviding {
 
     private let fetchBoard: BoardFetch
     private let fetchWindow: BoardFetch
+    /// The first trains from the next 03:00, asked only when tonight is nearly done.
+    private let fetchTomorrow: BoardFetch
     private let fetchTrip: TripFetch
     private let observe: Observe
     private let calendar: Calendar
@@ -18,14 +20,17 @@ public struct LiveStationBoard: StationBoardProviding {
     private let maxVia: Int
     private let cache = ViaCache()
 
-    /// `window` answers `serviceDayBoard`; nil reuses `board`, which is all a test seam needs.
+    /// `window` answers `serviceDayBoard` and `tomorrow` its late morning; nil reuses `board`, which is
+    /// all a test seam needs.
     public init(calendar: Calendar = SNCFTime.calendar, maxVia: Int = 3, observe: @escaping Observe = { _ in },
-                board: @escaping BoardFetch, window: BoardFetch? = nil, trip: @escaping TripFetch) {
+                board: @escaping BoardFetch, window: BoardFetch? = nil, tomorrow: BoardFetch? = nil,
+                trip: @escaping TripFetch) {
         self.calendar = calendar
         self.maxVia = max(0, maxVia)
         self.observe = observe
         self.fetchBoard = board
         self.fetchWindow = window ?? board
+        self.fetchTomorrow = tomorrow ?? board
         self.fetchTrip = trip
     }
 
@@ -40,13 +45,21 @@ public struct LiveStationBoard: StationBoardProviding {
             try await SNCFClient(token: token(), session: session)
                 .departures(from: station, at: now, within: BoardState.restOfServiceDay(after: now, atLeast: 2 * 3600, calendar: calendar))
         }
+        // A count, not a window: only the morning's first trains are drawn after the break.
+        let tomorrow: BoardFetch = { station, opens in
+            try await SNCFClient(token: token(), session: session).departures(from: station, at: opens, count: Self.tomorrowCount)
+        }
         let trip: TripFetch = { id in
             try await SNCFClient(token: token(), session: session).trip(vehicleJourneyID: id)
         }
         self.init(calendar: calendar, maxVia: maxVia,
                   observe: { await TrainWatcher.shared.reevaluate(against: $0) },
-                  board: board, window: window, trip: trip)
+                  board: board, window: window, tomorrow: tomorrow, trip: trip)
     }
+
+    /// How many of tomorrow's first trains a late board carries: a station sends every terminus at once,
+    /// so it takes a few times a journey's six to cover the morning's first two hours.
+    static let tomorrowCount = 30
 
     public func board(for station: Station, at now: Date) async -> BoardState {
         do {
@@ -58,17 +71,29 @@ public struct LiveStationBoard: StationBoardProviding {
         }
     }
 
-    /// After the last train the window to 03:00 is empty, and only the count-based board reaches into
-    /// tomorrow for the first train the night treatment shows: that second request is paid at night only.
-    public func serviceDayBoard(for station: Station, at now: Date) async -> BoardState {
+    /// Late in the evening a second, count-based request from the next 03:00 brings the morning, as the
+    /// journey boards do: it is paid only when tonight is nearly done. After the last train the window to
+    /// 03:00 is empty and that same morning names the first train, so the night never costs a third.
+    public func serviceDayBoard(for station: Station, at now: Date) async -> StationDayBoard {
+        var state: BoardState
         do {
             let trains = try await fetchWindow(station, now)
-            if trains.isEmpty { return await board(for: station, at: now) }
             await observe(trains)
-            return BoardState.from(trains, now: now, calendar: calendar)
+            state = BoardState.from(trains, now: now, calendar: calendar)
         } catch {
-            return .unavailable(error)
+            return StationDayBoard(state: .unavailable(error))
         }
+        guard state.tonightIsNearlyDone(at: now) else { return StationDayBoard(state: state) }
+        // A failure here only loses the morning; tonight's board stands.
+        let opens = BoardState.nextServiceDayStart(after: now, calendar: calendar)
+        let day = BoardState.serviceDay(of: opens, calendar: calendar)
+        let morning = ((try? await fetchTomorrow(station, opens)) ?? [])
+            .filter { BoardState.serviceDay(of: $0.scheduledDeparture, calendar: calendar) == day }
+            .sorted { $0.scheduledDeparture < $1.scheduledDeparture }
+        if state == .noTrains, let first = morning.first(where: { !$0.isCancelled }) {
+            state = .endOfService(firstTrain: first.scheduledDeparture)
+        }
+        return StationDayBoard(state: state, tomorrow: morning)
     }
 
     public func via(forVehicleJourneyID id: String) async -> [String] {

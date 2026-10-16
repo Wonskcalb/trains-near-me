@@ -187,14 +187,111 @@ import Testing
         #expect(BoardState.restOfServiceDay(after: at(2, 0), atLeast: 2 * 3600, calendar: paris) == 2 * 3600)
     }
 
-    @Test func theBoardAsksTheWindowAndFallsBackToTheCountAtNight() async {
+    @Test func theBoardAsksTheWindowAndNamesTheFirstTrainFromTheMorningAtNight() async {
         let tomorrow = TrainDeparture(scheduledDeparture: at(5, 42).addingTimeInterval(24 * 3600), delayMinutes: 0,
                                       isCancelled: false, trainNumber: "1")
-        let tonight = train(18, 0, to: Self.lyon)
-        let evening = LiveStationBoard(calendar: paris, board: { _, _ in [tomorrow] }, window: { _, _ in [tonight] }, trip: { _ in [] })
-        #expect(await evening.serviceDayBoard(for: grenoble, at: at(17, 40)) == .departures([tonight]))
+        let tonight = [train(18, 0, to: Self.lyon), train(18, 30, to: Self.lyon), train(19, 0, to: Self.lyon)]
+        let evening = LiveStationBoard(calendar: paris, board: { _, _ in [tomorrow] }, window: { _, _ in tonight }, trip: { _ in [] })
+        #expect(await evening.serviceDayBoard(for: grenoble, at: at(17, 40)) == StationDayBoard(state: .departures(tonight)))
         let night = LiveStationBoard(calendar: paris, board: { _, _ in [tomorrow] }, window: { _, _ in [] }, trip: { _ in [] })
-        #expect(await night.serviceDayBoard(for: grenoble, at: at(23, 50)) == .endOfService(firstTrain: tomorrow.scheduledDeparture))
+        #expect(await night.serviceDayBoard(for: grenoble, at: at(23, 50))
+            == StationDayBoard(state: .endOfService(firstTrain: tomorrow.scheduledDeparture), tomorrow: [tomorrow]))
+    }
+
+    @Test func theStationsMorningIsAskedOnceFromThreeOnlyWhenTonightIsNearlyDone() async {
+        let asked = AskedDates()
+        let evening = [train(18, 0, to: Self.lyon), train(18, 30, to: Self.lyon), train(19, 0, to: Self.lyon), train(23, 10, to: Self.lyon)]
+        let day9 = { (h: Int, m: Int) in at(h, m).addingTimeInterval(24 * 3600) }
+        let morning = [day9(6, 12), day9(5, 42), at(4, 0).addingTimeInterval(48 * 3600)].map {
+            TrainDeparture(scheduledDeparture: $0, delayMinutes: 0, isCancelled: false, trainNumber: nil, terminus: Self.lyon)
+        }
+        let board = LiveStationBoard(calendar: paris, board: { _, _ in [] },
+                                     window: { _, now in evening.filter { $0.scheduledDeparture > now } },
+                                     tomorrow: { _, opens in await asked.add(opens); return morning }, trip: { _ in [] })
+
+        // 17:50: four to go, no extra request.
+        #expect(await board.serviceDayBoard(for: grenoble, at: at(17, 50)).tomorrow.isEmpty)
+        #expect(await asked.dates.isEmpty)
+
+        // 22:00: the 23:10 alone, so the morning from the next 03:00, sorted and cut to that service day.
+        let late = await board.serviceDayBoard(for: grenoble, at: at(22, 0))
+        #expect(late.state == .departures([evening[3]]))
+        #expect(late.tomorrow.map(\.scheduledDeparture) == [day9(5, 42), day9(6, 12)])
+        #expect(await asked.dates == [day9(3, 0)])
+    }
+
+    @Test func aFailedMorningLeavesTonightStanding() async {
+        let tonight = [train(23, 10, to: Self.lyon)]
+        let failing: LiveStationBoard.BoardFetch = { _, _ in throw TrainServiceError.offline }
+        let board = LiveStationBoard(calendar: paris, board: { _, _ in [] }, window: { _, _ in tonight },
+                                     tomorrow: failing, trip: { _ in [] })
+        #expect(await board.serviceDayBoard(for: grenoble, at: at(22, 0)) == StationDayBoard(state: .departures(tonight)))
+    }
+
+    // MARK: Axis with the night folded
+
+    @Test func withoutAMorningTheAxisIsTheWindow() {
+        let axis = StationLines.axis(now: at(17, 40), tonight: false, lastTonight: at(23, 0), firstTomorrow: nil, calendar: paris)
+        #expect(axis == StationLines.Axis(start: at(17, 40), end: at(20, 10)))
+        #expect(axis.fraction(at(18, 55)) == 0.5)
+    }
+
+    @Test func theNightFoldsIntoABreakBeforeTwoHoursOfMorning() throws {
+        let first = at(5, 16).addingTimeInterval(24 * 3600)
+        let axis = StationLines.axis(now: at(22, 30), tonight: false, lastTonight: at(23, 21), firstTomorrow: first, calendar: paris)
+        let gap = try #require(axis.gap)
+        #expect(gap.start == at(23, 46))
+        #expect(gap.end == first.addingTimeInterval(-15 * 60))
+        #expect(axis.end == first.addingTimeInterval(2 * 3600))
+        // 76 min of evening, 25 of break, 135 of morning on the track.
+        #expect(abs(axis.fraction(gap.start) - 76.0 / 236) < 1e-9)
+        #expect(abs(axis.fraction(gap.end) - 101.0 / 236) < 1e-9)
+        #expect(axis.isFolded(at(2, 0).addingTimeInterval(24 * 3600)))
+        #expect(!axis.isFolded(first))
+    }
+
+    @Test func withNothingLeftTonightTheRiverStartsAtTheBreak() {
+        let first = at(5, 16).addingTimeInterval(24 * 3600)
+        let axis = StationLines.axis(now: at(23, 40), tonight: false, lastTonight: nil, firstTomorrow: first, calendar: paris)
+        #expect(axis.gap?.start == at(23, 40))
+        #expect(axis.fraction(at(23, 40)) == 0)
+    }
+
+    @Test func aShortLookAheadKeepsItsWindowWhileTonightFillsIt() {
+        let first = at(5, 16).addingTimeInterval(24 * 3600)
+        let early = StationLines.axis(now: at(19, 0), tonight: false, lastTonight: at(22, 40), firstTomorrow: first, calendar: paris)
+        #expect(early.gap == nil)
+        #expect(early.end == at(21, 30))
+        // TONIGHT reaches the last train anyway, so it breaks after it.
+        let whole = StationLines.axis(now: at(19, 0), tonight: true, lastTonight: at(22, 40), firstTomorrow: first, calendar: paris)
+        #expect(whole.gap?.start == at(23, 5))
+    }
+
+    // MARK: Lane path
+
+    @Test func theLanePathRunsFromTheCapsuleToTheTerminusByArcLength() {
+        let path = StationLines.LanePath(stationX: 34, exitY: 400, y: 200, curveEnd: 356, laneEnd: 1060)
+        #expect(path.point(at: 0) == CGPoint(x: 34, y: 400))
+        let end = path.point(at: 1)
+        #expect(abs(end.x - 1060) < 1e-9 && end.y == 200)
+        // The S-curve is longer than its chord, shorter than its two legs.
+        let curve = path.distance(toX: 356) - Double(path.peel.x - path.start.x)
+        let chord = hypot(356 - Double(path.peel.x), 200.0)
+        #expect(curve > chord && curve < 356 - Double(path.peel.x) + 200)
+        // On the row, distance and x move one for one; a stop at 500 is 144 pt past the curve.
+        #expect(abs(path.distance(toX: 500) - path.distance(toX: 356) - 144) < 1e-9)
+        let stop = path.point(atDistance: path.distance(toX: 500))
+        #expect(abs(stop.x - 500) < 1e-9 && stop.y == 200)
+        // Halfway along the cubic is its centre of symmetry, halfway up.
+        let middle = path.point(atDistance: Double(path.peel.x - path.start.x) + curve / 2)
+        #expect(abs(middle.y - 300) < 0.5)
+        #expect(abs(middle.x - (Double(path.peel.x) + 356) / 2) < 0.5)
+    }
+
+    @Test func theDistanceAlongThePathOnlyEverClimbs() {
+        let path = StationLines.LanePath(stationX: 34, exitY: 420, y: 110, curveEnd: 300, laneEnd: 900)
+        let ys = stride(from: 0.0, through: 1, by: 0.02).map { path.point(at: $0) }
+        #expect(zip(ys, ys.dropFirst()).allSatisfy { $0.x <= $1.x && $0.y >= $1.y })
     }
 
     @Test func anUnsavedLegIsFetchedOnDemand() async {
@@ -207,4 +304,10 @@ import Testing
         #expect(board.state == .departures(trains))
         #expect(board.journey == JourneyConfiguration(stationA: grenoble, stationB: Self.lyon))
     }
+}
+
+/// The dates the station tomorrow seam was asked from.
+private actor AskedDates {
+    private(set) var dates: [Date] = []
+    func add(_ date: Date) { dates.append(date) }
 }
