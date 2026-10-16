@@ -26,21 +26,18 @@ public struct JourneyBoard: Equatable, Sendable {
 }
 
 /// The 03:00-to-03:00 service day in one glance: when the last train leaves tonight, when the first
-/// leaves tomorrow, how many of tonight's trains are disrupted, and the trains-per-hour histogram the
-/// Lanes minimap draws. `trainsPerHour` always has 24 entries, indexed from the 03:00 service-day start
-/// (index 0 = 03:00–04:00, index 23 = 02:00–03:00).
+/// leaves tomorrow, and the trains-per-hour histogram the Lanes minimap draws. `trainsPerHour` always
+/// has 24 entries, indexed from the 03:00 service-day start (index 0 = 03:00–04:00, index 23 =
+/// 02:00–03:00). Only timetable facts live here, because the summary is cached for the whole day; how
+/// many trains run late is real time and is read off the live board instead.
 public struct ServiceDaySummary: Equatable, Sendable {
     public let lastTonight: Date?
     public let firstTomorrow: Date?
-    /// Trains still running but late (delayed or severely delayed); cancellations are counted separately
-    /// by the caller, matching the "N DISRUPTED TONIGHT" chip.
-    public let disruptedCount: Int
     public let trainsPerHour: [Int]
 
-    public init(lastTonight: Date?, firstTomorrow: Date?, disruptedCount: Int, trainsPerHour: [Int]) {
+    public init(lastTonight: Date?, firstTomorrow: Date?, trainsPerHour: [Int]) {
         self.lastTonight = lastTonight
         self.firstTomorrow = firstTomorrow
-        self.disruptedCount = disruptedCount
         self.trainsPerHour = trainsPerHour
     }
 
@@ -123,7 +120,7 @@ public enum TrainIdentity: Hashable, Codable, Sendable {
 
     /// nil when a row carries neither a vehicle-journey id nor a train number (a bare preview row):
     /// there is then nothing stable to watch.
-    public init?(_ train: TrainDeparture, calendar: Calendar = .current) {
+    public init?(_ train: TrainDeparture, calendar: Calendar = SNCFTime.calendar) {
         if let id = train.vehicleJourneyID, !id.isEmpty {
             self = .vehicleJourney(id)
         } else if let number = train.trainNumber, !number.isEmpty {
@@ -140,6 +137,21 @@ public extension TrainDeparture {
     var expectedArrival: Date? {
         scheduledArrival?.addingTimeInterval(TimeInterval((delayMinutes ?? 0) * 60))
     }
+
+    /// Running but late (delayed or severely delayed) — the "N DISRUPTED TONIGHT" chip counts these, and
+    /// leaves cancellations to their own CANCELLED rows.
+    var isRunningLate: Bool { status == .delayed || status == .severelyDelayed }
+}
+
+/// The station closest to the device, and how far it is in metres when the position is known.
+public struct NearbyStation: Equatable, Sendable {
+    public let station: Station
+    public let distance: Double?
+
+    public init(station: Station, distance: Double?) {
+        self.station = station
+        self.distance = distance
+    }
 }
 
 // MARK: - Protocols
@@ -147,6 +159,12 @@ public extension TrainDeparture {
 /// Every saved journey's board, fetched together (the sidebar, Lanes and Wall all need the whole set).
 public protocol JourneyBoardsProviding: Sendable {
     func boards(at now: Date) async -> [JourneyBoard]
+    /// Forget any memoised boards, so the next `boards(at:)` fetches. ⌘R and a journey edit call it.
+    func invalidate() async
+}
+
+public extension JourneyBoardsProviding {
+    func invalidate() async {}
 }
 
 /// One station's departure board, plus the short "via …" list for a row — looked up by the row's
@@ -184,8 +202,20 @@ public protocol LeaveByProviding: Sendable {
 public protocol TrainWatching: Sendable {
     func isWatched(_ identity: TrainIdentity) async -> Bool
     func watch(_ identity: TrainIdentity) async
+    /// Watch a train the UI holds: unlike the identity-only call this records the train's status, so the
+    /// first band change is measured from now, and schedules the departure reminder. `leg` names the
+    /// destination in the notification text.
+    func watch(_ train: TrainDeparture, to leg: Leg?) async
     func unwatch(_ identity: TrainIdentity) async
     func watched() async -> Set<TrainIdentity>
+}
+
+/// Finding stations: the "Go to station" search and the journey editor's pickers (any SNCF station,
+/// fuzzy — Navitia's `places` does the matching), and the NEAR ME station from the device's position.
+public protocol StationSearching: Sendable {
+    func search(_ query: String) async throws(TrainServiceError) -> [Station]
+    /// `.noLocation` without a fix, `.noStationNearby` when nothing is within the search radius.
+    func nearest() async throws(TrainServiceError) -> NearbyStation
 }
 
 /// Pure: the share text for a selected train on a leg (`ShareLink` in the inspector). No fetch.
@@ -206,6 +236,7 @@ public struct BigScreenData: Sendable {
     public let leaveBy: any LeaveByProviding
     public let watching: any TrainWatching
     public let eta: any ETAComposing
+    public let stationSearch: any StationSearching
 
     public init(journeyBoards: any JourneyBoardsProviding,
                 stationBoard: any StationBoardProviding,
@@ -214,7 +245,8 @@ public struct BigScreenData: Sendable {
                 roundTrip: any RoundTripPlanning,
                 leaveBy: any LeaveByProviding,
                 watching: any TrainWatching,
-                eta: any ETAComposing) {
+                eta: any ETAComposing,
+                stationSearch: any StationSearching) {
         self.journeyBoards = journeyBoards
         self.stationBoard = stationBoard
         self.trainStops = trainStops
@@ -223,6 +255,7 @@ public struct BigScreenData: Sendable {
         self.leaveBy = leaveBy
         self.watching = watching
         self.eta = eta
+        self.stationSearch = stationSearch
     }
 
     /// The mockup data, shared by previews, the screenshot build and the tests.

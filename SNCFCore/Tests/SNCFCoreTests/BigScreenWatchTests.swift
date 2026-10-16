@@ -120,7 +120,7 @@ import Testing
         let delayed = TrainDeparture(scheduledDeparture: onTime.scheduledDeparture, scheduledArrival: onTime.scheduledArrival,
                                      mode: onTime.mode, delayMinutes: 15, isCancelled: false,
                                      trainNumber: onTime.trainNumber, vehicleJourneyID: onTime.vehicleJourneyID)
-        await watcher.reevaluate(against: [delayed], calendar: cal)
+        await watcher.reevaluate(against: [delayed], calendar: cal, now: BigScreenFixtures.now)
         #expect(await watcher.lastSeen[id]?.status == .delayed)
 
         let reloaded = TrainWatcher(suiteName: name, schedulesNotifications: false)
@@ -133,5 +133,37 @@ import Testing
         let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false)
         await watcher.reevaluate(against: BigScreenFixtures.grenobleVoironTrains, calendar: cal)
         #expect(await watcher.lastSeen.isEmpty)
+    }
+
+    @Test func theProtocolsTrainWatchRecordsLastSeen() async {
+        let name = suite()
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false)
+        let watching: any TrainWatching = watcher   // what the screens hold
+        let train = BigScreenFixtures.grenobleVoironTrains[1]
+        await watching.watch(train, to: Leg(from: BigScreenFixtures.grenoble, to: BigScreenFixtures.voiron))
+        #expect(await watcher.lastSeen[TrainIdentity(train)!]?.status == .delayed)
+    }
+
+    @Test func watchesFromAServiceDayThatIsOverArePruned() async {
+        let name = suite()
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false)
+        let yesterday = BigScreenFixtures.grenobleVoironTrains[0]             // vehicle journey, the 15th
+        let numbered = TrainIdentity.numbered("1", serviceDay: BoardState.serviceDay(of: BigScreenFixtures.at(18, 0), calendar: cal))
+        let tonight = TrainDeparture(scheduledDeparture: BigScreenFixtures.at(0, 30, day: 16), delayMinutes: 0,
+                                     isCancelled: false, trainNumber: "2", vehicleJourneyID: nil)
+        await watcher.watch(yesterday, calendar: cal)
+        await watcher.watch(numbered)
+        await watcher.watch(tonight, calendar: cal)
+
+        // 02:00 on the 16th is still the 15th's service day: nothing goes.
+        await watcher.reevaluate(against: [], calendar: cal, now: BigScreenFixtures.at(2, 0, day: 16))
+        #expect(await watcher.watched().count == 3)
+
+        // 03:00 opens the 16th: every watch of the 15th is dropped, from memory and from the App Group.
+        await watcher.reevaluate(against: [], calendar: cal, now: BigScreenFixtures.at(3, 0, day: 16))
+        #expect(await watcher.watched().isEmpty)
+        #expect(await TrainWatcher(suiteName: name, schedulesNotifications: false).watched().isEmpty)
     }
 }

@@ -8,11 +8,7 @@ import Foundation
 
 /// The canned data behind `BigScreenData.fake`, exposed so tests can assert against the same anchor.
 public enum BigScreenFixtures {
-    public static let calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Paris")!
-        return calendar
-    }()
+    public static let calendar = SNCFTime.calendar
 
     /// Thu 15 Oct 2026, 17:40 — "now" in every mockup.
     public static func at(_ hour: Int, _ minute: Int, day: Int = 15) -> Date {
@@ -28,6 +24,14 @@ public enum BigScreenFixtures {
     public static let lyon = Station(id: "stop_area:SNCF:87723197", name: "Lyon Part-Dieu", latitude: 45.760460, longitude: 4.859496)
     public static let chambery = Station(id: "stop_area:SNCF:87741086", name: "Chambéry", latitude: 45.571156, longitude: 5.920660)
     public static let valence = Station(id: "stop_area:SNCF:87747279", name: "Valence Ville", latitude: 44.926650, longitude: 4.893466)
+
+    /// What the fake "Go to station" search can find: the journey stations plus a few on the same lines.
+    public static let searchableStations = [
+        grenoble, voiron, lyon, chambery, valence,
+        Station(id: "stop_area:SNCF:87686006", name: "Paris Gare de Lyon", latitude: 48.844922, longitude: 2.373462),
+        Station(id: "stop_area:SNCF:87747402", name: "Moirans", latitude: 45.325010, longitude: 5.567470),
+        Station(id: "stop_area:SNCF:87747469", name: "Saint-Égrève–St-Robert", latitude: 45.233140, longitude: 5.680580),
+    ]
 
     // MARK: Train builders
 
@@ -137,7 +141,7 @@ public enum BigScreenFixtures {
     public static let trainsPerHour = [0, 0, 1, 2, 3, 3, 2, 1, 1, 2, 2, 1, 1, 2, 3, 3, 2, 1, 1, 1, 0, 0, 0, 0]
 
     public static let serviceDaySummary = ServiceDaySummary(
-        lastTonight: at(22, 42), firstTomorrow: at(5, 42, day: 16), disruptedCount: 2, trainsPerHour: trainsPerHour)
+        lastTonight: at(22, 42), firstTomorrow: at(5, 42, day: 16), trainsPerHour: trainsPerHour)
 
     // MARK: Round trip (Duo): outbound Voiron → Grenoble, way back Grenoble → Voiron
 
@@ -234,8 +238,30 @@ actor FakeTrainWatching: TrainWatching {
     private var set: Set<TrainIdentity> = []
     func isWatched(_ identity: TrainIdentity) -> Bool { set.contains(identity) }
     func watch(_ identity: TrainIdentity) { set.insert(identity) }
+    func watch(_ train: TrainDeparture, to leg: Leg?) {
+        if let identity = TrainIdentity(train) { set.insert(identity) }
+    }
     func unwatch(_ identity: TrainIdentity) { set.remove(identity) }
     func watched() -> Set<TrainIdentity> { set }
+}
+
+/// A handful of stations, so the "Go to station" field and the journey editor have something to find
+/// offline. Matched the way Navitia matches enough to feel the same: case and accents ignored.
+struct FakeStationSearch: StationSearching {
+    let stations: [Station]
+    let near: NearbyStation
+
+    func search(_ query: String) async throws(TrainServiceError) -> [Station] {
+        Self.filter(stations, query)
+    }
+
+    func nearest() async throws(TrainServiceError) -> NearbyStation { near }
+
+    static func filter(_ stations: [Station], _ query: String) -> [Station] {
+        let needle = query.trimmingCharacters(in: .whitespaces)
+        guard needle.count >= 2 else { return [] }
+        return stations.filter { $0.name.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) != nil }
+    }
 }
 
 struct FakeETA: ETAComposing {
@@ -279,6 +305,8 @@ extension BigScreenData {
             roundTrip: FakeRoundTrip(plan: BigScreenFixtures.roundTripPlan),
             leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron, leaveBy: BigScreenFixtures.leaveBy),
             watching: FakeTrainWatching(),
-            eta: FakeETA())
+            eta: FakeETA(),
+            stationSearch: FakeStationSearch(stations: BigScreenFixtures.searchableStations,
+                                             near: NearbyStation(station: BigScreenFixtures.voiron, distance: 850)))
     }
 }

@@ -1,0 +1,1633 @@
+{
+ "journeys": [
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T054200",
+     "base_departure_date_time": "20261015T054200",
+     "arrival_date_time": "20261015T060700",
+     "base_arrival_date_time": "20261015T060700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17601",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T061200",
+     "base_departure_date_time": "20261015T061200",
+     "arrival_date_time": "20261015T063700",
+     "base_arrival_date_time": "20261015T063700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17603",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T064200",
+     "base_departure_date_time": "20261015T064200",
+     "arrival_date_time": "20261015T070700",
+     "base_arrival_date_time": "20261015T070700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17605",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T071200",
+     "base_departure_date_time": "20261015T071200",
+     "arrival_date_time": "20261015T073700",
+     "base_arrival_date_time": "20261015T073700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17607",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T074200",
+     "base_departure_date_time": "20261015T074200",
+     "arrival_date_time": "20261015T080700",
+     "base_arrival_date_time": "20261015T080700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17609",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T081200",
+     "base_departure_date_time": "20261015T081200",
+     "arrival_date_time": "20261015T083700",
+     "base_arrival_date_time": "20261015T083700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17611",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T084200",
+     "base_departure_date_time": "20261015T084200",
+     "arrival_date_time": "20261015T090700",
+     "base_arrival_date_time": "20261015T090700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17613",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T091200",
+     "base_departure_date_time": "20261015T091200",
+     "arrival_date_time": "20261015T093700",
+     "base_arrival_date_time": "20261015T093700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17615",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T094200",
+     "base_departure_date_time": "20261015T094200",
+     "arrival_date_time": "20261015T100700",
+     "base_arrival_date_time": "20261015T100700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17617",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T101200",
+     "base_departure_date_time": "20261015T101200",
+     "arrival_date_time": "20261015T103700",
+     "base_arrival_date_time": "20261015T103700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17619",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T104200",
+     "base_departure_date_time": "20261015T104200",
+     "arrival_date_time": "20261015T110700",
+     "base_arrival_date_time": "20261015T110700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17621",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T111200",
+     "base_departure_date_time": "20261015T111200",
+     "arrival_date_time": "20261015T113700",
+     "base_arrival_date_time": "20261015T113700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17623",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T114200",
+     "base_departure_date_time": "20261015T114200",
+     "arrival_date_time": "20261015T120700",
+     "base_arrival_date_time": "20261015T120700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17625",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T121200",
+     "base_departure_date_time": "20261015T121200",
+     "arrival_date_time": "20261015T123700",
+     "base_arrival_date_time": "20261015T123700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17627",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T124200",
+     "base_departure_date_time": "20261015T124200",
+     "arrival_date_time": "20261015T130700",
+     "base_arrival_date_time": "20261015T130700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17629",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T131200",
+     "base_departure_date_time": "20261015T131200",
+     "arrival_date_time": "20261015T133700",
+     "base_arrival_date_time": "20261015T133700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17631",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T134200",
+     "base_departure_date_time": "20261015T134200",
+     "arrival_date_time": "20261015T140700",
+     "base_arrival_date_time": "20261015T140700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17633",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T141200",
+     "base_departure_date_time": "20261015T141200",
+     "arrival_date_time": "20261015T143700",
+     "base_arrival_date_time": "20261015T143700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17635",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T144200",
+     "base_departure_date_time": "20261015T144200",
+     "arrival_date_time": "20261015T150700",
+     "base_arrival_date_time": "20261015T150700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17637",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T151200",
+     "base_departure_date_time": "20261015T151200",
+     "arrival_date_time": "20261015T153700",
+     "base_arrival_date_time": "20261015T153700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17639",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T154200",
+     "base_departure_date_time": "20261015T154200",
+     "arrival_date_time": "20261015T160700",
+     "base_arrival_date_time": "20261015T160700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17641",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T161200",
+     "base_departure_date_time": "20261015T161200",
+     "arrival_date_time": "20261015T163700",
+     "base_arrival_date_time": "20261015T163700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17643",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T164200",
+     "base_departure_date_time": "20261015T164200",
+     "arrival_date_time": "20261015T170700",
+     "base_arrival_date_time": "20261015T170700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17645",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T171200",
+     "base_departure_date_time": "20261015T171200",
+     "arrival_date_time": "20261015T173700",
+     "base_arrival_date_time": "20261015T173700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17647",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T174200",
+     "base_departure_date_time": "20261015T174200",
+     "arrival_date_time": "20261015T180700",
+     "base_arrival_date_time": "20261015T180700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17649",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T181200",
+     "base_departure_date_time": "20261015T181200",
+     "arrival_date_time": "20261015T183700",
+     "base_arrival_date_time": "20261015T183700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17651",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T184200",
+     "base_departure_date_time": "20261015T184200",
+     "arrival_date_time": "20261015T190700",
+     "base_arrival_date_time": "20261015T190700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17653",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T191200",
+     "base_departure_date_time": "20261015T191200",
+     "arrival_date_time": "20261015T193700",
+     "base_arrival_date_time": "20261015T193700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17655",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T194200",
+     "base_departure_date_time": "20261015T194200",
+     "arrival_date_time": "20261015T200700",
+     "base_arrival_date_time": "20261015T200700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17657",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T201200",
+     "base_departure_date_time": "20261015T201200",
+     "arrival_date_time": "20261015T203700",
+     "base_arrival_date_time": "20261015T203700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17659",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T204200",
+     "base_departure_date_time": "20261015T204200",
+     "arrival_date_time": "20261015T210700",
+     "base_arrival_date_time": "20261015T210700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17661",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T211200",
+     "base_departure_date_time": "20261015T211200",
+     "arrival_date_time": "20261015T213700",
+     "base_arrival_date_time": "20261015T213700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17663",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T214200",
+     "base_departure_date_time": "20261015T214200",
+     "arrival_date_time": "20261015T220700",
+     "base_arrival_date_time": "20261015T220700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17665",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T221200",
+     "base_departure_date_time": "20261015T221200",
+     "arrival_date_time": "20261015T223700",
+     "base_arrival_date_time": "20261015T223700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17667",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T224200",
+     "base_departure_date_time": "20261015T224200",
+     "arrival_date_time": "20261015T230700",
+     "base_arrival_date_time": "20261015T230700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17669",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "NO_SERVICE",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261015T234200",
+     "base_departure_date_time": "20261015T234200",
+     "arrival_date_time": "20261016T000700",
+     "base_arrival_date_time": "20261016T000700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17671",
+      "links": []
+     }
+    }
+   ]
+  },
+  {
+   "status": "",
+   "sections": [
+    {
+     "type": "public_transport",
+     "from": {
+      "id": "stop_area:SNCF:87747006",
+      "name": "Grenoble",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747006:Train",
+       "name": "Grenoble",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747006",
+        "name": "Grenoble"
+       }
+      }
+     },
+     "to": {
+      "id": "stop_area:SNCF:87747337",
+      "name": "Voiron",
+      "embedded_type": "stop_point",
+      "stop_point": {
+       "id": "stop_point:SNCF:87747337:Train",
+       "name": "Voiron",
+       "stop_area": {
+        "id": "stop_area:SNCF:87747337",
+        "name": "Voiron"
+       }
+      }
+     },
+     "departure_date_time": "20261016T054200",
+     "base_departure_date_time": "20261016T054200",
+     "arrival_date_time": "20261016T060700",
+     "base_arrival_date_time": "20261016T060700",
+     "display_informations": {
+      "commercial_mode": "TER",
+      "physical_mode": "TER / Intercités",
+      "trip_short_name": "17701",
+      "links": []
+     }
+    }
+   ]
+  }
+ ],
+ "disruptions": []
+}

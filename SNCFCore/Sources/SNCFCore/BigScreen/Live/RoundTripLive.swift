@@ -3,23 +3,24 @@ import Foundation
 /// The live round-trip provider: fetch the outbound board, pick an outbound, fetch the reverse leg from
 /// that arrival onward, then let `RoundTripPlanner` tag the returns. The network sits behind the
 /// `departures` seam so the provider's own logic (reverse leg, arrival window, re-plan) is fixture-testable
-/// with no live call. Phase 2 wires this in; there is deliberately no `BigScreenData.live` here yet.
+/// with no live call; `BigScreenData.live()` builds the production one.
 public struct RoundTripLive: RoundTripPlanning {
     private let calendar: Calendar
     private let departures: @Sendable (Leg, Date) async -> [TrainDeparture]
 
-    /// Production: the token every other call site builds its `SNCFClient` from, plus the calendar whose
-    /// 03:00 service day pins a `TrainIdentity`. A failed fetch degrades to an empty board (the protocol
-    /// cannot throw), which reads as "nothing runs".
-    public init(token: String?, session: URLSession = .shared, calendar: Calendar = .current) {
+    /// Production: the token every other call site builds its `SNCFClient` from (read per request, so one
+    /// typed after launch counts), plus the calendar whose 03:00 service day pins a `TrainIdentity`. A
+    /// failed fetch degrades to an empty board (the protocol cannot throw), which reads as "nothing runs".
+    public init(token: @escaping @Sendable () -> String? = { SharedSettings.token }, session: URLSession = .shared,
+                calendar: Calendar = SNCFTime.calendar) {
         self.calendar = calendar
         self.departures = { leg, date in
-            (try? await SNCFClient(token: token, session: session).departures(from: leg.from, to: leg.to, at: date)) ?? []
+            (try? await SNCFClient(token: token(), session: session).departures(from: leg.from, to: leg.to, at: date)) ?? []
         }
     }
 
     /// Testable seam: fixtures answer `departures` directly, no network.
-    init(calendar: Calendar = .current, departures: @escaping @Sendable (Leg, Date) async -> [TrainDeparture]) {
+    init(calendar: Calendar = SNCFTime.calendar, departures: @escaping @Sendable (Leg, Date) async -> [TrainDeparture]) {
         self.calendar = calendar
         self.departures = departures
     }

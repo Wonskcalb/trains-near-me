@@ -9,46 +9,69 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
     /// Direct trains for a resolved leg at a time. Typed-throws so a journey's failure carries the
     /// `TrainServiceError` into its `.unavailable` state instead of being swallowed.
     public typealias Fetch = @Sendable (Leg, Date) async throws(TrainServiceError) -> [TrainDeparture]
+    /// Handed every raw board as it lands, before it collapses into a `BoardState` (which drops cancelled
+    /// rows on a dead day): production re-checks watched trains here.
+    public typealias Observe = @Sendable ([TrainDeparture], Leg) async -> Void
 
     private let favorites: @Sendable () -> [JourneyConfiguration]
     private let location: @Sendable () async -> CLLocation?
     private let fetch: Fetch
+    private let observe: Observe
     private let calendar: Calendar
-    /// WidgetKit grants few reloads and the free SNCF tier few requests, so a sidebar of many saved
-    /// journeys must not open one socket each: the group never runs more than this many fetches at once.
+    /// The free SNCF tier is 5 000 requests a day, so a sidebar of many saved journeys must not open one
+    /// socket each: the group never runs more than this many fetches at once.
     private let maxConcurrent: Int
+    /// The sidebar, the detail screen and the menu bar all ask for every board on the same appear or ⌘R;
+    /// within this window they share one round of requests instead of each paying for it.
+    private let memoLifetime: TimeInterval
+    private let memo = BoardsMemo()
 
     public init(favorites: @escaping @Sendable () -> [JourneyConfiguration] = { SharedSettings.favorites },
                 location: @escaping @Sendable () async -> CLLocation? = { await LocationFix.shared.current() },
-                calendar: Calendar = .current,
+                calendar: Calendar = SNCFTime.calendar,
                 maxConcurrent: Int = 4,
+                memoLifetime: TimeInterval = 60,
+                observe: @escaping Observe = { _, _ in },
                 fetch: @escaping Fetch) {
         self.favorites = favorites
         self.location = location
         self.calendar = calendar
         self.maxConcurrent = max(1, maxConcurrent)
+        self.memoLifetime = memoLifetime
+        self.observe = observe
         self.fetch = fetch
     }
 
-    /// Production wiring: one direct-journeys request per saved journey, `base_schedule` as always.
-    public init(token: String? = SharedSettings.token,
+    /// Production wiring: one direct-journeys request per saved journey, `base_schedule` as always. The
+    /// token is read per fetch so one typed in Settings after launch is used straight away, and every
+    /// raw board goes past the shared `TrainWatcher` — the Mac and iPad have no other foreground check.
+    public init(token: @escaping @Sendable () -> String? = { SharedSettings.token },
                 session: URLSession = .shared,
                 favorites: @escaping @Sendable () -> [JourneyConfiguration] = { SharedSettings.favorites },
                 location: @escaping @Sendable () async -> CLLocation? = { await LocationFix.shared.current() },
-                calendar: Calendar = .current,
+                calendar: Calendar = SNCFTime.calendar,
                 maxConcurrent: Int = 4) {
         let fetch: Fetch = { leg, now in
-            try await SNCFClient(token: token, session: session).departures(from: leg.from, to: leg.to, at: now)
+            try await SNCFClient(token: token(), session: session).departures(from: leg.from, to: leg.to, at: now)
         }
-        self.init(favorites: favorites, location: location, calendar: calendar, maxConcurrent: maxConcurrent, fetch: fetch)
+        self.init(favorites: favorites, location: location, calendar: calendar, maxConcurrent: maxConcurrent,
+                  observe: { trains, leg in await TrainWatcher.shared.reevaluate(against: trains, to: leg) },
+                  fetch: fetch)
     }
 
     public func boards(at now: Date) async -> [JourneyBoard] {
         let journeys = favorites()
         guard !journeys.isEmpty else { return [] }
+        return await memo.value(for: journeys, at: now, lifetime: memoLifetime) { await fetchAll(journeys, at: now) }
+    }
+
+    public func invalidate() async { await memo.clear() }
+
+    private func fetchAll(_ journeys: [JourneyConfiguration], at now: Date) async -> [JourneyBoard] {
         // The one location fix is resolved once and shared, not fetched per journey.
         let location = await location()
         let fetch = self.fetch
+        let observe = self.observe
         let calendar = self.calendar
 
         return await withTaskGroup(of: (Int, JourneyBoard).self) { group in
@@ -62,7 +85,9 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
                 group.addTask {
                     let state: BoardState
                     do throws(TrainServiceError) {
-                        state = BoardState.from(try await fetch(leg, now), now: now, calendar: calendar)
+                        let trains = try await fetch(leg, now)
+                        await observe(trains, leg)
+                        state = BoardState.from(trains, now: now, calendar: calendar)
                     } catch {
                         state = .unavailable(error)
                     }
@@ -79,4 +104,23 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
             return boards.compactMap { $0 }
         }
     }
+}
+
+/// The last round of boards, held as its task so callers arriving while it is still in flight wait for
+/// it rather than starting their own. Keyed on the saved journeys too, so an edit is never answered with
+/// the old list.
+actor BoardsMemo {
+    private var entry: (journeys: [JourneyConfiguration], at: Date, task: Task<[JourneyBoard], Never>)?
+
+    func value(for journeys: [JourneyConfiguration], at now: Date, lifetime: TimeInterval,
+               compute: @escaping @Sendable () async -> [JourneyBoard]) async -> [JourneyBoard] {
+        if let entry, entry.journeys == journeys, abs(now.timeIntervalSince(entry.at)) < lifetime {
+            return await entry.task.value
+        }
+        let task = Task { await compute() }
+        entry = (journeys, now, task)
+        return await task.value
+    }
+
+    func clear() { entry = nil }
 }

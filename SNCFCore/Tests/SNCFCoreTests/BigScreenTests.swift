@@ -64,7 +64,16 @@ import Testing
         #expect(summary.trainsPerHour.reduce(0, +) == 32)   // the Lanes minimap total
         #expect(summary.lastTonight == BigScreenFixtures.at(22, 42))
         #expect(summary.firstTomorrow == BigScreenFixtures.at(5, 42, day: 16))
-        #expect(summary.disruptedCount == 2)
+        // The "2 DISRUPTED TONIGHT" chip is read off the live board (17655 +12, 17661 +24), not the summary.
+        #expect(departures(await data.journeyBoards.boards(at: now)[0].state).filter(\.isRunningLate).count == 2)
+    }
+
+    @Test func stationSearchIgnoresCaseAndAccents() async throws {
+        #expect(try await data.stationSearch.search("chambery").map(\.name) == ["Chambéry"])
+        #expect(try await data.stationSearch.search("SAINT-EGREVE").map(\.name) == ["Saint-Égrève–St-Robert"])
+        #expect(try await data.stationSearch.search("gre").map(\.name) == ["Grenoble", "Saint-Égrève–St-Robert"])
+        #expect(try await data.stationSearch.search("g").isEmpty)   // one letter is not a search
+        #expect(try await data.stationSearch.nearest().station == BigScreenFixtures.voiron)
     }
 
     @Test func roundTripTagsAreMonotonic() async {
@@ -106,6 +115,9 @@ import Testing
         #expect(await data.watching.watched() == [identity])
         await data.watching.unwatch(identity)
         #expect(await data.watching.isWatched(identity) == false)
+        // The train-based watch the screens call lands on the same identity.
+        await data.watching.watch(BigScreenFixtures.grenobleVoironTrains[1], to: nil)
+        #expect(await data.watching.isWatched(identity))
     }
 
     @Test func shareTextNamesTheTrainTheLegAndTheTime() {

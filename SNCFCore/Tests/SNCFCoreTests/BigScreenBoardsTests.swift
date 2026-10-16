@@ -56,6 +56,42 @@ import Testing
         #expect(await provider.boards(at: at(18, 0)).isEmpty)
     }
 
+    @Test func boardsAskedTogetherShareOneRoundUntilInvalidated() async {
+        let calls = Counter()
+        let trains = sampleTrains
+        let fetch: LiveJourneyBoards.Fetch = { _, _ in await calls.bump(); return trains }
+        let provider = LiveJourneyBoards(favorites: { [JourneyConfiguration(stationA: grenoble, stationB: voiron)] },
+                                         location: { nil }, calendar: paris, fetch: fetch)
+
+        // The sidebar and the detail screen on the same appear, then again 30 s later.
+        async let sidebar = provider.boards(at: at(18, 0))
+        async let detail = provider.boards(at: at(18, 0))
+        #expect(await sidebar == detail)
+        _ = await provider.boards(at: at(18, 0).addingTimeInterval(30))
+        #expect(await calls.count == 1)
+
+        // ⌘R forgets the memo; so does the minute running out.
+        await provider.invalidate()
+        _ = await provider.boards(at: at(18, 1))
+        #expect(await calls.count == 2)
+        _ = await provider.boards(at: at(18, 3))
+        #expect(await calls.count == 3)
+    }
+
+    @Test func everyRawBoardIsHandedToTheWatcherHook() async {
+        let seen = Seen()
+        let cancelled = TrainDeparture(scheduledDeparture: at(18, 0), scheduledArrival: at(18, 30),
+                                       delayMinutes: 0, isCancelled: true, trainNumber: "1")
+        let fetch: LiveJourneyBoards.Fetch = { _, _ in [cancelled] }
+        let provider = LiveJourneyBoards(favorites: { [JourneyConfiguration(stationA: grenoble, stationB: voiron)] },
+                                         location: { nil }, calendar: paris,
+                                         observe: { trains, leg in await seen.add(trains, leg) }, fetch: fetch)
+        // The board collapses to `.noService`, but the hook still saw the cancelled row itself.
+        #expect(await provider.boards(at: at(17, 0))[0].state == .noService)
+        #expect(await seen.trains == [cancelled])
+        #expect(await seen.legs == [Leg(from: grenoble, to: voiron)])
+    }
+
     // MARK: Station board + via cache
 
     @Test func stationBoardMapsDeparturesAndDegradesOnError() async {
@@ -86,6 +122,16 @@ import Testing
         #expect(first == ["Mid 1", "Mid 2"])    // origin + terminus dropped
         #expect(second == first)
         #expect(await calls.count == 1)          // the second read is cached, no new trip()
+    }
+
+    @Test func aFailedViaLookupIsAskedAgain() async {
+        let calls = Counter()
+        let noBoard: LiveStationBoard.BoardFetch = { _, _ in [] }
+        let trip: LiveStationBoard.TripFetch = { _ in await calls.bump(); throw TrainServiceError.offline }
+        let provider = LiveStationBoard(calendar: paris, board: noBoard, trip: trip)
+        #expect(await provider.via(forVehicleJourneyID: "vj:1").isEmpty)
+        #expect(await provider.via(forVehicleJourneyID: "vj:1").isEmpty)
+        #expect(await calls.count == 2)          // a blip is not remembered as "direct"
     }
 
     @Test func viaListFromARealTripIsCapped() async throws {
@@ -130,4 +176,11 @@ private actor Counter {
     private var value = 0
     func bump() { value += 1 }
     var count: Int { value }
+}
+
+/// What the watcher hook was handed.
+private actor Seen {
+    private(set) var trains: [TrainDeparture] = []
+    private(set) var legs: [Leg] = []
+    func add(_ trains: [TrainDeparture], _ leg: Leg) { self.trains += trains; legs.append(leg) }
 }
