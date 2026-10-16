@@ -101,8 +101,8 @@ struct TrainInspector: View {
 
     /// Your leg (board → alight) is solid in ink; the rest of the run is dashed and at half strength.
     private var pattern: some View {
-        let boardIdx = stops.firstIndex { $0.name == leg.from.name } ?? 0
-        let alightIdx = stops.lastIndex { $0.name == leg.to.name } ?? (stops.count - 1)
+        let boardIdx = stops.firstIndex { $0.isAt(leg.from) } ?? 0
+        let alightIdx = stops.lastIndex { $0.isAt(leg.to) } ?? (stops.count - 1)
         let onBoardMinutes = Int((train.duration ?? 0) / 60)
         return VStack(spacing: 0) {
             ForEach(Array(stops.enumerated()), id: \.offset) { index, stop in

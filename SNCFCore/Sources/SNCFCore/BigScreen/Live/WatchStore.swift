@@ -100,7 +100,9 @@ public actor TrainWatcher: TrainWatching {
     public func reevaluate(against trains: [TrainDeparture], to leg: Leg? = nil,
                            calendar: Calendar = SNCFTime.calendar, now: Date = .now) async {
         for train in trains {
-            guard let identity = TrainIdentity(train, calendar: calendar), watchedSet.contains(identity) else { continue }
+            guard let identity = TrainIdentity(train, calendar: calendar) else { continue }
+            adoptNumberedWatch(of: train, as: identity, calendar: calendar)
+            guard watchedSet.contains(identity) else { continue }
             if let alert = Self.alert(from: lastSeen[identity]?.status, to: train.status) {
                 await fire(alert, for: train, to: leg)
             }
@@ -109,6 +111,18 @@ public actor TrainWatcher: TrainWatching {
         }
         prune(now: now, calendar: calendar)
         save()
+    }
+
+    /// Journey rows had no vehicle-journey id before 2026-10, so a watch made on one was stored `.numbered`.
+    /// The same train now arrives with its id: move the watch over, or it would never match again and stay
+    /// silent for the rest of its day.
+    private func adoptNumberedWatch(of train: TrainDeparture, as identity: TrainIdentity, calendar: Calendar) {
+        guard case .vehicleJourney = identity, let number = train.trainNumber, !number.isEmpty else { return }
+        let legacy = TrainIdentity.numbered(number, serviceDay: BoardState.serviceDay(of: train.scheduledDeparture, calendar: calendar))
+        guard watchedSet.remove(legacy) != nil else { return }
+        watchedSet.insert(identity)
+        if let seen = lastSeen.removeValue(forKey: legacy), lastSeen[identity] == nil { lastSeen[identity] = seen }
+        cancelReminder(legacy)
     }
 
     /// A `.numbered` identity carries its service day; a vehicle journey is dated by the departure last

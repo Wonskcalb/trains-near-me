@@ -39,6 +39,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Big screen: ⌘1–4 (Station hall, Lanes, Wall mode, Round trip), ⌘K and ⌘R are real menu commands in the View menu (and the iPad keyboard overlay) instead of hidden buttons that did not always fire.
 - Big screen: the Wall's clock and LEAVE HOME IN, and the station hall's "in N min", now advance at each minute change on their own instead of only on a reload.
 - Lanes draws every train of the service day its minimap counts, not only the next dozen.
+- Journey boards show each train's stopping pattern again (the vehicle journey is now read from the journey sections).
 - The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app is now iPhone-only and portrait-only, so it no longer claims iPad support.
 - Version and build number now come from `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` instead of a hard-coded 1.0 (1), which App Store Connect would have rejected on a second upload; declares no non-exempt encryption so TestFlight skips the export-compliance prompt.
 

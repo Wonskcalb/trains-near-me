@@ -96,7 +96,10 @@ private struct StationHallBoard: View {
     }
 
     private func loadStops() async {
-        guard let id = selected?.vehicleJourneyID else { stops = []; return }
+        // Cleared first: otherwise the inspector draws the previous train's run under the new train's
+        // number until the request lands.
+        stops = []
+        guard let id = selected?.vehicleJourneyID else { return }
         stops = (try? await data.trainStops.stops(forVehicleJourneyID: id)) ?? []
     }
 

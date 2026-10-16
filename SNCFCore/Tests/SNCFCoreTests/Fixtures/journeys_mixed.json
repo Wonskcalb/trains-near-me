@@ -51,6 +51,12 @@
     {
      "type": "public_transport",
      "id": "section_17601",
+     "links": [
+      {"type": "company", "id": "company:SNCF:1187", "templated": false},
+      {"type": "vehicle_journey", "id": "vehicle_journey:SNCF:2026-10-08:17601:1187:Train", "templated": false},
+      {"type": "line", "id": "line:SNCF:FR:Line::DAF77CAA-444E-43F9-A7EC-1FFEF4C462CD:", "templated": false},
+      {"type": "physical_mode", "id": "physical_mode:Train", "templated": false}
+     ],
      "from": {
       "id": "stop_area:SNCF:87747006",
       "name": "Grenoble",
@@ -166,6 +172,12 @@
     {
      "type": "public_transport",
      "id": "section_17603",
+     "links": [
+      {"type": "company", "id": "company:SNCF:1187", "templated": false},
+      {"type": "vehicle_journey", "id": "vehicle_journey:SNCF:2026-10-08:17603:1187:Train", "templated": false},
+      {"type": "line", "id": "line:SNCF:FR:Line::DAF77CAA-444E-43F9-A7EC-1FFEF4C462CD:", "templated": false},
+      {"type": "physical_mode", "id": "physical_mode:Train", "templated": false}
+     ],
      "from": {
       "id": "stop_area:SNCF:87747006",
       "name": "Grenoble",

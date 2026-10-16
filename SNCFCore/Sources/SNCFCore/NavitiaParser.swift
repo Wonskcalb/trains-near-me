@@ -90,7 +90,8 @@ public enum NavitiaParser {
             mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: originStop, significantDelays: journey.status == "SIGNIFICANT_DELAYS"),
             isCancelled: cancelled,
-            trainNumber: info?.tripShortName ?? info?.headsign
+            trainNumber: info?.tripShortName ?? info?.headsign,
+            vehicleJourneyID: section.links?.first { $0.type == "vehicle_journey" }?.id
         )
     }
 
@@ -251,6 +252,8 @@ struct Section: Decodable {
     let from: Place?
     let to: Place?
     let displayInformations: DisplayInformations?
+    /// A public-transport section links its `vehicle_journey`, the same id a station board carries.
+    let links: [Link]?
 }
 
 struct Place: Decodable {
