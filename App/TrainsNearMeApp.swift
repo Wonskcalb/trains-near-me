@@ -3,18 +3,28 @@ import SNCFCore
 import SwiftUI
 import WidgetKit
 
-/// On macOS it exists only to store the API token and obtain location permission; the widget is the
-/// product there. On iOS it is a real app: the radar and the saved journeys, same data as the widgets.
+/// On macOS it is now the big-screen app (a window + the menu bar extra), with the token/location
+/// settings moved into a `Settings` scene; the widget is still a product there too. On iOS it is the
+/// radar and the saved journeys, same data as the widgets, with the big-screen split view on iPad.
 @main
 struct TrainsNearMeApp: App {
     var body: some Scene {
         #if os(macOS)
-        Window("Trains near me", id: "settings") {
-            SettingsView().frame(width: 420).fixedSize()
+        WindowGroup {
+            BigScreenRoot().environment(\.bigScreenData, .fake)
         }
-        .windowResizability(.contentSize)
+        Settings {
+            SettingsView().frame(width: 420)
+        }
+        // Window style so the popover can host the full board (MenuBar.dc.html), not a plain menu.
+        MenuBarExtra("Trains near me", systemImage: "tram.fill") {
+            MenuBarExtraView().environment(\.bigScreenData, .fake)
+        }
+        .menuBarExtraStyle(.window)
         #else
-        WindowGroup { RootView() }
+        WindowGroup {
+            BigScreenRoot().environment(\.bigScreenData, .fake)
+        }
         #endif
     }
 }
