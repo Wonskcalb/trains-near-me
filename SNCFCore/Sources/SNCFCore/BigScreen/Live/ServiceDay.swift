@@ -104,11 +104,8 @@ private struct StoredServiceDaySummary: Codable {
     }
 }
 
-/// The App Group suite name, read the same way `SharedSettings` does (Info.plist `SNCFAppGroup`), so the
-/// service-day cache lands in the group the app and widgets share. Duplicated rather than reaching into
-/// `SharedSettings.defaults`, which is `internal` to that file; a shared accessor there would retire this.
+/// The App Group suite name, resolved once by `SharedSettings.appGroupSuiteName` (Info.plist
+/// `SNCFAppGroup`), so the service-day cache lands in the group the app and widgets share.
 public enum BigScreenAppGroup {
-    public static var suiteName: String? {
-        Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String
-    }
+    public static var suiteName: String? { SharedSettings.appGroupSuiteName }
 }

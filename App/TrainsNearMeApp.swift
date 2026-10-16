@@ -8,22 +8,35 @@ import WidgetKit
 /// radar and the saved journeys, same data as the widgets, with the big-screen split view on iPad.
 @main
 struct TrainsNearMeApp: App {
+    #if os(iOS)
+    @Environment(\.scenePhase) private var scenePhase
+    // BGTaskScheduler demands its handler be registered before launch finishes; App.init() is that window.
+    init() { BackgroundRefresh.register() }
+    #endif
+
     var body: some Scene {
         #if os(macOS)
-        WindowGroup {
-            BigScreenRoot().environment(\.bigScreenData, .fake)
+        WindowGroup(id: "main") {
+            BigScreenRoot().environment(\.bigScreenData, .live())
         }
         Settings {
             SettingsView().frame(width: 420)
         }
-        // Window style so the popover can host the full board (MenuBar.dc.html), not a plain menu.
-        MenuBarExtra("Trains near me", systemImage: "tram.fill") {
-            MenuBarExtraView().environment(\.bigScreenData, .fake)
+        // Window style so the popover can host the full board (MenuBar.dc.html), not a plain menu. A
+        // custom label (the amber flap + next time) rather than a template symbol, per MenuBar.dc.html.
+        MenuBarExtra {
+            MenuBarExtraView().environment(\.bigScreenData, .live())
+        } label: {
+            MenuBarLabel().environment(\.bigScreenData, .live())
         }
         .menuBarExtraStyle(.window)
         #else
         WindowGroup {
-            BigScreenRoot().environment(\.bigScreenData, .fake)
+            BigScreenRoot().environment(\.bigScreenData, .live())
+                // Ask for a background re-evaluation of watched trains whenever the app leaves the foreground.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .background { BackgroundRefresh.schedule() }
+                }
         }
         #endif
     }

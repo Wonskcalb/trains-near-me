@@ -62,13 +62,31 @@ struct BigScreenRoot: View {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
+    #if os(macOS)
+    // The menu-bar "Wall mode on this display" (⌘3) cannot reach this window's BigScreenModel across
+    // scenes, so it leaves a flag here; the window consumes it on appear (cold open) and on change
+    // (already open). Same process, so plain standard defaults carry it.
+    @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
+    #endif
     @State private var model = BigScreenModel()
 
     var body: some View {
         content
             .environment(model)
             .background(commands)
+        #if os(macOS)
+            .onAppear { consumePendingRoute() }
+            .onChange(of: pendingRoute) { _, _ in consumePendingRoute() }
+        #endif
     }
+
+    #if os(macOS)
+    private func consumePendingRoute() {
+        guard pendingRoute == "wall" else { return }
+        model.select(.wall)
+        pendingRoute = ""
+    }
+    #endif
 
     @ViewBuilder private var content: some View {
         #if os(iOS)
@@ -132,9 +150,11 @@ private struct BigScreenSidebar: View {
     @State private var query = ""
     @FocusState private var searchFocused: Bool
 
-    /// Thu 15 Oct 2026, 17:40 — the fake world the whole Phase-1 build renders against. Flip to `Date()`
-    /// at the one spot `TrainsNearMeApp` injects live data, and every relative time follows.
-    private let now = BigScreenFixtures.now
+    /// The clock the sidebar reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
+    /// from the `#Preview` so the mockup lines up. Every relative time follows from it.
+    let now: Date
+
+    init(now: Date = Date()) { self.now = now }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -442,7 +462,7 @@ struct BigScreenPlaceholder: View {
 
 #Preview("Sidebar") {
     NavigationSplitView {
-        BigScreenSidebar().navigationSplitViewColumnWidth(280)
+        BigScreenSidebar(now: BigScreenFixtures.now).navigationSplitViewColumnWidth(280)
     } detail: {
         Color.ground
     }

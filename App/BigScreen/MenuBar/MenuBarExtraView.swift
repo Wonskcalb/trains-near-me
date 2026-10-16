@@ -39,6 +39,9 @@ struct MenuBarLabel: View {
 /// the next three trains, journey chips, and the Open / Wall actions (MenuBar.dc.html).
 struct MenuBarExtraView: View {
     @Environment(\.bigScreenData) private var data
+    @Environment(\.openWindow) private var openWindow
+    // Shared with the main window's BigScreenRoot: ⌘3 leaves "wall" here and that window switches route.
+    @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
     var now: Date = .now
 
     @State private var boards: [JourneyBoard] = []
@@ -288,15 +291,15 @@ struct MenuBarExtraView: View {
         Task { boards = await data.journeyBoards.boards(at: now) }
     }
 
-    // ponytail: the popover can't reach the main window's route or the WindowGroup id from here — that
-    // state lives in TrainsNearMeApp, which this screen must not edit. Phase 1 just brings the app
-    // forward; actually opening the window and switching to Wall need the scene hooks named in the
-    // handoff report (give the WindowGroup `id: "main"`, expose a Wall-route setter).
+    // Open (or raise) the main window and bring the app forward. ⌘3 also sets the pending route so the
+    // window lands on Wall mode — BigScreenRoot reads it on appear (cold open) and on change (already open).
     private func openMain() {
         NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "main")
     }
 
     private func openWall() {
+        pendingRoute = "wall"
         openMain()
     }
 }

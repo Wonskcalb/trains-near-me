@@ -4,11 +4,15 @@ import Foundation
 public enum SharedSettings {
     static let tokenKey = "sncfToken"
 
-    /// The group id comes from Info.plist (`SNCFAppGroup`) so it can carry the per-platform shape:
-    /// the team prefix on macOS, a "group." prefix on iOS.
+    /// The App Group suite name from Info.plist (`SNCFAppGroup`), carrying the per-platform shape: the
+    /// team prefix on macOS, a "group." prefix on iOS. Public so the big-screen providers read it from
+    /// here instead of each repeating the Info.plist lookup. nil without a group (a free Apple account).
+    public static var appGroupSuiteName: String? {
+        Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String
+    }
+
     static var defaults: UserDefaults? {
-        guard let group = Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String else { return nil }
-        return UserDefaults(suiteName: group)
+        appGroupSuiteName.flatMap { UserDefaults(suiteName: $0) }
     }
 
     /// Whether the app and the widget actually share storage. False without a real signing team on
