@@ -60,6 +60,11 @@ targets:
         NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
         SNCFAppGroup: $(SNCF_APP_GROUP)
         SNCFToken: $(SNCF_TOKEN)
+        # iOS background app refresh re-evaluates watched trains off-screen (BackgroundRefresh). Both keys
+        # are iOS-only concepts and simply ignored on macOS, so they can stay in the shared Info.plist.
+        # The identifier must match BackgroundRefresh.taskID (the bundle id + ".refresh").
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [$(BUNDLE_ID_PREFIX).refresh]
     entitlements:
       path: App/TrainsNearMe.entitlements
       properties:
