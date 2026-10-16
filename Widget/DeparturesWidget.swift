@@ -16,6 +16,8 @@ let widgetFamilies: [WidgetFamily] = {
     #if os(iOS)
     families += [.accessoryRectangular, .accessoryCircular]
     #endif
+    // The vertical extra-tall family only exists on iOS/macOS 27; offer it there (both widgets inherit this).
+    if #available(iOS 27, macOS 27, *) { families.append(.systemExtraLargePortrait) }
     return families
 }()
 
@@ -72,17 +74,20 @@ struct DeparturesView: View {
     private var secondaryColor: Color { onDark ? Color.white.opacity(0.7) : .inkSecondary }
 
     var body: some View {
-        #if os(iOS)
         switch family {
+        #if os(iOS)
         case .accessoryCircular, .accessoryRectangular:
             // iOS 17+ refuses to render a widget that doesn't adopt containerBackground — without it
             // the Lock Screen shows "Please adopt containerBackground API" instead of the board.
             AccessoryBoard(entry: entry).containerBackground(.clear, for: .widget)
-        default: panel
-        }
-        #else
-        panel
         #endif
+        case .systemExtraLargePortrait:
+            // The vertical-track extra-tall layout (OS 27 only; the case never matches below it). Falls
+            // back to the panel when there is no board to draw — ExtraTallView assumes an upcoming train.
+            if entry.upcoming.isEmpty { panel } else { ExtraTallView(entry: entry) }
+        default:
+            panel
+        }
     }
 
     private var panel: some View {
