@@ -21,7 +21,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            NavigationStack { BoardView(journey: nil) }
+            nearMeTab
                 .tabItem { Label("Near me", systemImage: "antenna.radiowaves.left.and.right") }
                 .tag(0)
             journeysTab
@@ -33,12 +33,34 @@ struct RootView: View {
         }
         .tint(.amber)
         .preferredColorScheme(appearance.colorScheme)
+        // The line map opens a terminus through `model.open(temporary:)`, which only the iPad/Mac shell
+        // routes. In the tabs the journey is pushed over the map instead, and the leg cleared at once so the
+        // Journeys tab's boards never read it as their own temporary journey.
+        .onChange(of: model.temporaryLeg) { _, leg in
+            guard let leg else { return }
+            model.temporaryLeg = nil
+            nearMe.open(leg)
+        }
         #if DEBUG
         .task {
             ScreenshotSupport.seedIfNeeded()
             if let journey = ScreenshotSupport.openJourney { model.journeyPath = [journey] }
         }
         #endif
+    }
+
+    // Here rather than in the tab for the same reason as `journeyPath`: folding swaps the tab's container.
+    @State private var nearMe = NearMeState()
+
+    @ViewBuilder private var nearMeTab: some View {
+        if spansFold {
+            NearMeSplit(nearMe: $nearMe)
+        } else {
+            NavigationStack(path: $nearMe.path) {
+                BoardView(journey: nil, nearMe: $nearMe)
+                    .navigationDestination(for: NearMeRoute.self) { NearMeDestination(route: $0, nearMe: $nearMe) }
+            }
+        }
     }
 
     // The path lives on the shared model so that folding a Duo, which swaps the split for a plain stack,
