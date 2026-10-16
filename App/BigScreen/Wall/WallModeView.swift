@@ -43,12 +43,8 @@ struct WallModeView: View {
     @State private var keepAwake = true
     @Environment(\.previewFold) private var previewFold
 
-    /// Set when the wall covers the screen (the iPhone's Wall button), nil where it is a page or a tab.
-    private let onClose: (() -> Void)?
-
-    init(now: Date? = nil, onClose: (() -> Void)? = nil) {
+    init(now: Date? = nil) {
         frozenNow = now
-        self.onClose = onClose
     }
 
     private static let stationKey = "station"
@@ -311,8 +307,8 @@ struct WallModeView: View {
 
     // MARK: Controls
 
-    /// The journey, the walk, keep awake and close, in the bottom bar wherever the side column with its
-    /// journey cards is gone; otherwise only Close, where the wall covers the screen.
+    /// The journey, the walk and keep awake, in the bottom bar wherever the side column with its journey
+    /// cards is gone. The wall is a page or a tab everywhere, so it has no Close.
     @ToolbarContentBuilder private func controls(inBottomBar: Bool) -> some ToolbarContent {
         if inBottomBar {
             #if os(iOS)
@@ -320,10 +316,6 @@ struct WallModeView: View {
             #else
             ToolbarItemGroup(placement: .automatic) { bottomControls }
             #endif
-        } else if let onClose {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark", action: onClose)
-            }
         }
     }
 
@@ -352,9 +344,6 @@ struct WallModeView: View {
         Spacer()
         Button(keepAwake ? "Let the screen sleep" : "Keep the screen awake",
                systemImage: keepAwake ? "sun.max.fill" : "sun.max") { keepAwake.toggle() }
-        if let onClose {
-            Button("Close", systemImage: "xmark", action: onClose)
-        }
     }
 
     /// The stored walk to the leg's station; a new figure recounts LEAVE HOME IN straight away.

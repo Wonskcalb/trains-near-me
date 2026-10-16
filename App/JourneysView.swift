@@ -14,8 +14,6 @@ struct JourneysView: View {
     @State private var adding = false
     @State private var editing = false
     @State private var editTarget: JourneyConfiguration?
-    @State private var showingLanes = false
-    @Environment(\.spansFold) private var spansFold
 
     var body: some View {
         Group {
@@ -35,19 +33,13 @@ struct JourneysView: View {
         }
         .background(Color.ground.ignoresSafeArea())
         .navigationTitle("Journeys")
-        // A value link, so the pushed journey is the stack's path, which the shared model keeps across a fold.
-        .navigationDestination(for: JourneyConfiguration.self) { JourneyBoardScreen(journey: $0) }
-        .navigationDestination(isPresented: $showingLanes) { LanesView() }
+        // The boards it opens are registered by the stack around it, which also holds Lanes when folded.
         .toolbar {
             // The toggle only earns its place once there is something to manage.
             if !journeys.isEmpty {
                 Button(editing ? "Done" : "Edit") { editing.toggle() }
             }
             Button("Add a journey", systemImage: "plus") { adding = true }
-            // On the Duo's inner display Lanes is already the detail column; elsewhere it is one push away.
-            if !spansFold, !journeys.isEmpty {
-                Button(BigScreenRoute.lanes.title, systemImage: BigScreenRoute.lanes.symbol) { showingLanes = true }
-            }
         }
         .tint(.amber)
         .refreshable { await boards.load(journeys) }

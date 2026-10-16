@@ -62,6 +62,8 @@ enum BigScreenRoute: Hashable, CaseIterable {
     /// The Journeys tab's pushed journey. Held here rather than in the tab so folding and unfolding a Duo,
     /// which swaps the tab between a plain stack and a split, keeps you on the same journey.
     var journeyPath: [JourneyConfiguration] = []
+    /// The folded Journeys tab's List | Lanes switch, here beside `journeyPath` for the same reason.
+    var showsLanes = false
     /// The train a journey board hands to the detail column on the Duo's inner display; nil shows Lanes.
     var detailTrain: PickedTrain?
 
@@ -81,7 +83,7 @@ struct PickedTrain: Equatable {
 }
 
 /// The big-screen container: a sidebar + a routed detail column on macOS and on iPad / any regular
-/// width; compact iPhone and the iPhone Duo keep the three-tab `RootView`. The keyboard commands (⌘K /
+/// width; compact iPhone and the iPhone Duo keep the four-tab `RootView`. The keyboard commands (⌘K /
 /// ⌘R / ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode is a route like the others.
 struct BigScreenRoot: View {
     @Environment(\.bigScreenData) private var data
@@ -125,7 +127,7 @@ struct BigScreenRoot: View {
         GeometryReader { proxy in
             let spansFold = Fold.division(in: proxy) != nil
             if spansFold || sizeClass == .compact {
-                RootView().environment(\.spansFold, spansFold)
+                RootView(isTabletop: Fold.isTabletop(in: proxy)).environment(\.spansFold, spansFold)
             } else {
                 split
             }

@@ -31,7 +31,12 @@ struct JourneysSplit: View {
         GeometryReader { proxy in
             let split = Fold.split(width: proxy.size.width, region: Fold.region(in: proxy, preview: previewFold))
             NavigationSplitView(columnVisibility: .constant(.all)) {
-                NavigationStack(path: $model.journeyPath) { JourneysView() }
+                NavigationStack(path: $model.journeyPath) {
+                    JourneysView()
+                        // A value link, so the pushed journey is the stack's path, which the shared model
+                        // keeps across a fold.
+                        .navigationDestination(for: JourneyConfiguration.self) { JourneyBoardScreen(journey: $0) }
+                }
                     .padding(.trailing, split.leadingPadding)
                     // All three bounds: a lone width is still clamped to the split's own sidebar maximum,
                     // which on a 951 pt screen falls well short of the fold.
@@ -75,58 +80,48 @@ extension BigScreenRoute: Identifiable {
     var id: Self { self }
 }
 
-/// A journey board's toolbar on iPhone: Round trip (the prominent action), Swap and Wall. Labels with
-/// symbols, so the Duo stacks them in its strip and a plain iPhone keeps them in the top bar. Round trip
-/// and Wall have no tab of their own, so they cover the screen and close back onto the board.
+/// A journey board's toolbar on iPhone: Round trip (the prominent action) and Swap. Labels with symbols,
+/// so the Duo stacks them in its strip and a plain iPhone keeps them in the top bar. Round trip has no tab
+/// of its own, so it covers the screen and closes back onto the board; Wall is a tab.
 struct JourneyToolbar: ViewModifier {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
     /// False on the Near me radar, which shares `BoardView` but has no journey to act on.
     var isEnabled = true
+    /// The board's leg, Round trip's outbound; nil lets Round trip take the first saved journey.
+    var leg: Leg? = nil
     /// nil disables Swap: the hall board can only swap to a saved reverse journey.
     let swap: (() -> Void)?
-    @State private var cover: BigScreenRoute?
+    @State private var showsRoundTrip = false
 
     func body(content: Content) -> some View {
         content
             .toolbar {
                 if isEnabled {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(BigScreenRoute.roundTrip.title, systemImage: BigScreenRoute.roundTrip.symbol) { cover = .roundTrip }
+                        Button(BigScreenRoute.roundTrip.title, systemImage: BigScreenRoute.roundTrip.symbol) { showsRoundTrip = true }
                             .prominentToolbarButton()
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Swap direction", systemImage: "arrow.up.arrow.down") { swap?() }
                             .disabled(swap == nil)
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(BigScreenRoute.wall.title, systemImage: BigScreenRoute.wall.symbol) { cover = .wall }
-                    }
                 }
             }
-            .fullScreenCover(item: $cover) { route in
+            .fullScreenCover(isPresented: $showsRoundTrip) {
                 NavigationStack {
-                    if route == .wall {
-                        // The wall places its own Close: in the bottom bar with its other controls on the
-                        // desk clock, at the top otherwise.
-                        WallModeView(onClose: { cover = nil })
-                    } else {
-                        RoundTripView()
-                            .toolbar {
-                                ToolbarItem(placement: .cancellationAction) {
-                                    Button("Close", systemImage: "xmark") { cover = nil }
-                                }
+                    RoundTripView(outbound: leg)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close", systemImage: "xmark") { showsRoundTrip = false }
                             }
-                    }
+                        }
                 }
                 // Re-injected: the cover is its own presentation, and the live data must not fall back to
                 // the environment's fake default.
                 .environment(\.bigScreenData, data)
                 .environment(model)
             }
-            #if DEBUG
-            .onAppear { if isEnabled, ScreenshotSupport.openWall { cover = .wall } }
-            #endif
     }
 }
 #endif
