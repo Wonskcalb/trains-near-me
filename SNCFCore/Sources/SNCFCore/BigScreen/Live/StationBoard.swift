@@ -6,43 +6,56 @@ import Foundation
 public struct LiveStationBoard: StationBoardProviding {
     public typealias BoardFetch = @Sendable (Station, Date) async throws(TrainServiceError) -> [TrainDeparture]
     public typealias TripFetch = @Sendable (String) async throws(TrainServiceError) -> [TripStop]
+    /// Handed every raw board before it collapses into a `BoardState`: production re-checks watched trains.
+    public typealias Observe = @Sendable ([TrainDeparture]) async -> Void
 
     private let fetchBoard: BoardFetch
     private let fetchTrip: TripFetch
+    private let observe: Observe
     private let calendar: Calendar
     /// The Wall and the board rows only show a couple of intermediate stops, so the via line is capped.
     private let maxVia: Int
     private let cache = ViaCache()
 
-    public init(calendar: Calendar = .current, maxVia: Int = 3, board: @escaping BoardFetch, trip: @escaping TripFetch) {
+    public init(calendar: Calendar = SNCFTime.calendar, maxVia: Int = 3, observe: @escaping Observe = { _ in },
+                board: @escaping BoardFetch, trip: @escaping TripFetch) {
         self.calendar = calendar
         self.maxVia = max(0, maxVia)
+        self.observe = observe
         self.fetchBoard = board
         self.fetchTrip = trip
     }
 
-    /// Production wiring: the station board and, on demand, each row's stopping pattern.
-    public init(token: String? = SharedSettings.token, session: URLSession = .shared,
-                calendar: Calendar = .current, maxVia: Int = 3) {
+    /// Production wiring: the station board and, on demand, each row's stopping pattern. The token is read
+    /// per request so one typed after launch is used at once.
+    public init(token: @escaping @Sendable () -> String? = { SharedSettings.token }, session: URLSession = .shared,
+                calendar: Calendar = SNCFTime.calendar, maxVia: Int = 3) {
         let board: BoardFetch = { station, now in
-            try await SNCFClient(token: token, session: session).departures(from: station, at: now)
+            try await SNCFClient(token: token(), session: session).departures(from: station, at: now)
         }
         let trip: TripFetch = { id in
-            try await SNCFClient(token: token, session: session).trip(vehicleJourneyID: id)
+            try await SNCFClient(token: token(), session: session).trip(vehicleJourneyID: id)
         }
-        self.init(calendar: calendar, maxVia: maxVia, board: board, trip: trip)
+        self.init(calendar: calendar, maxVia: maxVia,
+                  observe: { await TrainWatcher.shared.reevaluate(against: $0) },
+                  board: board, trip: trip)
     }
 
     public func board(for station: Station, at now: Date) async -> BoardState {
-        do { return BoardState.from(try await fetchBoard(station, now), now: now, calendar: calendar) }
-        catch { return .unavailable(error) }
+        do {
+            let trains = try await fetchBoard(station, now)
+            await observe(trains)
+            return BoardState.from(trains, now: now, calendar: calendar)
+        } catch {
+            return .unavailable(error)
+        }
     }
 
     public func via(forVehicleJourneyID id: String) async -> [String] {
         let fetchTrip = self.fetchTrip
         let maxVia = self.maxVia
         return await cache.via(id) {
-            let stops = (try? await fetchTrip(id)) ?? []
+            guard let stops = try? await fetchTrip(id) else { return nil }
             return Self.via(from: stops, max: maxVia)
         }
     }
@@ -56,14 +69,19 @@ public struct LiveStationBoard: StationBoardProviding {
 }
 
 /// Per-session cache of via lists keyed by vehicle-journey id. It holds the in-flight task, not just the
-/// finished list, so two rows asking for the same train at once still cost a single `trip()` request.
+/// finished list, so two rows asking for the same train at once still cost a single `trip()` request. A
+/// failed lookup (nil) is dropped once it lands, so a row that hit a network blip asks again next time
+/// instead of reading "direct" for the rest of the session.
 actor ViaCache {
-    private var tasks: [String: Task<[String], Never>] = [:]
+    private var tasks: [String: Task<[String]?, Never>] = [:]
 
-    func via(_ id: String, compute: @escaping @Sendable () async -> [String]) async -> [String] {
-        if let task = tasks[id] { return await task.value }
-        let task = Task { await compute() }
+    func via(_ id: String, compute: @escaping @Sendable () async -> [String]?) async -> [String] {
+        let task = tasks[id] ?? Task { await compute() }
         tasks[id] = task
-        return await task.value
+        guard let via = await task.value else {
+            tasks[id] = nil
+            return []
+        }
+        return via
     }
 }

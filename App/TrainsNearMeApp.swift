@@ -8,6 +8,10 @@ import WidgetKit
 /// radar and the saved journeys, same data as the widgets, with the big-screen split view on iPad.
 @main
 struct TrainsNearMeApp: App {
+    /// Built once for the process: the boards memo, the via cache and the shared watcher live inside, and
+    /// `body` runs again on every scene-phase change (and once per scene on macOS).
+    private let data = BigScreenData.live()
+
     #if os(iOS)
     @Environment(\.scenePhase) private var scenePhase
     // BGTaskScheduler demands its handler be registered before launch finishes; App.init() is that window.
@@ -17,22 +21,23 @@ struct TrainsNearMeApp: App {
     var body: some Scene {
         #if os(macOS)
         WindowGroup(id: "main") {
-            BigScreenRoot().environment(\.bigScreenData, .live())
+            BigScreenRoot().environment(\.bigScreenData, data)
         }
         Settings {
-            SettingsView().frame(width: 420)
+            // The same Tableau pane the main window shows under Settings, at a size it was drawn for.
+            SettingsView().environment(\.bigScreenData, data).frame(width: 560, height: 680)
         }
         // Window style so the popover can host the full board (MenuBar.dc.html), not a plain menu. A
         // custom label (the amber flap + next time) rather than a template symbol, per MenuBar.dc.html.
         MenuBarExtra {
-            MenuBarExtraView().environment(\.bigScreenData, .live())
+            MenuBarExtraView().environment(\.bigScreenData, data)
         } label: {
-            MenuBarLabel().environment(\.bigScreenData, .live())
+            MenuBarLabel().environment(\.bigScreenData, data)
         }
         .menuBarExtraStyle(.window)
         #else
         WindowGroup {
-            BigScreenRoot().environment(\.bigScreenData, .live())
+            BigScreenRoot().environment(\.bigScreenData, data)
                 // Ask for a background re-evaluation of watched trains whenever the app leaves the foreground.
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background { BackgroundRefresh.schedule() }
@@ -53,13 +58,12 @@ enum AppGroupStore {
 }
 
 struct SettingsView: View {
+    @Environment(\.bigScreenData) private var data
     @State private var token = SharedSettings.token ?? ""
     @State private var tokenStatus = ""
     @State private var location = LocationFix.shared
     @State private var fix: String?
-    #if !os(macOS)
     @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
-    #endif
 
     var body: some View {
         content
@@ -79,56 +83,35 @@ struct SettingsView: View {
             }
     }
 
-    // macOS keeps the plain settings window — the widget is the product there, so the native Form is
-    // the right amount of chrome; only iOS gets the Tableau treatment.
-    @ViewBuilder private var content: some View {
-        #if os(macOS)
-        Form {
-            Section("SNCF API token") {
-                tokenControls
-            }
-            Section("Location (needed by Radar, optional for Trip)") {
-                HStack {
-                    Text(summary).foregroundStyle(.secondary)
-                    Spacer()
-                    if location.status == .notDetermined {
-                        Button("Allow") { location.requestAuthorization() }
-                    } else {
-                        Button("Find me") { Task { await probe() } }
-                    }
-                }
-                if let fix {
-                    Text(fix).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .formStyle(.grouped)
-        #else
-        iosSettings
-        #endif
-    }
+    // One Tableau pane on every platform: the iPhone tab, the big-screen detail column and the Mac's
+    // Settings window (⌘,) all show the same sections, so a setting is never in one place only.
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Settings").font(.largeTitle.bold()).padding(.horizontal, 4).padding(.bottom, 2)
 
-    // Shared between the two platforms' token sections.
-    @ViewBuilder private var tokenControls: some View {
-        // Typing a token only reaches the widget through the App Group, which a free Apple
-        // account does not get on iOS. There, the compiled-in SNCF_TOKEN is all there is.
-        if SharedSettings.isShared {
-            SecureField("Token", text: $token)
-                .textContentType(.password)
-            HStack {
-                Button("Save and test") { Task { await save() } }
-                    .disabled(token.isEmpty)
-                Text(tokenStatus).font(.caption).foregroundStyle(.secondary)
+                SettingsSection("SNCF API TOKEN") { tokenCard }
+                SettingsSection("JOURNEYS") { SettingsCard { SavedJourneysCard() } }
+                SettingsSection("LOCATION") { locationCard }
+                SettingsSection("APPEARANCE") { appearanceCard }
+                SettingsSection("TICKETS & FULL TIMETABLES") {
+                    SettingsCard { ExternalLinkRow("Open SNCF Connect", url: "https://www.sncf-connect.com") }
+                }
+                SettingsSection("ABOUT") { aboutCard }
             }
-            Link("Get a free token", destination: URL(string: "https://numerique.sncf.com/startup/api/token-developpeur/")!)
-                .font(.caption)
-        } else {
-            Text(SharedSettings.bundled == nil
-                 ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
-                 : "Token taken from the build settings (SNCF_TOKEN). Sign with a real team to type it here instead.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .frame(maxWidth: 720, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
+        .background(Color.ground.ignoresSafeArea())
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        // The large title is drawn in the content, so the bar stays empty rather than stacking a
+        // second "Settings" on top of it.
+        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+        #endif
     }
 
     private var summary: String {
@@ -165,44 +148,24 @@ struct SettingsView: View {
         } catch {
             tokenStatus = error == .unauthorized ? "Token rejected." : "Saved, but the SNCF API could not be reached."
         }
+        // The providers read the token per request; the memoised boards were fetched without it.
+        await data.journeyBoards.invalidate()
         WidgetCenter.shared.reloadAllTimelines()
     }
 }
 
-#if !os(macOS)
 private extension SettingsView {
-    var iosSettings: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Settings").font(.largeTitle.bold()).padding(.horizontal, 4).padding(.bottom, 2)
-
-                SettingsSection("SNCF API TOKEN") { tokenCard }
-                SettingsSection("LOCATION") { locationCard }
-                SettingsSection("APPEARANCE") { appearanceCard }
-                SettingsSection("TICKETS & FULL TIMETABLES") {
-                    SettingsCard { SettingsLink("Open SNCF Connect", url: "https://www.sncf-connect.com") }
-                }
-                SettingsSection("ABOUT") { aboutCard }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
-        }
-        .background(Color.ground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-        // The large title is drawn in the content, so the bar stays empty rather than stacking a
-        // second "Settings" on top of it.
-        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
-    }
-
     @ViewBuilder var tokenCard: some View {
         SettingsCard {
+            // Typing a token only reaches the widget through the App Group, which a free Apple
+            // account does not get on iOS. There, the compiled-in SNCF_TOKEN is all there is.
             if SharedSettings.isShared {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         Text("Token")
                         SecureField("", text: $token)
                             .textContentType(.password)
+                            .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .font(.mono(15, weight: .medium))
                             .foregroundStyle(Color.inkSecondary)
@@ -218,7 +181,7 @@ private extension SettingsView {
                     }
                 }
                 Divider().overlay(Color.ink.opacity(0.07))
-                SettingsLink("Get a free token", url: "https://numerique.sncf.com/startup/api/token-developpeur/")
+                ExternalLinkRow("Get a free token", url: "https://numerique.sncf.com/startup/api/token-developpeur/")
             } else {
                 Text(SharedSettings.bundled == nil
                      ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
@@ -322,7 +285,7 @@ private struct SettingsCard<Content: View>: View {
 }
 
 /// A row that opens an external URL, drawn as a card on its own with the trailing "open" glyph.
-private struct SettingsLink: View {
+private struct ExternalLinkRow: View {
     let title: String
     let url: String
 
@@ -341,4 +304,3 @@ private struct SettingsLink: View {
         }
     }
 }
-#endif

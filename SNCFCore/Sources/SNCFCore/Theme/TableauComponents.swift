@@ -13,13 +13,17 @@ public struct FlapTime: View {
     var tileColor: Color
     var seamColor: Color
     var cornerRadius: CGFloat
+    /// nil draws the colon in `digitColor`. The colon sits on the panel, not on a tile, so where the
+    /// digits are amber on an ink tile over paper it must be ink instead: amber text on paper is out.
+    var colonColor: Color?
 
     // The tile sizes the mockups use are all passed in: 46×66 hero, 52×74 wall clock, 25×38 wall rows,
     // 62×88 leave-by, 30×44 menu bar, 34×50 extra-tall. The digit and colon scale from `tileHeight`, so
     // one geometry serves them all. `tileColor`/`seamColor` default to the dark split-flap; the light
     // extra-tall widget flips to an ink tile with a paper seam and an amber digit.
     public init(date: Date, digitColor: Color = .amber, tileWidth: CGFloat = 36, tileHeight: CGFloat = 52,
-                tileColor: Color = .raised, seamColor: Color = .ground, cornerRadius: CGFloat = 7) {
+                tileColor: Color = .raised, seamColor: Color = .ground, cornerRadius: CGFloat = 7,
+                colonColor: Color? = nil) {
         self.date = date
         self.digitColor = digitColor
         self.tileWidth = tileWidth
@@ -27,6 +31,7 @@ public struct FlapTime: View {
         self.tileColor = tileColor
         self.seamColor = seamColor
         self.cornerRadius = cornerRadius
+        self.colonColor = colonColor
     }
 
     /// Always two-and-two in 24-hour form whatever the device clock: the flap has four tiles, so a
@@ -41,7 +46,7 @@ public struct FlapTime: View {
             tile(digits[1])
             Text(":")
                 .font(.monoFixed(tileHeight * 0.54, weight: .bold))
-                .foregroundStyle(digitColor)
+                .foregroundStyle(colonColor ?? digitColor)
                 .frame(width: 10)
             tile(digits[2])
             tile(digits[3])
@@ -273,6 +278,13 @@ public struct TimeTrackMetrics: Sendable {
         sleeperThickness: 3, sleeperLength: 20, hourSleeperLength: 26, railThickness: 1.8, railGap: 9,
         markerRadius: 5, nextMarkerRadius: 5.5, ghostRadius: 3.2, cancelledRadius: 4.6, labelSize: 10,
         acrossExtent: 70, bandCentre: 48, labelAcross: 2, startInset: 13, endInset: 10)
+
+    /// The large widget's footer geometry on a now-anchored rail, for the menu bar popover: 44 pt tall,
+    /// sleepers 3×14 (3×18 on the hour), 1.6 pt rails 7.4 apart, markers r5–5.5, 9 pt labels.
+    public static let compact = TimeTrackMetrics(
+        sleeperThickness: 3, sleeperLength: 14, hourSleeperLength: 18, railThickness: 1.6, railGap: 7.4,
+        markerRadius: 5, nextMarkerRadius: 5.5, ghostRadius: 3.2, cancelledRadius: 4.6, labelSize: 9,
+        acrossExtent: 44, bandCentre: 17.5, labelAcross: 37, startInset: 6, endInset: 6)
 }
 
 /// A time axis with the next departures placed along it. Two shapes share the drawing:
@@ -280,10 +292,10 @@ public struct TimeTrackMetrics: Sendable {
 ///   from the first train to the hour after the last, no "now" mark. Its geometry is frozen so the widget
 ///   renders identically to before.
 /// - `TimeTrack(trains:now:axis:…)` is the big-screen rail — a now-anchored window (17:40 → 21:00 in the
-///   mockups) drawn horizontally (Main's board) or vertically (the extra-tall widget), with a "now" mark.
+///   mockups) drawn horizontally (Main's board) or vertically (the extra-tall widget).
 /// Either way the soonest on-time train is amber, a delay slides the dot to the amended time and leaves a
-/// dashed-arc ghost at the scheduled one, a cancelled train is crossed out, and the whole track is
-/// decorative to VoiceOver (the rows above already name each train).
+/// dashed-arc ghost at the scheduled one, and a cancelled train is crossed out. The footer is decorative
+/// to VoiceOver (the rows above already name each train); the big-screen rail reads as one sentence.
 public struct TimeTrack: View {
     public enum Axis: Sendable { case horizontal, vertical }
 
@@ -475,18 +487,19 @@ public struct TimeTrack: View {
                     context.stroke(cross, with: .color(.stop), style: StrokeStyle(lineWidth: m.railThickness, lineCap: .round))
                 case .delayed, .severelyDelayed:
                     let color = train.status.tableauInk
-                    // A dashed arc from the scheduled ghost to the amended dot, bowed off the track.
-                    let bow = m.markerRadius + 5
-                    let g = point(train.scheduledDeparture, -m.railGap)
-                    let r = point(train.expectedDeparture, -m.railGap)
+                    // A dashed arc from the scheduled ghost's centre to the amended marker's, bowed away from
+                    // the hour labels (up on a horizontal rail; right on the vertical one, whose labels sit
+                    // in the left gutter) — DuoWidget's `M48 91.2 Q64 106.8 48 122.4`.
+                    let bow: CGFloat = 16
+                    let g = point(train.scheduledDeparture)
                     let ctrl = horizontal
-                        ? CGPoint(x: (g.x + r.x) / 2, y: m.bandCentre - bow)
-                        : CGPoint(x: m.bandCentre - bow, y: (g.y + r.y) / 2)
+                        ? CGPoint(x: (g.x + centre.x) / 2, y: m.bandCentre - bow)
+                        : CGPoint(x: m.bandCentre + bow, y: (g.y + centre.y) / 2)
                     var arc = Path()
-                    arc.move(to: g); arc.addQuadCurve(to: r, control: ctrl)
-                    context.stroke(arc, with: .color(color), style: StrokeStyle(lineWidth: 1.3, dash: [2, 2]))
-                    fill(point(train.scheduledDeparture), m.ghostRadius, .surface)
-                    ring(point(train.scheduledDeparture), m.ghostRadius, color, 1.3)
+                    arc.move(to: g); arc.addQuadCurve(to: centre, control: ctrl)
+                    context.stroke(arc, with: .color(color), style: StrokeStyle(lineWidth: 1.6, dash: [3, 3]))
+                    fill(g, m.ghostRadius, .surface)
+                    ring(g, m.ghostRadius, color, 1.3)
                     fill(centre, m.markerRadius, color)
                 case .unknown:
                     fill(centre, m.markerRadius, .caution)
@@ -500,20 +513,40 @@ public struct TimeTrack: View {
                 }
             }
 
-            // The "now" flag at the window start.
-            let nowPoint = point(now)
-            fill(nowPoint, m.nextMarkerRadius, .amber)
-            ring(nowPoint, m.nextMarkerRadius, .ink, 2)
-
+            // No separate "now" flag: the window starts at now, and the next-train marker is the one amber
+            // mark every mockup draws — a flag on top of it read as a doubled dot.
             for hour in layout.hours {
+                let label = context.resolve(Text(Self.hourShort.string(from: hour))
+                    .font(.mono(m.labelSize, weight: .medium)).foregroundStyle(Color.inkSecondary))
                 let a = along(hour)
-                let at = horizontal ? CGPoint(x: a, y: m.labelAcross) : CGPoint(x: m.labelAcross, y: a)
-                context.draw(Text(Self.hourShort.string(from: hour)).font(.mono(m.labelSize, weight: .medium)).foregroundStyle(Color.inkSecondary),
-                             at: at, anchor: horizontal ? .center : .leading)
+                if horizontal {
+                    // Centred on its sleeper, but pulled in so the last hour's label is never clipped.
+                    let half = label.measure(in: size).width / 2
+                    context.draw(label, at: CGPoint(x: min(a, size.width - half), y: m.labelAcross), anchor: .center)
+                } else {
+                    context.draw(label, at: CGPoint(x: m.labelAcross, y: a), anchor: .leading)
+                }
             }
         }
         .frame(width: horizontal ? length : m.acrossExtent, height: horizontal ? m.acrossExtent : length)
-        .accessibilityHidden(true)
+        // The rail is the one view of the next trains on the big screens, so VoiceOver gets it as a single
+        // sentence rather than nothing.
+        .accessibilityElement()
+        .accessibilityLabel(spokenSummary(until: layout.end))
+    }
+
+    /// "Next trains: 17:42, 18:12 plus 12, 18:42 cancelled".
+    private func spokenSummary(until end: Date) -> String {
+        let parts = trains.filter { $0.expectedDeparture <= end }.map { train -> String in
+            let time = Self.hourLabel.string(from: train.scheduledDeparture)
+            switch train.status {
+            case .cancelled: return "\(time) cancelled"
+            case .delayed, .severelyDelayed: return "\(time) plus \(train.delayMinutes ?? 0)"
+            case .unknown: return "\(time) delayed"
+            case .onTime: return time
+            }
+        }
+        return parts.isEmpty ? "No trains in the next hours" : "Next trains: " + parts.joined(separator: ", ")
     }
 }
 

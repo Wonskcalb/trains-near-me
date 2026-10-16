@@ -20,6 +20,20 @@ public struct SNCFClient {
     }
 
     public func departures(from: Station, to: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await journeys(from: from, to: to, at: date, extra: ["min_nb_journeys": String(Self.departuresPerRequest)])
+    }
+
+    /// Every direct train in `duration` seconds from `date` — a whole service day in one request for the
+    /// big-screen summary, where `min_nb_journeys` alone stops at a dozen. Navitia caps the window at 24 h
+    /// and `max_nb_journeys` bounds the answer on a very busy line.
+    public func departures(from: Station, to: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await journeys(from: from, to: to, at: date, extra: [
+            "timeframe_duration": String(Int(min(duration, 24 * 3600))),
+            "max_nb_journeys": "150",
+        ])
+    }
+
+    private func journeys(from: Station, to: Station, at date: Date, extra: [String: String]) async throws(TrainServiceError) -> [TrainDeparture] {
         let data = try await get("journeys", [
             "from": from.id,
             "to": to.id,
@@ -28,8 +42,7 @@ public struct SNCFClient {
             "data_freshness": "base_schedule",
             "max_nb_transfers": "0",
             "direct_path": "none",
-            "min_nb_journeys": String(Self.departuresPerRequest),
-        ])
+        ].merging(extra) { _, new in new })
         return try NavitiaParser.departures(from: data, origin: from, destination: to)
     }
 

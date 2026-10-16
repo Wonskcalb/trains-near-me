@@ -5,8 +5,8 @@ import SNCFCore
 /// iOS background app refresh for watched trains. When the system grants a slot, re-fetch the pinned
 /// station's board and every saved journey's board and let `TrainWatcher` fire a delay-band or
 /// cancellation alert on a change. This never reloads widgets: the WidgetKit budget (~40-70/day) is for
-/// drawing, not for this, so the type never imports WidgetKit. The watched set and last-seen status round
-/// trip through the App Group, so a fresh `TrainWatcher` per run sees the same state the app wrote.
+/// drawing, not for this, so the type never imports WidgetKit. It goes through `TrainWatcher.shared`, the
+/// same instance the screens use, so one never overwrites what the other recorded.
 enum BackgroundRefresh {
     /// Matches the `BGTaskSchedulerPermittedIdentifiers` entry in Info.plist (`<bundle>.refresh`).
     static let taskID = (Bundle.main.bundleIdentifier ?? "trains-near-me") + ".refresh"
@@ -14,8 +14,11 @@ enum BackgroundRefresh {
     /// Register the launch handler. iOS requires this before launch finishes, so `App.init()` calls it.
     static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskID, using: nil) { task in
-            // BGTask is not Sendable; it is only ever touched on this one launch queue, so the task
-            // hops below are safe — the unsafe opt-out is what lets them satisfy Swift 6's checker.
+            // A refresh request is one-shot: without asking again here, the first background run is the
+            // last until the app is next sent to the background by hand.
+            schedule()
+            // BGTask is not Sendable, yet `expirationHandler` and `setTaskCompleted` must be reached from the
+            // tasks below. Both are documented callable from any thread; the opt-out only tells Swift 6 so.
             nonisolated(unsafe) let task = task
             let work = Task { await run() }
             task.expirationHandler = { work.cancel() }
@@ -37,7 +40,8 @@ enum BackgroundRefresh {
     /// to `reevaluate` — base_schedule keeps cancelled rows, so a cancellation is still visible here; a
     /// collapsed `BoardState` would have dropped it.
     static func run() async {
-        let watcher = TrainWatcher()
+        let watcher = TrainWatcher.shared
+        await watcher.reevaluate(against: [])   // drops yesterday's watches before deciding to spend the slot
         guard !(await watcher.watched()).isEmpty else { return }   // nothing watched: don't spend the slot
         let client = SNCFClient(token: SharedSettings.token)
         let now = Date.now

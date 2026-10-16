@@ -114,6 +114,17 @@ public enum BoardState: Equatable, Sendable {
     }
 }
 
+/// SNCF runs on Europe/Paris whatever zone the device is in. One calendar for everything that must agree
+/// across processes and devices — a watched train's `.numbered` identity, the service day the big-screen
+/// providers cut on — so a Mac set to another zone still matches the identity the iPhone recorded.
+public enum SNCFTime {
+    public static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Paris")!
+        return calendar
+    }()
+}
+
 public enum TrainServiceError: Error, Equatable, Sendable {
     case missingToken
     case unauthorized

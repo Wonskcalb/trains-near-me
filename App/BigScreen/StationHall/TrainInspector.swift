@@ -15,7 +15,7 @@ struct TrainInspector: View {
     @State private var watched = false
 
     private var delay: Int { train.delayMinutes ?? 0 }
-    private var identity: TrainIdentity? { TrainIdentity(train, calendar: BigScreenFixtures.calendar) }
+    private var identity: TrainIdentity? { TrainIdentity(train, calendar: SNCFTime.calendar) }
     /// The train's final destination, from the run; falls back to the headsign or the leg's end.
     private var headsign: String { stops.last?.name ?? train.direction ?? leg.to.name }
 
@@ -133,13 +133,14 @@ struct TrainInspector: View {
                 Button {
                     guard let identity else { return }
                     Task {
-                        if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(identity) }
+                        if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(train, to: leg) }
                         watched = await data.watching.isWatched(identity)
                     }
                 } label: {
                     actionLabel(watched ? "bell.fill" : "bell", watched ? "Watching" : "Watch train")
                 }
                 .buttonStyle(.plain).disabled(identity == nil)
+                .accessibilityValue(watched ? "On" : "Off")
 
                 ShareLink(item: data.eta.shareText(for: train, leg: leg)) {
                     actionLabel("square.and.arrow.up", "Share ETA")

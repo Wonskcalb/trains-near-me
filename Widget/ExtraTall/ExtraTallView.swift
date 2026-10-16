@@ -31,6 +31,9 @@ struct ExtraTallView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) { Color.surface }
         .foregroundStyle(Color.ink)
+        // The track is a fixed chart: markers 2.6 pt a minute apart with a 40 pt label centred on each,
+        // so larger type would overlap the neighbours rather than wrap.
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     // MARK: Header — route and refresh
@@ -77,8 +80,10 @@ struct ExtraTallView: View {
         HStack(spacing: 14) {
             // Light flips to an ink tile with amber digits (the Phase 0 tileColor/seamColor knobs); the seam
             // is the panel colour showing through the split.
+            // The colon sits on the panel, not a tile: ink on light, where amber text on paper is out.
             FlapTime(date: train.expectedDeparture, digitColor: .amber, tileWidth: 34, tileHeight: 50,
-                     tileColor: scheme == .dark ? .raised : .ink, seamColor: .surface, cornerRadius: 7)
+                     tileColor: scheme == .dark ? .raised : .ink, seamColor: .surface, cornerRadius: 7,
+                     colonColor: scheme == .dark ? .amber : .ink)
             VStack(alignment: .leading, spacing: 3) {
                 Text("in \(countdown(to: train.expectedDeparture))")
                     .font(.mono(15, weight: .bold)).foregroundStyle(Color.soon)
@@ -104,6 +109,8 @@ struct ExtraTallView: View {
             ZStack(alignment: .topLeading) {
                 TimeTrack(trains: trains, now: entry.date, axis: .vertical,
                           minutesSpan: minutesSpan, length: height, metrics: m)
+                    // The labels beside it already read every train out; the rail's own summary would repeat them.
+                    .accessibilityHidden(true)
                 ForEach(Array(trains.enumerated()), id: \.element) { index, train in
                     let marker = markerTime(train)
                     if marker <= layout.end {
@@ -120,6 +127,8 @@ struct ExtraTallView: View {
     }
 
     private let minutesSpan = 200
+    /// Each label row is centred on its marker, so its height is fixed; the type is capped where it would
+    /// outgrow it (see `body`).
     private let labelHeight: CGFloat = 40
 
     private func along(_ date: Date, in length: CGFloat, layout: TimeTrackLayout, metrics m: TimeTrackMetrics) -> CGFloat {
@@ -165,7 +174,7 @@ struct ExtraTallView: View {
         if isNext {
             Text("NEXT")
                 .font(.mono(9.5, weight: .bold)).tracking(1.2)
-                .foregroundStyle(onAmber)
+                .foregroundStyle(Color.onAmber)
                 .padding(.horizontal, 5).padding(.vertical, 3)
                 .background(Color.amber, in: RoundedRectangle(cornerRadius: 4))
         } else {
@@ -250,10 +259,6 @@ struct ExtraTallView: View {
         f.dateFormat = "HH:mm"
         return f
     }()
-
-    // Dark ink on amber in either scheme: amber is always amber, so text on it is always near-black.
-    // (No token spans this — ground would turn to paper on light.)
-    private let onAmber = Color(red: 0.055, green: 0.059, blue: 0.067)
 }
 
 #Preview {

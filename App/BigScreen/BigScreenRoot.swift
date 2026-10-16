@@ -1,9 +1,13 @@
 import SNCFCore
 import SwiftUI
 
-/// The four big-screen destinations, driven from the sidebar and ⌘1–4.
+/// The big-screen destinations: the four screens the sidebar's views and ⌘1–4 switch between, plus the
+/// station board a search or NEAR ME opens and the Settings pane.
 enum BigScreenRoute: Hashable, CaseIterable {
-    case stationHall, lanes, wall, roundTrip
+    case stationHall, lanes, wall, roundTrip, station, settings
+
+    /// The routes bound to ⌘1–4, in that order.
+    static let numbered: [BigScreenRoute] = [.stationHall, .lanes, .wall, .roundTrip]
 
     var title: String {
         switch self {
@@ -11,6 +15,8 @@ enum BigScreenRoute: Hashable, CaseIterable {
         case .lanes: "Lanes"
         case .wall: "Wall mode"
         case .roundTrip: "Round trip"
+        case .station: "Station"
+        case .settings: "Settings"
         }
     }
 
@@ -20,16 +26,19 @@ enum BigScreenRoute: Hashable, CaseIterable {
         case .lanes: "chart.bar.doc.horizontal"
         case .wall: "tv"
         case .roundTrip: "arrow.left.arrow.right"
+        case .station: "mappin.and.ellipse"
+        case .settings: "slider.horizontal.3"
         }
     }
 
-    /// The ⌘ digit that selects this route.
-    var shortcut: KeyEquivalent {
+    /// The ⌘ digit that selects this route; nil for the two that are reached from the sidebar only.
+    var shortcut: KeyEquivalent? {
         switch self {
         case .stationHall: "1"
         case .lanes: "2"
         case .wall: "3"
         case .roundTrip: "4"
+        case .station, .settings: nil
         }
     }
 }
@@ -40,6 +49,8 @@ enum BigScreenRoute: Hashable, CaseIterable {
     /// Which saved journey the station-hall board shows: an index into `data.journeyBoards`. The sidebar
     /// sets it, the centre board reads it. Clamped by the reader so a stale index never traps.
     var selectedJourney = 0
+    /// The station `.station` shows, picked from the search or NEAR ME.
+    var station: Station?
     /// ⌘K asked for the "go to station" search; the sidebar owns the actual field and clears this.
     var searchRequested = false
     /// ⌘R bumps this; screens reload when it changes.
@@ -48,6 +59,7 @@ enum BigScreenRoute: Hashable, CaseIterable {
     func select(_ route: BigScreenRoute) { self.route = route }
     /// Picking a journey always returns to the board it feeds.
     func select(journey index: Int) { selectedJourney = index; route = .stationHall }
+    func show(station: Station) { self.station = station; route = .station }
     func requestSearch() { searchRequested = true }
     func refresh() { refreshTick += 1 }
     /// Esc: leave Wall mode, otherwise do nothing (a screen may dismiss its own sheet first).
@@ -68,12 +80,15 @@ struct BigScreenRoot: View {
     // (already open). Same process, so plain standard defaults carry it.
     @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
     #endif
+    // The Settings pane's picker writes here; the big screen follows it like the iPhone tabs do.
+    @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
     @State private var model = BigScreenModel()
 
     var body: some View {
         content
             .environment(model)
             .background(commands)
+            .preferredColorScheme(appearance.colorScheme)
         #if os(macOS)
             .onAppear { consumePendingRoute() }
             .onChange(of: pendingRoute) { _, _ in consumePendingRoute() }
@@ -115,6 +130,9 @@ struct BigScreenRoot: View {
         case .lanes: LanesView()
         case .wall: WallModeView()
         case .roundTrip: RoundTripView()
+        case .station:
+            if let station = model.station { StationBoardView(station: station) } else { StationHallView() }
+        case .settings: SettingsView()
         }
     }
 
@@ -122,11 +140,15 @@ struct BigScreenRoot: View {
     // without an AppKit/UIKit responder. Phase 1 can promote these to a macOS `.commands` menu.
     private var commands: some View {
         Group {
-            ForEach(BigScreenRoute.allCases, id: \.self) { route in
-                Button("") { model.select(route) }.keyboardShortcut(route.shortcut, modifiers: .command)
+            ForEach(BigScreenRoute.numbered, id: \.self) { route in
+                if let key = route.shortcut {
+                    Button("") { model.select(route) }.keyboardShortcut(key, modifiers: .command)
+                }
             }
             Button("") { model.requestSearch() }.keyboardShortcut("k", modifiers: .command)
-            Button("") { model.refresh() }.keyboardShortcut("r", modifiers: .command)
+            // ⌘R means "fetch now", so the boards memo that spares the duplicate requests is dropped first.
+            Button("") { Task { await data.journeyBoards.invalidate(); model.refresh() } }
+                .keyboardShortcut("r", modifiers: .command)
             Button("") { model.escape() }.keyboardShortcut(.cancelAction)
         }
         .opacity(0)
@@ -137,18 +159,29 @@ struct BigScreenRoot: View {
 
 // MARK: - Sidebar (Main.dc.html's left column)
 
-/// The station-hall sidebar: app mark, a "Go to station" search over known stations, the NEAR ME row,
-/// the saved journeys, the VIEWS switcher, Settings and the "Updated …" freshness line. It is the shell
-/// sidebar, so it is what the two-column split shows beside every screen.
+/// The station-hall sidebar: app mark, a "Go to station" search over every SNCF station, the NEAR ME row,
+/// the saved journeys (add / edit / delete / reorder), the VIEWS switcher, Settings and the "Updated …"
+/// freshness line. It is the shell sidebar, so it is what the two-column split shows beside every screen.
+/// Drawn on the Board (dark) palette like the station hall beside it: its times are amber text, which
+/// the Timetable (light) palette forbids on paper.
 private struct BigScreenSidebar: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
 
     @State private var boards: [JourneyBoard] = []
     @State private var pinned: Station?
+    @State private var near: Result<NearbyStation, TrainServiceError>?
     @State private var nextNearMe: Date?
+    @State private var location = LocationFix.shared
+
     @State private var query = ""
+    @State private var results: [Station] = []
+    @State private var searchFailure: String?
+    @State private var highlighted = 0
     @FocusState private var searchFocused: Bool
+
+    @State private var adding = false
+    @State private var editTarget: JourneyConfiguration?
 
     /// The clock the sidebar reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
     /// from the `#Preview` so the mockup lines up. Every relative time follows from it.
@@ -160,7 +193,7 @@ private struct BigScreenSidebar: View {
         VStack(alignment: .leading, spacing: 20) {
             appMark
             searchField
-            if !query.isEmpty && searchFocused {
+            if !query.isEmpty {
                 searchResults
             } else {
                 nearMe
@@ -174,10 +207,22 @@ private struct BigScreenSidebar: View {
         .padding(.vertical, 22)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.ground)
+        .environment(\.colorScheme, .dark)
         .task(id: model.refreshTick) { await load() }
+        // A just-granted permission is worth a fresh NEAR ME at once, not at the next ⌘R.
+        .onChange(of: location.status) { Task { await loadNear() } }
+        .task(id: query) { await search() }
         // ⌘K hands focus to the search field, then releases the flag so the next ⌘K fires again.
         .onChange(of: model.searchRequested) { _, requested in
             if requested { searchFocused = true; model.searchRequested = false }
+        }
+        .sheet(isPresented: $adding) {
+            EditJourneyView { save(SharedSettings.favorites + [$0]) }
+        }
+        .sheet(item: $editTarget) { target in
+            EditJourneyView(existing: target) { updated in
+                save(SharedSettings.favorites.map { $0 == target ? updated : $0 })
+            }
         }
         .navigationTitle("")
     }
@@ -185,9 +230,52 @@ private struct BigScreenSidebar: View {
     private func load() async {
         boards = await data.journeyBoards.boards(at: now)
         pinned = await data.leaveBy.pinnedStation()
-        if let pinned {
-            nextNearMe = BoardReading.nextUpcoming(await data.stationBoard.board(for: pinned, at: now), after: now)?.expectedDeparture
+        await loadNear()
+    }
+
+    private func loadNear() async {
+        do throws(TrainServiceError) { near = .success(try await data.stationSearch.nearest()) }
+        catch { near = .failure(error) }
+        if let station = nearStation {
+            nextNearMe = BoardReading.nextUpcoming(await data.stationBoard.board(for: station, at: now), after: now)?.expectedDeparture
+        } else {
+            nextNearMe = nil
         }
+    }
+
+    /// The station NEAR ME stands for: the nearest one, or the pinned one when there is no fix.
+    private var nearStation: Station? {
+        if case .success(let found) = near { return found.station }
+        return pinned
+    }
+
+    private func save(_ journeys: [JourneyConfiguration]) {
+        SavedJourneys.save(journeys, data: data, model: model)
+    }
+
+    // MARK: Search
+
+    /// A pause in the typing, at least two letters, then one request; `task(id:)` cancels the sleep as the
+    /// next key lands, so a word typed fast costs one lookup.
+    private func search() async {
+        searchFailure = nil
+        highlighted = 0
+        let text = query.trimmingCharacters(in: .whitespaces)
+        guard text.count >= 2 else { results = []; return }
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !Task.isCancelled else { return }
+        do throws(TrainServiceError) {
+            results = try await data.stationSearch.search(text)
+        } catch {
+            results = []
+            searchFailure = error.appDescription
+        }
+    }
+
+    private func pick(_ station: Station) {
+        model.show(station: station)
+        query = ""
+        searchFocused = false
     }
 
     // MARK: Pieces
@@ -208,65 +296,62 @@ private struct BigScreenSidebar: View {
                 .font(.system(size: 14))
                 .foregroundStyle(Color.ink)
                 .focused($searchFocused)
+                .onKeyPress(.downArrow) { highlighted = min(highlighted + 1, max(results.count - 1, 0)); return .handled }
+                .onKeyPress(.upArrow) { highlighted = max(highlighted - 1, 0); return .handled }
+                .onKeyPress(.escape) {
+                    guard !query.isEmpty else { return .ignored }
+                    query = ""; searchFocused = false
+                    return .handled
+                }
+                .onSubmit { if results.indices.contains(highlighted) { pick(results[highlighted]) } }
             Text("⌘K").font(.mono(11, weight: .semibold)).foregroundStyle(Color.inkSecondary)
                 .padding(.horizontal, 5).padding(.vertical, 1)
                 .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.ink.opacity(0.14), lineWidth: 1))
         }
-        .padding(.horizontal, 10).frame(height: 38)
+        .padding(.horizontal, 10).frame(minHeight: 38)
         .background(Color.raised, in: RoundedRectangle(cornerRadius: 11))
         .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.ink.opacity(0.06), lineWidth: 1))
     }
 
-    // Phase 1 searches only the stations we already hold (journey endpoints + the pinned station): the
-    // views cannot call `SNCFClient`, so a live text search needs a `StationSearching` provider added to
-    // `BigScreenData`. Picking a result jumps to a journey that touches that station.
     private var searchResults: some View {
-        let matches = knownStations.filter { $0.name.localizedCaseInsensitiveContains(query) }.prefix(6)
-        return VStack(alignment: .leading, spacing: 2) {
-            if matches.isEmpty {
-                Text("No saved station matches").font(.system(size: 13)).foregroundStyle(Color.inkSecondary).padding(10)
+        VStack(alignment: .leading, spacing: 2) {
+            if let searchFailure {
+                note(searchFailure)
+            } else if query.trimmingCharacters(in: .whitespaces).count < 2 {
+                note("Keep typing…")
+            } else if results.isEmpty {
+                note("No station matches")
             }
-            ForEach(Array(matches), id: \.id) { station in
-                Button {
-                    if let index = boards.firstIndex(where: { $0.leg.from.id == station.id || $0.leg.to.id == station.id }) {
-                        model.select(journey: index)
-                    }
-                    query = ""; searchFocused = false
-                } label: {
+            ForEach(Array(results.prefix(8).enumerated()), id: \.element.id) { index, station in
+                Button { pick(station) } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "mappin.and.ellipse").font(.system(size: 13)).foregroundStyle(Color.amber)
-                        Text(station.name).font(.system(size: 15)).foregroundStyle(Color.ink)
+                        Text(station.name).font(.system(size: 15)).foregroundStyle(Color.ink).lineLimit(1)
                         Spacer(minLength: 0)
                     }
                     .padding(10).contentShape(Rectangle())
+                    .background(index == highlighted ? Color.raised : .clear, in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    /// Journey endpoints plus the pinned station, de-duplicated by id in first-seen order.
-    private var knownStations: [Station] {
-        var seen = Set<String>()
-        var out: [Station] = []
-        for station in boards.flatMap({ [$0.leg.from, $0.leg.to] }) + [pinned].compactMap({ $0 }) where seen.insert(station.id).inserted {
-            out.append(station)
-        }
-        return out
+    private func note(_ text: String) -> some View {
+        Text(text).font(.system(size: 13)).foregroundStyle(Color.inkSecondary).padding(10)
     }
 
     private var nearMe: some View {
         SidebarSection("NEAR ME") {
-            // Tapping surfaces the "follows you" journey if one is saved; distance needs a location the
-            // views cannot read, so it is left to the live build.
             Button {
-                if let index = boards.firstIndex(where: { $0.journey.nearestStationAsDeparture }) { model.select(journey: index) }
+                if let station = nearStation { model.show(station: station) }
             } label: {
                 HStack(spacing: 11) {
                     Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(Color.amber).frame(width: 22)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(pinned?.name ?? "Nearest station").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
-                        Text("every direction").font(.mono(11.5)).foregroundStyle(Color.inkSecondary)
+                        Text(nearStation?.name ?? "Nearest station").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
+                            .lineLimit(1)
+                        Text(nearDetail).font(.mono(11.5)).foregroundStyle(Color.inkSecondary).lineLimit(2)
                     }
                     Spacer(minLength: 0)
                     if let nextNearMe {
@@ -276,35 +361,86 @@ private struct BigScreenSidebar: View {
                 .padding(10).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(nearStation == nil)
+            if case .failure(.noLocation) = near, location.status == .notDetermined {
+                Button("Allow location") { location.requestAuthorization() }
+                    .buttonStyle(.borderless).font(.system(size: 13, weight: .semibold)).tint(.amber)
+                    .padding(.horizontal, 10)
+            }
         }
     }
 
+    /// The second line: how far the station is, or — without one — why, so an empty row never just sits there.
+    private var nearDetail: String {
+        switch near {
+        case nil: return "looking around…"
+        case .success(let found): return ["every direction", found.distance.map(Self.distance)].compactMap { $0 }.joined(separator: " · ")
+        case .failure(let error):
+            let reason: String
+            switch error {
+            case .noLocation:
+                switch location.status {
+                case .notDetermined: reason = "location not allowed yet"
+                case .denied, .restricted: reason = "location is off for this app"
+                default: reason = "no position yet"
+                }
+            case .noStationNearby: reason = "no station within \(SNCFClient.searchRadiusKilometres) km"
+            default: reason = error.terse.lowercased()
+            }
+            return pinned == nil ? reason : "pinned · \(reason)"
+        }
+    }
+
+    private static func distance(_ metres: Double) -> String {
+        metres < 1000 ? "\(Int((metres / 10).rounded()) * 10) m" : String(format: "%.1f km", metres / 1000)
+    }
+
     private var journeys: some View {
-        SidebarSection("JOURNEYS") {
+        SidebarSection("JOURNEYS", accessory: {
+            Button { adding = true } label: {
+                Image(systemName: "plus").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.inkSecondary)
+                    .frame(width: 24, height: 24).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Add a journey")
+        }) {
             ForEach(Array(boards.enumerated()), id: \.offset) { index, board in
                 Button { model.select(journey: index) } label: {
                     SidebarJourneyRow(board: board, now: now, selected: index == model.selectedJourney && model.route == .stationHall)
                 }
                 .buttonStyle(.plain)
+                .contextMenu { actions(for: board.journey) }
             }
+        }
+    }
+
+    /// Edit / move / delete against the saved list; a board whose journey is not saved (the mockup data
+    /// in previews) has nothing to act on.
+    @ViewBuilder private func actions(for journey: JourneyConfiguration) -> some View {
+        let saved = SharedSettings.favorites
+        if let index = saved.firstIndex(of: journey) {
+            JourneyActions(journey: journey, index: index, count: saved.count,
+                           edit: { editTarget = journey }, apply: save, journeys: saved)
         }
     }
 
     private var views: some View {
         SidebarSection("VIEWS") {
-            viewRow(.lanes, symbol: "chart.bar.doc.horizontal", shortcut: "⌘2")
-            viewRow(.wall, symbol: "tv", shortcut: "⌘3")
-            viewRow(.roundTrip, symbol: "arrow.left.arrow.right", shortcut: "⌘4")
+            viewRow(.lanes, shortcut: "⌘2")
+            viewRow(.wall, shortcut: "⌘3")
+            viewRow(.roundTrip, shortcut: "⌘4")
         }
     }
 
-    private func viewRow(_ route: BigScreenRoute, symbol: String, shortcut: String) -> some View {
+    private func viewRow(_ route: BigScreenRoute, shortcut: String?) -> some View {
         Button { model.select(route) } label: {
             HStack(spacing: 11) {
-                Image(systemName: symbol).font(.system(size: 15)).frame(width: 18)
+                Image(systemName: route.symbol).font(.system(size: 15)).frame(width: 18)
                 Text(route.title).font(.system(size: 15))
                 Spacer(minLength: 0)
-                Text(shortcut).font(.mono(11, weight: .semibold)).foregroundStyle(Color.inkSecondary.opacity(0.8))
+                if let shortcut {
+                    Text(shortcut).font(.mono(11, weight: .semibold)).foregroundStyle(Color.inkSecondary.opacity(0.8))
+                }
             }
             .foregroundStyle(model.route == route ? Color.amber : Color.ink.opacity(0.85))
             .padding(.horizontal, 10).padding(.vertical, 9).contentShape(Rectangle())
@@ -313,16 +449,11 @@ private struct BigScreenSidebar: View {
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder private var footer: some View {
+    private var footer: some View {
         VStack(alignment: .leading, spacing: 12) {
-            #if os(macOS)
-            SettingsLink {
-                settingsLabel
-            }
-            .buttonStyle(.plain)
-            #else
-            settingsLabel
-            #endif
+            // Settings opens as a pane of this window rather than the small separate panel, so the token,
+            // the journeys and the appearance sit at the size the rest of the big screen is drawn at.
+            viewRow(.settings, shortcut: nil)
             HStack(spacing: 7) {
                 Circle().fill(Color.soon).frame(width: 7, height: 7)
                 Text("Updated \(HallFormat.hm(boards.first?.fetchedAt ?? now)) · ⌘R")
@@ -330,16 +461,6 @@ private struct BigScreenSidebar: View {
             }
             .padding(.horizontal, 10)
         }
-    }
-
-    private var settingsLabel: some View {
-        HStack(spacing: 11) {
-            Image(systemName: "slider.horizontal.3").font(.system(size: 15)).frame(width: 18)
-            Text("Settings").font(.system(size: 15))
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(Color.ink.opacity(0.85))
-        .padding(.horizontal, 10).padding(.vertical, 9)
     }
 }
 
@@ -356,22 +477,35 @@ private struct FlapMark: View {
     }
 }
 
-/// A mono-caps sidebar section header over its rows.
-private struct SidebarSection<Content: View>: View {
+/// A mono-caps sidebar section header over its rows, with an optional control at the header's end.
+private struct SidebarSection<Accessory: View, Content: View>: View {
     let title: String
+    let accessory: Accessory
     @ViewBuilder let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: String, @ViewBuilder accessory: () -> Accessory, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.accessory = accessory()
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.mono(11, weight: .semibold)).tracking(1.4)
-                .foregroundStyle(Color.inkSecondary).padding(.horizontal, 10)
+            HStack {
+                Text(title).font(.mono(11, weight: .semibold)).tracking(1.4)
+                    .foregroundStyle(Color.inkSecondary)
+                Spacer(minLength: 0)
+                accessory
+            }
+            .padding(.horizontal, 10)
             content
         }
+    }
+}
+
+extension SidebarSection where Accessory == EmptyView {
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.init(title, accessory: { EmptyView() }, content: content)
     }
 }
 
@@ -437,26 +571,6 @@ private struct SidebarJourneyRow: View {
                 Text(HallFormat.hm(next.expectedDeparture)).font(.mono(14, weight: .semibold)).foregroundStyle(Color.amber)
             }
         }
-    }
-}
-
-/// The shared stub body each not-yet-built screen replaces: it reads `BigScreenData` from the environment
-/// so the whole pipe (scene → environment → providers) compiles and runs on the fake today.
-struct BigScreenPlaceholder: View {
-    let route: BigScreenRoute
-    let detail: String
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: route.symbol)
-                .font(.system(size: 46))
-                .foregroundStyle(Color.inkSecondary)
-            Text(route.title).font(.largeTitle.bold()).foregroundStyle(Color.ink)
-            Text(detail).font(.mono(13)).foregroundStyle(Color.inkSecondary)
-            Text("Phase 1 owner fills this").font(.caption).foregroundStyle(Color.inkSecondary.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ground.ignoresSafeArea())
     }
 }
 

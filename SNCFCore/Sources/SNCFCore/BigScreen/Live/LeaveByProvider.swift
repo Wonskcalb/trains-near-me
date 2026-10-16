@@ -9,7 +9,7 @@ import MapKit
 ///
 /// The board fetch sits behind a `Board` closure and the walk-time refinement behind a `WalkETA` one, so
 /// the catch-the-train logic is exercised by fixtures alone — no SNCF API, no MapKit — in the tests. The
-/// `init(client:)` Phase 2 calls wires those seams to `SNCFClient` and, where available, `MKDirections`.
+/// production `init(token:)` wires those seams to `SNCFClient` and, where available, `MKDirections`.
 public struct LiveLeaveBy: LeaveByProviding {
     /// A leg's board at a moment. Returns a `BoardState` so the same service-day filtering the rest of
     /// the app relies on is reused, rather than a parallel notion of "today's trains".
@@ -25,14 +25,13 @@ public struct LiveLeaveBy: LeaveByProviding {
         self.walkETA = walkETA
     }
 
-    /// Production: the board from `SNCFClient.departures`, the walk time from MapKit when it answers.
-    public init(client: SNCFClient, calendar: Calendar = .current) {
-        // `SNCFClient` is not `Sendable`, so rebuild it in the closure from its two Sendable parts.
-        let token = client.token
-        let session = client.session
+    /// Production: the board from `SNCFClient.departures`, the walk time from MapKit when it answers. The
+    /// token is read per request so one typed after launch is used at once.
+    public init(token: @escaping @Sendable () -> String? = { SharedSettings.token }, session: URLSession = .shared,
+                calendar: Calendar = SNCFTime.calendar) {
         self.init(
             board: { leg, now in
-                let client = SNCFClient(token: token, session: session)
+                let client = SNCFClient(token: token(), session: session)
                 guard let trains = try? await client.departures(from: leg.from, to: leg.to, at: now) else {
                     return .noTrains
                 }

@@ -9,8 +9,9 @@ public struct LiveTrainStops: TrainStopsProviding {
 
     public init(fetch: @escaping Fetch) { self.fetch = fetch }
 
-    public init(token: String? = SharedSettings.token, session: URLSession = .shared) {
-        let fetch: Fetch = { id in try await SNCFClient(token: token, session: session).trip(vehicleJourneyID: id) }
+    /// The token is read per request so one typed after launch is used at once.
+    public init(token: @escaping @Sendable () -> String? = { SharedSettings.token }, session: URLSession = .shared) {
+        let fetch: Fetch = { id in try await SNCFClient(token: token(), session: session).trip(vehicleJourneyID: id) }
         self.init(fetch: fetch)
     }
 

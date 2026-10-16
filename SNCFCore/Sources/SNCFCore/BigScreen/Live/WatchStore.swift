@@ -18,12 +18,18 @@ public enum WatchAlert: Equatable, Sendable {
 /// train leaves and, on every refresh, an alert whenever a watched train changes delay band or is
 /// cancelled.
 ///
-/// Re-evaluation (`reevaluate(against:…)`) runs from the app and from iOS background app refresh — never
-/// by reloading widgets. The WidgetKit reload budget (≈40–70/day) is for drawing, not for this; this type
-/// never imports WidgetKit. Every authorization and scheduling call is gated by `schedulesNotifications`
-/// (off in tests) so `UNUserNotificationCenter.current()`, which needs a real app bundle, is only reached
-/// on device.
+/// Re-evaluation (`reevaluate(against:…)`) runs from the app's board loads and from iOS background app
+/// refresh — never by reloading widgets. The WidgetKit reload budget (≈40–70/day) is for drawing, not for
+/// this; this type never imports WidgetKit. Every authorization and scheduling call is gated by
+/// `schedulesNotifications` (off in tests) so `UNUserNotificationCenter.current()`, which needs a real app
+/// bundle, is only reached from the app.
+///
+/// The app uses the one `shared` instance: each instance holds its own copy of the stored state and
+/// `save()` writes all of it, so a second instance would overwrite the first's `lastSeen` and bring back
+/// trains it had unwatched.
 public actor TrainWatcher: TrainWatching {
+    public static let shared = TrainWatcher()
+
     private let defaults: UserDefaults?
     private let schedulesNotifications: Bool
     private let eta = ETAComposer()
@@ -38,13 +44,9 @@ public actor TrainWatcher: TrainWatching {
     var lastSeen: [TrainIdentity: WatchedStatus]
     private var didRequestAuthorization = false
 
-    /// The App Group suite, shaped per platform in Info.plist, mirroring `SharedSettings`. nil — no group,
-    /// a free Apple account on iOS — degrades to in-memory only: watching still works for the session.
-    public static var appGroupSuiteName: String? {
-        Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String
-    }
-
-    public init(suiteName: String? = TrainWatcher.appGroupSuiteName, schedulesNotifications: Bool = true) {
+    /// nil — no App Group, a free Apple account on iOS — degrades to in-memory only: watching still works
+    /// for the session.
+    public init(suiteName: String? = SharedSettings.appGroupSuiteName, schedulesNotifications: Bool = true) {
         let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) }
         self.defaults = defaults
         self.schedulesNotifications = schedulesNotifications
@@ -75,7 +77,11 @@ public actor TrainWatcher: TrainWatching {
     /// Watch a train the UI already has in hand: persists the identity, records its status so the first
     /// band change is measured from now, and schedules the departure reminder. A row with nothing stable
     /// to watch (no vehicle-journey id, no number) is ignored.
-    public func watch(_ train: TrainDeparture, to leg: Leg? = nil, calendar: Calendar = .current) async {
+    public func watch(_ train: TrainDeparture, to leg: Leg?) async {
+        await watch(train, to: leg, calendar: SNCFTime.calendar)
+    }
+
+    public func watch(_ train: TrainDeparture, to leg: Leg? = nil, calendar: Calendar) async {
         guard let identity = TrainIdentity(train, calendar: calendar) else { return }
         watchedSet.insert(identity)
         lastSeen[identity] = WatchedStatus(train)
@@ -90,7 +96,9 @@ public actor TrainWatcher: TrainWatching {
     /// a band change or cancellation, and move the reminder to the new expected time. Pass the raw
     /// departures (a `.departures` board, or the array behind one): `base_schedule` keeps cancelled rows,
     /// so cancellations are visible here. `leg` only names the destination in the notification text.
-    public func reevaluate(against trains: [TrainDeparture], to leg: Leg? = nil, calendar: Calendar = .current) async {
+    /// Trains from a service day already over are dropped, so background refresh stops fetching for them.
+    public func reevaluate(against trains: [TrainDeparture], to leg: Leg? = nil,
+                           calendar: Calendar = SNCFTime.calendar, now: Date = .now) async {
         for train in trains {
             guard let identity = TrainIdentity(train, calendar: calendar), watchedSet.contains(identity) else { continue }
             if let alert = Self.alert(from: lastSeen[identity]?.status, to: train.status) {
@@ -99,7 +107,26 @@ public actor TrainWatcher: TrainWatching {
             lastSeen[identity] = WatchedStatus(train)
             await scheduleReminder(for: train, identity: identity, to: leg)
         }
+        prune(now: now, calendar: calendar)
         save()
+    }
+
+    /// A `.numbered` identity carries its service day; a vehicle journey is dated by the departure last
+    /// seen. One with neither (watched by identity alone, never seen on a board) is kept: nothing says
+    /// its day is over.
+    private func prune(now: Date, calendar: Calendar) {
+        let today = BoardState.serviceDay(of: now, calendar: calendar)
+        for identity in watchedSet {
+            let day: Date?
+            switch identity {
+            case .numbered(_, let serviceDay): day = serviceDay
+            case .vehicleJourney: day = lastSeen[identity]?.departure.map { BoardState.serviceDay(of: $0, calendar: calendar) }
+            }
+            guard let day, day < today else { continue }
+            watchedSet.remove(identity)
+            lastSeen[identity] = nil
+            cancelReminder(identity)
+        }
     }
 
     // MARK: The pure decision — the tested part
@@ -134,7 +161,7 @@ public actor TrainWatcher: TrainWatching {
         if let data = try? JSONEncoder().encode(lastSeen) { defaults.set(data, forKey: Keys.lastSeen) }
     }
 
-    // MARK: Notifications (gated, so tests and macOS never reach UNUserNotificationCenter.current())
+    // MARK: Notifications (gated, so tests never reach UNUserNotificationCenter.current())
 
     /// Permission is asked on first watch, not at launch, so the prompt lands when the rider opts in.
     private func ensureAuthorization() async {
@@ -198,10 +225,14 @@ public actor TrainWatcher: TrainWatching {
 struct WatchedStatus: Codable, Equatable, Sendable {
     let delayMinutes: Int?
     let isCancelled: Bool
+    /// When the train was timetabled to leave, so a vehicle-journey watch can be dropped once its day is
+    /// over. Optional so last-seen records written before it existed still decode.
+    let departure: Date?
 
     init(_ train: TrainDeparture) {
         delayMinutes = train.delayMinutes
         isCancelled = train.isCancelled
+        departure = train.scheduledDeparture
     }
 
     var status: DepartureStatus { .from(delayMinutes: delayMinutes, cancelled: isCancelled) }

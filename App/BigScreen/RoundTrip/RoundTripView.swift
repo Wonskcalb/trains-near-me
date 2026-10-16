@@ -31,7 +31,7 @@ struct RoundTripView: View {
 
     /// Below this the two columns would be too cramped, so the way back becomes a pushed screen.
     private let minTwoPaneWidth: CGFloat = 680
-    private let cal = BigScreenFixtures.calendar
+    private let cal = SNCFTime.calendar
 
     var body: some View {
         GeometryReader { geo in
@@ -57,11 +57,12 @@ struct RoundTripView: View {
     private func load() async {
         watchedBoth = false
         let boards = await data.journeyBoards.boards(at: now)
-        guard let primary = boards.first?.leg else { plan = nil; return }
-        // The outbound is the primary journey flipped: you leave home (the saved destination) and come
-        // back to it. The planner returns the authoritative legs, so the panes read `plan.outbound` /
-        // `plan.returnLeg` rather than this request leg.
-        let outbound = Leg(from: primary.to, to: primary.from)
+        guard let primary = boards.first?.journey else { plan = nil; return }
+        // The outbound is the primary journey's B → A: you leave home (the saved destination) and come
+        // back to it. Read from the saved stations, not the leg the board resolved at `now` — an automatic
+        // journey flips at its switch time, and the round trip must not flip with it. The planner returns
+        // the authoritative legs, so the panes read `plan.outbound` / `plan.returnLeg`.
+        let outbound = Leg(from: primary.stationB, to: primary.stationA)
         plan = await data.roundTrip.roundTrip(outbound: outbound, pick: pick, stay: stay, at: now)
     }
 
@@ -86,7 +87,7 @@ struct RoundTripView: View {
                     hingePill
                     Button { showReturn = true } label: {
                         HStack { Text("Way back"); Spacer(); Image(systemName: "arrow.right") }
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ground)
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.onAmber)
                             .padding(.horizontal, 18).frame(height: 52)
                             .background(Color.amber, in: RoundedRectangle(cornerRadius: 16))
                     }
@@ -146,7 +147,17 @@ struct RoundTripView: View {
     private func outboundRow(_ train: TrainDeparture, selectedID: TrainIdentity?) -> some View {
         let id = TrainIdentity(train, calendar: cal)
         let picked = id != nil && id == selectedID
-        return HStack(alignment: .center, spacing: 10) {
+        return Button { if !train.isCancelled, let id { pick = id } } label: {
+            outboundRowContent(train, picked: picked)
+        }
+        .buttonStyle(.plain)
+        .disabled(train.isCancelled || id == nil)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(picked ? .isSelected : [])
+    }
+
+    private func outboundRowContent(_ train: TrainDeparture, picked: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 timeLine(train)
                 if let subtitle = subtitle(train) {
@@ -162,7 +173,6 @@ struct RoundTripView: View {
         }
         .modifier(RowHighlight(selected: picked))
         .contentShape(Rectangle())
-        .onTapGesture { if !train.isCancelled, let id { pick = id } }
     }
 
     @ViewBuilder private func outboundTrailing(_ train: TrainDeparture, picked: Bool) -> some View {
@@ -243,6 +253,7 @@ struct RoundTripView: View {
                         .overlay(Circle().stroke(Color.ink.opacity(0.10), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Share both trains")
             }
 
             if let plan {
@@ -270,11 +281,28 @@ struct RoundTripView: View {
                     Text(subtitle).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
+            .opacity(option.train.isCancelled ? 0.55 : 1)
             Spacer(minLength: 4)
-            returnTag(option.fit)
+            // A return can be late or cancelled too; say so beside its fit, as the outbound rows do.
+            VStack(alignment: .trailing, spacing: 4) {
+                returnTag(option.fit)
+                returnStatus(option.train)
+            }
         }
         .opacity(dimmed ? 0.4 : 1)
         .modifier(RowHighlight(selected: option.fit == .firstThatFits))
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private func returnStatus(_ train: TrainDeparture) -> some View {
+        switch train.status {
+        case .onTime: EmptyView()
+        case .delayed, .severelyDelayed:
+            StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+            Text("leaves \(hhmm(train.expectedDeparture))").font(.mono(11)).foregroundStyle(train.status.tableauInk)
+        case .cancelled: StatusPill("CANCELLED", status: .cancelled)
+        case .unknown: StatusPill("delay ?", status: .unknown)
+        }
     }
 
     @ViewBuilder private func returnTag(_ fit: ReturnFit) -> some View {
@@ -284,7 +312,7 @@ struct RoundTripView: View {
                 .foregroundStyle(Color.inkSecondary)
         case .firstThatFits:
             Text("FIRST THAT FITS").font(.mono(10, weight: .bold)).tracking(1.2)
-                .foregroundStyle(Color.ground)
+                .foregroundStyle(Color.onAmber)
                 .padding(.horizontal, 7).padding(.vertical, 4)
                 .background(Color.amber, in: RoundedRectangle(cornerRadius: 5))
         case .laterBy(let minutes):
@@ -335,11 +363,12 @@ struct RoundTripView: View {
                     Image(systemName: watchedBoth ? "bell.fill" : "bell")
                     Text(watchedBoth ? "Watching both trains" : "Watch both trains")
                 }
-                .font(.system(size: 16, weight: .bold)).foregroundStyle(Color.ground)
-                .frame(maxWidth: .infinity).frame(height: 52)
+                .font(.system(size: 16, weight: .bold)).foregroundStyle(Color.onAmber)
+                .frame(maxWidth: .infinity).frame(minHeight: 52)
                 .background(Color.amber, in: RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(.plain)
+            .accessibilityValue(watchedBoth ? "On" : "Off")
             if let back = plan.pairedReturn {
                 // `pairedReturn` is already the first return that fits, so if the earliest one is lost the
                 // view simply proposes the next; the copy promises that.
@@ -351,9 +380,8 @@ struct RoundTripView: View {
     }
 
     private func watch(_ plan: RoundTripPlan) async {
-        for train in [plan.selectedOutbound, plan.pairedReturn] {
-            if let train, let id = TrainIdentity(train, calendar: cal) { await data.watching.watch(id) }
-        }
+        if let out = plan.selectedOutbound { await data.watching.watch(out, to: plan.outbound) }
+        if let back = plan.pairedReturn { await data.watching.watch(back, to: plan.returnLeg) }
         watchedBoth = true
     }
 
@@ -410,7 +438,7 @@ struct RoundTripView: View {
     }
 
     private var checkBadge: some View {
-        Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.ground)
+        Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.onAmber)
             .frame(width: 22, height: 22).background(Color.amber, in: Circle())
             .accessibilityLabel("Picked")
     }
