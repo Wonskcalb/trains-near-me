@@ -31,7 +31,7 @@ struct WallModeView: View {
 
     @State private var station: Station?
     @State private var stationIsPinned = false
-    @State private var board: BoardState = .noTrains
+    @State private var stationBoard = StationDayBoard(state: .noTrains)
     @State private var journeys: [JourneyBoard] = []
     @State private var leave: LeaveBy?
     @State private var leaveLeg: Leg?
@@ -54,7 +54,9 @@ struct WallModeView: View {
         return journeys.first { Self.key(for: $0.journey) == selection } ?? first
     }
 
-    private var shownState: BoardState { current?.state ?? board }
+    private var shownState: BoardState { current?.state ?? stationBoard.state }
+    /// The morning under the split: the journey's, or the station's once tonight is nearly done.
+    private var shownTomorrow: [TrainDeparture] { current?.tomorrow ?? stationBoard.tomorrow }
 
     var body: some View {
         // `.everyMinute` fires on each minute change, which a clock needs: a `.periodic` schedule anchored
@@ -86,20 +88,22 @@ struct WallModeView: View {
         now = frozenNow ?? Date()
         journeys = await data.journeyBoards.boards(at: now)
         // The pin is a local read, so the Station card can name it whatever the wall shows; the nearest
-        // station costs a location fix and a request, so it is only looked up when the board needs it.
+        // station costs a location fix and a request, so it is only looked up when the board needs it. The
+        // station card asks for the service day rather than a fixed count: the same one request, and late
+        // in the evening it brings the morning for the split.
         let pinned = await data.leaveBy.pinnedStation()
         stationIsPinned = pinned != nil
         station = pinned
         if current == nil {
             if let pinned {
-                board = await data.stationBoard.board(for: pinned, at: now)
+                stationBoard = await data.stationBoard.serviceDayBoard(for: pinned, at: now)
             } else {
                 do throws(TrainServiceError) {
                     let nearest = try await data.stationSearch.nearest().station
                     station = nearest
-                    board = await data.stationBoard.board(for: nearest, at: now)
+                    stationBoard = await data.stationBoard.serviceDayBoard(for: nearest, at: now)
                 } catch {
-                    board = .unavailable(error)
+                    stationBoard = StationDayBoard(state: .unavailable(error))
                 }
             }
         }
@@ -196,7 +200,7 @@ struct WallModeView: View {
     // MARK: Board
 
     @ViewBuilder private func boardPanel(liveNow: Date) -> some View {
-        let tomorrow = current?.tomorrow ?? []
+        let tomorrow = shownTomorrow
         VStack(spacing: 0) {
             boardHeaderRow
             switch shownState {
@@ -262,9 +266,12 @@ struct WallModeView: View {
     private func boardRows(_ trains: [TrainDeparture], liveNow: Date) -> some View {
         // Rows drop off as their train leaves, without waiting for the next fetch. The soonest one still to
         // run is the "next" — a cancelled row is never it — with the amber tint and a green countdown; once
-        // tonight is over that is the morning's first, under the split.
-        let upcoming = trains.filter { $0.expectedDeparture > liveNow }
-        let tomorrow = current?.tomorrow ?? []
+        // tonight is over that is the morning's first, under the split. The station board answers the whole
+        // service day, but each of its rows asks for its own via line, so it lists what the fixed-count
+        // board did, and a morning as long as a journey's.
+        let station = current == nil
+        let upcoming = Array(trains.filter { $0.expectedDeparture > liveNow }.prefix(station ? SNCFClient.boardDeparturesPerRequest : .max))
+        let tomorrow = Array(shownTomorrow.prefix(station ? 6 : .max))
         let next = upcoming.first { !$0.isCancelled } ?? tomorrow.first { !$0.isCancelled }
         return VStack(spacing: 0) {
             ForEach(Array(upcoming.enumerated()), id: \.offset) { _, train in

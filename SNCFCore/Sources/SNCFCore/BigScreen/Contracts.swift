@@ -175,13 +175,28 @@ public extension JourneyBoardsProviding {
     func invalidate() async {}
 }
 
+/// A station's service day for the big screen: tonight's board and, once tonight is nearly done, the
+/// first trains of the next service day, the station counterpart of `JourneyBoard.tomorrow`.
+public struct StationDayBoard: Equatable, Sendable {
+    public let state: BoardState
+    /// Empty until tonight is nearly done (`BoardState.tonightIsNearlyDone(at:)`), then the morning's
+    /// first trains in timetable order, each with its terminus so they join tonight's lanes.
+    public let tomorrow: [TrainDeparture]
+
+    public init(state: BoardState, tomorrow: [TrainDeparture] = []) {
+        self.state = state
+        self.tomorrow = tomorrow
+    }
+}
+
 /// One station's departure board, plus the short "via …" list for a row — looked up by the row's
 /// `vehicleJourneyID`, since the station board itself does not carry the stopping pattern.
 public protocol StationBoardProviding: Sendable {
     func board(for station: Station, at now: Date) async -> BoardState
-    /// The rest of the service day (at least 2 h) with each train's terminus — the big-screen star. The
-    /// plain `board(for:at:)` stays a fixed count, which is what the radar and the sidebar want.
-    func serviceDayBoard(for station: Station, at now: Date) async -> BoardState
+    /// The rest of the service day (at least 2 h) with each train's terminus — the big-screen star — and
+    /// late in the evening the next morning. The plain `board(for:at:)` stays a fixed count, which is what
+    /// the radar and the sidebar want.
+    func serviceDayBoard(for station: Station, at now: Date) async -> StationDayBoard
     func via(forVehicleJourneyID id: String) async -> [String]
 }
 
