@@ -7,21 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02EC6B751B663B843A49F232 /* WallModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DCE55CCBCB95942498A6321 /* WallModeView.swift */; };
 		0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */; };
+		0E09B59E51EE388D934CAD68 /* LanesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4A03F254F9F4280823B075 /* LanesView.swift */; };
 		1AFB944E672A5436A5501754 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFF2E10643CEC9A8ED29159F /* Assets.xcassets */; };
 		3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CE2524109D16225D1BB68B /* BoardView.swift */; };
 		5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EC3D71442832142A87AC2F /* JourneysView.swift */; };
+		5C6E155583BC575E10B6F541 /* BigScreenRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */; };
 		6D8A2B2469753A72D5446915 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */; };
 		6FDEF5E33F16A652529A0246 /* ScreenshotSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB961D1499AABCD21D3C11B7 /* ScreenshotSupport.swift */; };
 		7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */; };
+		78CBC52AA86417B60E543CD9 /* StationHallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A858C01098D0D1C4E4F7C6CD /* StationHallView.swift */; };
+		99B8638CDC8D123F1673BEFA /* ExtraTallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894979E8E627FBDBF7BA0E50 /* ExtraTallView.swift */; };
 		9DC5898F32BB15E8CFDB1C77 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */; };
 		A1B489C0B95333D17618759B /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED794790151F219377530F5 /* Provider.swift */; };
 		A846415F7CFEE6861EB06783 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = F7D332FDF3CDEF189AE5BB46 /* SNCFCore */; };
 		B2118B81EF4ECD2D93E46292 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */; };
+		B25590FA70606FA1EFAAA330 /* MenuBarExtraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F86A92A2E3E41EE7C68A9BA /* MenuBarExtraView.swift */; };
 		B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */; };
 		BA94592906FDBECE0E26B092 /* TrainsNearMeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0841E4888C3F59FD6494FD2 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A265E336545C59C7F21A33A /* SNCFCore */; };
 		CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513970A98529F419C18FB0B7 /* RootView.swift */; };
+		D084F4AC32ACA4A4B0B5DECD /* RoundTripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417EF036C914F051F03F5857 /* RoundTripView.swift */; };
 		E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072468D7CF61AC0275D3A463 /* JourneyIntent.swift */; };
 /* End PBXBuildFile section */
 
@@ -51,8 +58,11 @@
 
 /* Begin PBXFileReference section */
 		072468D7CF61AC0275D3A463 /* JourneyIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntent.swift; sourceTree = "<group>"; };
+		0F86A92A2E3E41EE7C68A9BA /* MenuBarExtraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarExtraView.swift; sourceTree = "<group>"; };
 		2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TrainsNearMeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F3DEB15EE7B3CF12AEC21D2 /* SNCFCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SNCFCore; path = SNCFCore; sourceTree = SOURCE_ROOT; };
+		3DCE55CCBCB95942498A6321 /* WallModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallModeView.swift; sourceTree = "<group>"; };
+		417EF036C914F051F03F5857 /* RoundTripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundTripView.swift; sourceTree = "<group>"; };
 		4BA6CB5E31A44DE4C39717BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		513970A98529F419C18FB0B7 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		53A33FCCCFE5DB826C1A1DD4 /* TrainsNearMe-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TrainsNearMe-iOS.entitlements"; sourceTree = "<group>"; };
@@ -60,15 +70,19 @@
 		5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7493B2EAAED743D0DB07E6B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		894979E8E627FBDBF7BA0E50 /* ExtraTallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtraTallView.swift; sourceTree = "<group>"; };
 		90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainsNearMeApp.swift; sourceTree = "<group>"; };
 		95CE2524109D16225D1BB68B /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
 		97F2EB8890AACB58A1EAB3CF /* TrainsNearMe.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TrainsNearMe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A4A03F254F9F4280823B075 /* LanesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanesView.swift; sourceTree = "<group>"; };
 		9D5312ED0A2FD2363A7F3B77 /* TrainsNearMeWidget-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "TrainsNearMeWidget-iOS.entitlements"; sourceTree = "<group>"; };
+		A858C01098D0D1C4E4F7C6CD /* StationHallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationHallView.swift; sourceTree = "<group>"; };
 		AEC7157EEB5104942A376232 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C0750732F4C5EBA9F20C580C /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		C927FCF5D9F634EFE5CEFD6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrainsNearMe.entitlements; sourceTree = "<group>"; };
 		DFF2E10643CEC9A8ED29159F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigScreenRoot.swift; sourceTree = "<group>"; };
 		EED794790151F219377530F5 /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeparturesWidget.swift; sourceTree = "<group>"; };
 		F441009ACDA644D0BA5605EA /* TrainsNearMeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrainsNearMeWidget.entitlements; sourceTree = "<group>"; };
@@ -115,6 +129,7 @@
 				EED794790151F219377530F5 /* Provider.swift */,
 				9D5312ED0A2FD2363A7F3B77 /* TrainsNearMeWidget-iOS.entitlements */,
 				F441009ACDA644D0BA5605EA /* TrainsNearMeWidget.entitlements */,
+				A2A7AE9648C30DF413183BD8 /* ExtraTall */,
 			);
 			path = Widget;
 			sourceTree = "<group>";
@@ -141,8 +156,54 @@
 				53A33FCCCFE5DB826C1A1DD4 /* TrainsNearMe-iOS.entitlements */,
 				DADD15B7CFF73EDCB67DBF8E /* TrainsNearMe.entitlements */,
 				90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */,
+				4D8456F6731DE2DC769AE1A4 /* BigScreen */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		349B103A8A86290240CF74CE /* Lanes */ = {
+			isa = PBXGroup;
+			children = (
+				9A4A03F254F9F4280823B075 /* LanesView.swift */,
+			);
+			path = Lanes;
+			sourceTree = "<group>";
+		};
+		4D8456F6731DE2DC769AE1A4 /* BigScreen */ = {
+			isa = PBXGroup;
+			children = (
+				E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */,
+				349B103A8A86290240CF74CE /* Lanes */,
+				51556DEEFCEB9E99608F9648 /* MenuBar */,
+				B195E034A9F2FFEDCF8BA1BB /* RoundTrip */,
+				8386CA421565037B9754A131 /* StationHall */,
+				FE43F321EF3ACC8E4C961870 /* Wall */,
+			);
+			path = BigScreen;
+			sourceTree = "<group>";
+		};
+		51556DEEFCEB9E99608F9648 /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				0F86A92A2E3E41EE7C68A9BA /* MenuBarExtraView.swift */,
+			);
+			path = MenuBar;
+			sourceTree = "<group>";
+		};
+		8386CA421565037B9754A131 /* StationHall */ = {
+			isa = PBXGroup;
+			children = (
+				A858C01098D0D1C4E4F7C6CD /* StationHallView.swift */,
+			);
+			path = StationHall;
+			sourceTree = "<group>";
+		};
+		A2A7AE9648C30DF413183BD8 /* ExtraTall */ = {
+			isa = PBXGroup;
+			children = (
+				894979E8E627FBDBF7BA0E50 /* ExtraTallView.swift */,
+			);
+			path = ExtraTall;
 			sourceTree = "<group>";
 		};
 		A63698CC21F197829DD9FE65 /* Products */ = {
@@ -152,6 +213,14 @@
 				2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B195E034A9F2FFEDCF8BA1BB /* RoundTrip */ = {
+			isa = PBXGroup;
+			children = (
+				417EF036C914F051F03F5857 /* RoundTripView.swift */,
+			);
+			path = RoundTrip;
 			sourceTree = "<group>";
 		};
 		C075C65897AE7B362F12B9E7 /* Packages */ = {
@@ -172,6 +241,14 @@
 				23E80DDCC49A283A4ACC7C94 /* Frameworks */,
 				A63698CC21F197829DD9FE65 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		FE43F321EF3ACC8E4C961870 /* Wall */ = {
+			isa = PBXGroup;
+			children = (
+				3DCE55CCBCB95942498A6321 /* WallModeView.swift */,
+			);
+			path = Wall;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -286,11 +363,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C6E155583BC575E10B6F541 /* BigScreenRoot.swift in Sources */,
 				3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */,
 				5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */,
+				0E09B59E51EE388D934CAD68 /* LanesView.swift in Sources */,
+				B25590FA70606FA1EFAAA330 /* MenuBarExtraView.swift in Sources */,
 				CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */,
+				D084F4AC32ACA4A4B0B5DECD /* RoundTripView.swift in Sources */,
 				6FDEF5E33F16A652529A0246 /* ScreenshotSupport.swift in Sources */,
+				78CBC52AA86417B60E543CD9 /* StationHallView.swift in Sources */,
 				7349A2FF10F206357F0F1A07 /* TrainsNearMeApp.swift in Sources */,
+				02EC6B751B663B843A49F232 /* WallModeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,6 +382,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */,
+				99B8638CDC8D123F1673BEFA /* ExtraTallView.swift in Sources */,
 				E32C7C9CDDF7DF7C027D8249 /* JourneyIntent.swift in Sources */,
 				A1B489C0B95333D17618759B /* Provider.swift in Sources */,
 			);
@@ -351,7 +435,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -433,7 +517,7 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				"TARGETED_DEVICE_FAMILY[sdk=iphone*]" = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=iphone*]" = "1,2";
 			};
 			name = Release;
 		};
@@ -473,7 +557,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_DEBUG_DYLIB = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -525,7 +609,7 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				"TARGETED_DEVICE_FAMILY[sdk=iphone*]" = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=iphone*]" = "1,2";
 			};
 			name = Debug;
 		};
