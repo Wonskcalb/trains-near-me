@@ -1,10 +1,11 @@
 import SNCFCore
 import SwiftUI
 
-/// Round trip — the outbound board and the way back side by side, with the stay stepper and the
-/// paper pairing pill across the hinge (Design/BigScreen/Duo.dc.html). Two panes whenever the window
-/// is wide enough for two compact columns (iPad, iPad split view, Mac); otherwise the way back is a
-/// pushed second screen. There is no iPhone "Duo" today, so compact iPhone never reaches here.
+/// Round trip — the outbound board and the way back side by side, with the stay stepper. Across the Duo's
+/// fold the two panes come from Apple's `ArrangementView` and only a dashed tie crosses the fold
+/// (Design/BigScreen/Duo/DuoLayouts.html, screen 4); elsewhere two panes whenever the window is wide enough
+/// for two compact columns (iPad, iPad split view, Mac), with the pairing pill between them; otherwise
+/// (the folded Duo, a narrow iPad window) the way back is a pushed second screen.
 struct RoundTripView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -22,8 +23,16 @@ struct RoundTripView: View {
     @State private var stay: TimeInterval = 150 * 60
     @State private var watchedBoth = false
     @State private var showReturn = false
+    /// The picked rows' positions, which line the Duo's two panes up and place the tie between them.
+    @State private var outboundY: RowY?
+    @State private var returnY: RowY?
+    /// The board the round trip was opened from; nil takes the first saved journey.
+    private let outbound: Leg?
 
-    init(now: Date = Date()) { self.now = now }
+    init(now: Date = Date(), outbound: Leg? = nil) {
+        self.now = now
+        self.outbound = outbound
+    }
 
     /// Below this the two columns would be too cramped, so the way back becomes a pushed screen.
     private let minTwoPaneWidth: CGFloat = 680
@@ -32,7 +41,9 @@ struct RoundTripView: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if geo.size.width >= minTwoPaneWidth {
+                if let fold = Fold.division(in: geo) {
+                    duo(fold: fold)
+                } else if geo.size.width >= minTwoPaneWidth {
                     twoPane
                 } else {
                     narrow
@@ -51,6 +62,10 @@ struct RoundTripView: View {
 
     private func load() async {
         watchedBoth = false
+        if let outbound {
+            plan = await data.roundTrip.roundTrip(outbound: outbound, pick: pick, stay: stay, at: now)
+            return
+        }
         let boards = await data.journeyBoards.boards(at: now)
         guard let primary = boards.first?.journey else { plan = nil; return }
         // The outbound is the primary journey's B → A: you leave home (the saved destination) and come
@@ -65,8 +80,8 @@ struct RoundTripView: View {
 
     private var twoPane: some View {
         HStack(spacing: 16) {
-            pane { outboundPane }
-            pane { returnPane }
+            pane { outboundPane() }
+            pane { returnPane() }
         }
         .padding(16)
         // The pairing pill straddles the fold; its exact drop is cosmetic, so it is anchored by hand just
@@ -78,7 +93,7 @@ struct RoundTripView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    outboundPane
+                    outboundPane()
                     hingePill
                     Button { showReturn = true } label: {
                         HStack { Text("Way back"); Spacer(); Image(systemName: "arrow.right") }
@@ -92,14 +107,136 @@ struct RoundTripView: View {
             }
             .background(Color.ground.ignoresSafeArea())
             .navigationDestination(isPresented: $showReturn) {
-                ScrollView { returnPane.padding(16) }
+                ScrollView { returnPane().padding(16) }
                     .background(Color.ground.ignoresSafeArea())
                     .navigationTitle("Way back")
             }
         }
     }
 
-    /// One scrolling column; a ScrollView keeps a short Mac window from clipping the rows.
+    // MARK: Duo
+
+    static let outboundSpace = "roundTrip.outbound"
+    static let returnSpace = "roundTrip.return"
+    static let screenSpace = "roundTrip.screen"
+    /// Each pane's inset on the fold side: the gap the tie spans on either side of the division.
+    private static let foldGutter: CGFloat = 20
+
+    /// The Duo's inner display. Apple places the two panes (`ArrangementView`, pinned side by side while
+    /// the fold runs top to bottom, left to stack in portrait); nothing sits on the fold but the tie,
+    /// drawn from the division's own frame so it spans the active ~30 pt band when half open too. The
+    /// actions are toolbar items, which the Duo stands up in its strip.
+    @ViewBuilder private func duo(fold: CGRect) -> some View {
+        let landscape = fold.height > fold.width
+        let out = duoPane(Self.outboundSpace, raise: landscape ? lift(outboundY, under: returnY) : 0) {
+            outboundPane(duo: true)
+        }
+        let back = duoPane(Self.returnSpace, raise: landscape ? lift(returnY, under: outboundY) : 0) {
+            returnPane(duo: true)
+        }
+        Group {
+            #if os(iOS)
+            if #available(iOS 27.1, *) {
+                ArrangementView { out } secondary: { back }
+                    .arrangementViewStyle(landscape ? SplitArrangementViewStyle().axes(.horizontal) : SplitArrangementViewStyle())
+            } else {
+                handSplit(out, back, fold: fold, landscape: landscape)
+            }
+            #else
+            handSplit(out, back, fold: fold, landscape: landscape)
+            #endif
+        }
+        .overlay { if landscape { tie(fold) } }
+        .coordinateSpace(.named(Self.screenSpace))
+        #if os(iOS)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(watchedBoth ? "Watching both trains" : "Watch both trains",
+                       systemImage: watchedBoth ? "bell.fill" : "bell") {
+                    if let plan { Task { await watch(plan) } }
+                }
+                .prominentToolbarButton()
+                .disabled(plan == nil)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                ShareLink("Share the plan", item: shareText).disabled(plan == nil)
+            }
+            // Text only, so it stays horizontal at the top while the labelled items stand up in the strip.
+            // No multi-day in scope: today is the only day.
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("Today") { Button("Today", systemImage: "checkmark") {} }
+            }
+        }
+        #endif
+    }
+
+    /// Where `ArrangementView` is missing (before iOS 27.1, which has no fold to report anyway) and in the
+    /// headless renders: the same two panes cut at the division by hand.
+    @ViewBuilder private func handSplit(_ out: some View, _ back: some View, fold: CGRect, landscape: Bool) -> some View {
+        if landscape {
+            HStack(spacing: fold.width) { out.frame(width: fold.minX); back }
+        } else {
+            VStack(spacing: fold.height) { out.frame(height: fold.minY); back }
+        }
+    }
+
+    /// One pane, scrolling inside itself (Apple: never an `ArrangementView` inside a scroll view). `raise`
+    /// pushes its content down so its picked row lines up with the other pane's.
+    private func duoPane<Content: View>(_ space: String, raise: CGFloat,
+                                        @ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView {
+            content()
+                .coordinateSpace(.named(space))
+                .padding(.top, raise)
+                .padding(.horizontal, Self.foldGutter).padding(.vertical, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// How far down a pane's content goes for its picked row to meet the other one's; measured in the
+    /// pane's own content, which the padding does not move, so the two values never chase each other.
+    private func lift(_ mine: RowY?, under other: RowY?) -> CGFloat {
+        guard let mine, let other else { return 0 }
+        return max(0, other.content - mine.content)
+    }
+
+    /// The dashed tie: card edge to card edge across the division, at the picked rows' shared line. Hidden
+    /// while one pane is scrolled away from the other, where a tie would point at nothing.
+    @ViewBuilder private func tie(_ fold: CGRect) -> some View {
+        if let outboundY, let returnY, abs(outboundY.screen - returnY.screen) < 2, outboundY.screen > 0 {
+            Path { path in
+                path.move(to: CGPoint(x: fold.minX - Self.foldGutter, y: outboundY.screen))
+                path.addLine(to: CGPoint(x: fold.maxX + Self.foldGutter, y: outboundY.screen))
+            }
+            .stroke(Color.ink.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// Minutes at the destination between the picked outbound's arrival and the paired return.
+    private var thereMinutes: Int? {
+        guard let arrival = plan?.pairedArrival, let back = plan?.pairedReturn else { return nil }
+        return Int(back.scheduledDeparture.timeIntervalSince(arrival) / 60)
+    }
+
+    /// The outbound's paper tab, "✓ 2 h 31 THERE", reaching the card's inner edge where the tie leaves.
+    private func thereTab(_ minutes: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(Color.onAmber)
+                .frame(width: 18, height: 18).background(Color.amber, in: Circle())
+            Text("\(durationWords(minutes).uppercased()) THERE").font(.mono(11, weight: .bold)).tracking(0.8)
+                .foregroundStyle(Color.ground)
+        }
+        .padding(.leading, 5).padding(.trailing, 16).padding(.vertical, 5)
+        .background(Color.ink, in: UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14))
+        .padding(.trailing, -16)
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Picked, \(durationWords(minutes)) there")
+    }
+
+    /// One pane's scrolling column; a ScrollView keeps a short Mac window from clipping the rows.
     private func pane<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         ScrollView { content().padding(.horizontal, 20).padding(.vertical, 24) }
             .frame(maxWidth: .infinity)
@@ -107,17 +244,21 @@ struct RoundTripView: View {
 
     // MARK: Outbound pane
 
-    @ViewBuilder private var outboundPane: some View {
+    /// `duo`: the Duo's pane, whose day picker, Share and Watch live in the toolbar and whose picked row
+    /// carries the paper tab instead of the check.
+    @ViewBuilder private func outboundPane(duo: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 sectionLabel("① OUTBOUND")
                 Spacer()
                 // No multi-day in scope; the pill is decorative, so it carries no action.
-                Text("Today")
-                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
-                    .padding(.horizontal, 12).frame(height: 36)
-                    .background(Color.raised.opacity(0.72), in: Capsule())
-                    .overlay(Capsule().stroke(Color.ink.opacity(0.10), lineWidth: 1))
+                if !duo {
+                    Text("Today")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
+                        .padding(.horizontal, 12).frame(height: 36)
+                        .background(Color.raised.opacity(0.72), in: Capsule())
+                        .overlay(Capsule().stroke(Color.ink.opacity(0.10), lineWidth: 1))
+                }
             }
 
             if let plan {
@@ -125,7 +266,7 @@ struct RoundTripView: View {
                 card {
                     ForEach(Array(plan.outboundOptions.enumerated()), id: \.offset) { index, train in
                         if index > 0 { rowDivider }
-                        outboundRow(train, selectedID: selectedOutboundID)
+                        outboundRow(train, selectedID: selectedOutboundID, duo: duo)
                     }
                 }
                 wholeDayOut(plan)
@@ -139,11 +280,12 @@ struct RoundTripView: View {
         plan?.selectedOutbound.flatMap { TrainIdentity($0, calendar: cal) }
     }
 
-    private func outboundRow(_ train: TrainDeparture, selectedID: TrainIdentity?) -> some View {
+    private func outboundRow(_ train: TrainDeparture, selectedID: TrainIdentity?, duo: Bool) -> some View {
         let id = TrainIdentity(train, calendar: cal)
         let picked = id != nil && id == selectedID
         return Button { if !train.isCancelled, let id { pick = id } } label: {
-            outboundRowContent(train, picked: picked)
+            outboundRowContent(train, picked: picked, duo: duo)
+                .measuringRow(duo && picked, in: Self.outboundSpace) { outboundY = $0 }
         }
         .buttonStyle(.plain)
         .disabled(train.isCancelled || id == nil)
@@ -151,19 +293,30 @@ struct RoundTripView: View {
         .accessibilityAddTraits(picked ? .isSelected : [])
     }
 
-    private func outboundRowContent(_ train: TrainDeparture, picked: Bool) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+    private func outboundRowContent(_ train: TrainDeparture, picked: Bool, duo: Bool) -> some View {
+        // On the Duo the tab takes the trailing edge, so an on-time pick's "in 6 min" joins the subtitle.
+        let soonInSubtitle = duo && picked && train.status == .onTime
+        return HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 timeLine(train)
                 if let subtitle = subtitle(train) {
-                    Text(subtitle).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    if soonInSubtitle {
+                        Text("\(subtitle) · \(Text("in \(relative(train.expectedDeparture))").foregroundStyle(Color.soon))")
+                            .font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    } else {
+                        Text(subtitle).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    }
                 }
             }
             .opacity(train.isCancelled ? 0.55 : 1)
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 4) {
-                if picked { checkBadge }
-                outboundTrailing(train, picked: picked)
+                if picked, duo, let there = thereMinutes {
+                    thereTab(there)
+                } else if picked {
+                    checkBadge
+                }
+                if !soonInSubtitle { outboundTrailing(train, picked: picked) }
             }
         }
         .modifier(RowHighlight(selected: picked))
@@ -235,11 +388,33 @@ struct RoundTripView: View {
 
     // MARK: Way-back pane
 
-    @ViewBuilder private var returnPane: some View {
+    @ViewBuilder private func returnPane(duo: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 sectionLabel("② WAY BACK")
                 Spacer()
+                if !duo { shareButton }
+            }
+
+            if let plan {
+                routeHeader(plan.returnLeg)
+                // On the Duo the stepper goes under the list, as the whole day does on the outbound side, so
+                // both lists start level and the picked rows can share a line.
+                if !duo { stayStepper }
+                returnList(plan, duo: duo)
+                if duo {
+                    stayStepper
+                    watchFootnote(plan, prefix: "Watch both trains (the bell): if")
+                } else {
+                    watchBoth(plan)
+                }
+            } else {
+                loading
+            }
+        }
+    }
+
+    private var shareButton: some View {
                 ShareLink(item: shareText) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
@@ -249,11 +424,9 @@ struct RoundTripView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Share both trains")
-            }
+    }
 
-            if let plan {
-                routeHeader(plan.returnLeg)
-                stayStepper
+    @ViewBuilder private func returnList(_ plan: RoundTripPlan, duo: Bool) -> some View {
                 // The way back is asked by count from the arrival, so late in the evening it runs on into the
                 // morning. Those rows go under the split, tagged TOMORROW: "first that fits" on a train the
                 // next day would read as a return tonight.
@@ -262,7 +435,7 @@ struct RoundTripView: View {
                 card {
                     ForEach(Array(tonight.enumerated()), id: \.offset) { index, option in
                         if index > 0 { rowDivider }
-                        returnRow(option, lastTonight: !morning.isEmpty && index == tonight.count - 1)
+                        returnRow(option, lastTonight: !morning.isEmpty && index == tonight.count - 1, duo: duo)
                     }
                     if !morning.isEmpty {
                         TomorrowSplit(lastTonight: tonight.last { !$0.train.isCancelled }?.train.scheduledDeparture, inset: 16)
@@ -272,22 +445,18 @@ struct RoundTripView: View {
                         }
                     }
                 }
-                watchBoth(plan)
-            } else {
-                loading
-            }
-        }
     }
 
     /// `lastTonight` marks tonight's final row when the morning follows: the planner gave LAST TRAIN to the
     /// list's final row, which is then tomorrow's, so tonight's last would otherwise read "+1 h there".
-    private func returnRow(_ option: ReturnOption, lastTonight: Bool = false, tomorrow: Bool = false) -> some View {
+    private func returnRow(_ option: ReturnOption, lastTonight: Bool = false, tomorrow: Bool = false, duo: Bool = false) -> some View {
         let dimmed = option.fit == .tooEarly && !tomorrow
+        let paired = option.fit == .firstThatFits && !tomorrow
         var fit = option.fit
         if lastTonight, case .laterBy = fit { fit = .lastTrain }
         return HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                timeLine(option.train)
+                timeLine(option.train, tab: duo && paired)
                 if let subtitle = subtitle(option.train) {
                     Text(subtitle).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
@@ -301,7 +470,8 @@ struct RoundTripView: View {
             }
         }
         .opacity(dimmed ? 0.4 : 1)
-        .modifier(RowHighlight(selected: option.fit == .firstThatFits && !tomorrow))
+        .modifier(RowHighlight(selected: paired))
+        .measuringRow(duo && paired, in: Self.returnSpace) { returnY = $0 }
         .accessibilityElement(children: .combine)
     }
 
@@ -387,13 +557,16 @@ struct RoundTripView: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(watchedBoth ? "On" : "Off")
-            if let back = plan.pairedReturn {
-                // `pairedReturn` is already the first return that fits, so if the earliest one is lost the
-                // view simply proposes the next; the copy promises that.
-                Text("If the \(hhmm(back.scheduledDeparture)) is cancelled or late, you get the next one that fits.")
-                    .font(.system(size: 11.5)).foregroundStyle(Color.inkSecondary)
-                    .multilineTextAlignment(.center).frame(maxWidth: .infinity)
-            }
+            watchFootnote(plan, prefix: "If").multilineTextAlignment(.center).frame(maxWidth: .infinity)
+        }
+    }
+
+    /// `pairedReturn` is already the first return that fits, so if the earliest one is lost the view simply
+    /// proposes the next; the copy promises that.
+    @ViewBuilder private func watchFootnote(_ plan: RoundTripPlan, prefix: String) -> some View {
+        if let back = plan.pairedReturn {
+            Text("\(prefix) the \(hhmm(back.scheduledDeparture)) is cancelled or late, you get the next one that fits.")
+                .font(.system(size: 11.5)).foregroundStyle(Color.inkSecondary)
         }
     }
 
@@ -431,11 +604,17 @@ struct RoundTripView: View {
 
     /// Departure → arrival, the scheduled departure in amber and the amended arrival next to it; both
     /// struck through when the train is cancelled.
-    private func timeLine(_ train: TrainDeparture) -> some View {
+    /// `tab`: the paired return on the Duo, its time on a paper tab reaching the card's inner edge, where the
+    /// tie from the outbound lands.
+    private func timeLine(_ train: TrainDeparture, tab: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             Text(hhmm(train.scheduledDeparture)).font(.mono(22, weight: .bold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
+                .foregroundStyle(tab ? Color.ground : train.isCancelled ? Color.inkSecondary : Color.amberText)
                 .strikethrough(train.isCancelled)
+                .padding(tab ? EdgeInsets(top: 3, leading: 16, bottom: 3, trailing: 9) : EdgeInsets())
+                .background(tab ? Color.ink : .clear,
+                            in: UnevenRoundedRectangle(bottomTrailingRadius: 8, topTrailingRadius: 8))
+                .padding(.leading, tab ? -16 : 0)
             if let arrival = train.expectedArrival ?? train.scheduledArrival {
                 dash
                 Text(hhmm(arrival)).font(.mono(15, weight: .medium))
@@ -556,6 +735,25 @@ private struct RowHighlight: ViewModifier {
         content
             .padding(.horizontal, 16).padding(.vertical, 13)
             .selectedRowBackground(selected)
+    }
+}
+
+/// A picked row's middle: in its pane's content (to line the panes up) and in the round trip (for the tie).
+struct RowY: Equatable {
+    var content: CGFloat
+    var screen: CGFloat
+}
+
+private extension View {
+    @ViewBuilder func measuringRow(_ isOn: Bool, in space: String, _ action: @escaping (RowY) -> Void) -> some View {
+        if isOn {
+            onGeometryChange(for: RowY.self) { proxy in
+                RowY(content: proxy.frame(in: .named(space)).midY,
+                     screen: proxy.frame(in: .named(RoundTripView.screenSpace)).midY)
+            } action: { action($0) }
+        } else {
+            self
+        }
     }
 }
 
