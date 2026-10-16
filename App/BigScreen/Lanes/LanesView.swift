@@ -603,7 +603,8 @@ private struct Hatch: View {
 
 /// Always the dark ink card the mockup draws, whatever the chart's scheme: the subtree is forced dark,
 /// so `ground` is the ink surface and `ink` its light text, and the mode chip's outline stays visible.
-private struct LaneTrainPopover: View {
+/// Shared with the station board's stops, so a train reads the same wherever it is tapped.
+struct LaneTrainPopover: View {
     @Environment(\.bigScreenData) private var data
     let train: TrainDeparture
     let leg: Leg

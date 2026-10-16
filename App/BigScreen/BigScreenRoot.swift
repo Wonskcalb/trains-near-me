@@ -55,7 +55,7 @@ enum BigScreenRoute: Hashable, CaseIterable {
     var searchRequested = false
     /// ⌘R bumps this; screens reload when it changes.
     var refreshTick = 0
-    /// An unsaved journey a branch of the station star opened, station → terminus. The station hall board
+    /// An unsaved journey a lane of the station line map opened, station → terminus. The station hall board
     /// shows it inside the `.station` route, so the back button is just clearing it; any other navigation
     /// drops it, because it is not saved anywhere to come back to.
     var temporaryLeg: Leg?
