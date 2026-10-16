@@ -50,10 +50,14 @@ let extraTallEntry = DeparturesEntry(
 struct ExtraTall: View {
     var body: some View {
         ExtraTallView(entry: extraTallEntry)
+            // WidgetKit insets a widget's content by its content margins; outside it nothing does, so the
+            // harness applies DuoWidget.dc.html's 20/20/16 here rather than the view, which would then be
+            // padded twice on a real desktop.
+            .padding(EdgeInsets(top: 20, leading: 20, bottom: 16, trailing: 20))
             .frame(width: 364, height: 800)
             // containerBackground draws nothing outside WidgetKit, so paint the surface here (as the preview does).
             .background(Color.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
     }
 }
 

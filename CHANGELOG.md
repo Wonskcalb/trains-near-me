@@ -13,9 +13,17 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Extra-tall widget**: the time track turned vertical with a written label beside each marker, on the `.systemExtraLargePortrait` family where iOS / macOS 27 offers it.
 - **A macOS menu-bar extra**: a window-style popover (journey switcher, next train, compact track, the next three trains, journey chips, Open / Wall-mode actions) and a bar label with the amber flap and the next time.
 - **Live data behind all of it**: concurrent journey boards and a cached service-day summary, the round-trip planner, the leave-by countdown (per-station walk time, pinned station, optional MapKit walking ETA), watching a train (a reminder before it leaves and a delay-band / cancellation alert, re-evaluated in the foreground and in iOS background app refresh — never by spending the widget reload budget), and Share ETA.
+- **Go to station** (⌘K) on the big screen searches every SNCF station, accents and case ignored, with ↑↓ / Return / Esc; a pick opens that station's departure board, which can be **pinned for Wall mode**.
+- **Saved journeys can be added, edited, reordered and deleted on the Mac and iPad**: a + in the sidebar's JOURNEYS header, Edit / Move / Delete on each journey, and a Journeys section in Settings.
+- **Settings is a pane of the main window** on the big screen, in the Tableau style, with the same sections on the Mac's Settings window (⌘,).
 
 ### Fixed
 
+- Big screen: NEAR ME shows the station nearest to you with its next departure and distance, or says why it cannot (location not allowed yet — with an **Allow location** button —, location off, no station within 20 km), falling back to the pinned station.
+- Big screen: watching a train now schedules its reminder and measures delay changes from the moment you watch it, on the Mac and iPad too; a watch is dropped once its service day is over; a token typed after launch is used straight away; boards are no longer fetched twice per refresh.
+- Big screen: the service-day summary (last train tonight, first tomorrow, the Lanes histogram) covers the whole 03:00-to-03:00 day instead of the next dozen trains; "N DISRUPTED TONIGHT" follows the live board.
+- Big screen: the menu-bar label and Wall mode keep themselves current (departed trains drop off, a cancelled train is never "next"); the time track no longer draws a second amber dot at "now", its delay arcs bow as designed, and VoiceOver reads it as one sentence.
+- Big screen: no amber text on paper in the light palette (the station hall, sidebar, inspector and menu bar stay on the dark board palette), the Lanes popover stays an ink card in both schemes, and the end-of-service board gets the widget's night treatment.
 - The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app is now iPhone-only and portrait-only, so it no longer claims iPad support.
 - Version and build number now come from `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` instead of a hard-coded 1.0 (1), which App Store Connect would have rejected on a second upload; declares no non-exempt encryption so TestFlight skips the export-compliance prompt.
 
