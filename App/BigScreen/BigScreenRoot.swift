@@ -59,6 +59,11 @@ enum BigScreenRoute: Hashable, CaseIterable {
     /// shows it inside the `.station` route, so the back button is just clearing it; any other navigation
     /// drops it, because it is not saved anywhere to come back to.
     var temporaryLeg: Leg?
+    /// The Journeys tab's pushed journey. Held here rather than in the tab so folding and unfolding a Duo,
+    /// which swaps the tab between a plain stack and a split, keeps you on the same journey.
+    var journeyPath: [JourneyConfiguration] = []
+    /// The train a journey board hands to the detail column on the Duo's inner display; nil shows Lanes.
+    var detailTrain: PickedTrain?
 
     func select(_ route: BigScreenRoute) { temporaryLeg = nil; self.route = route }
     /// Picking a journey always returns to the board it feeds.
@@ -69,9 +74,15 @@ enum BigScreenRoute: Hashable, CaseIterable {
     func refresh() { refreshTick += 1 }
 }
 
+/// A train picked on a journey board, with the leg it was picked for, so the detail column can draw it.
+struct PickedTrain: Equatable {
+    let train: TrainDeparture
+    let leg: Leg
+}
+
 /// The big-screen container: a sidebar + a routed detail column on macOS and on iPad / any regular
-/// width; compact iPhone keeps the existing three-tab `RootView`. The keyboard commands (⌘K / ⌘R /
-/// ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode is a route like the others.
+/// width; compact iPhone and the iPhone Duo keep the three-tab `RootView`. The keyboard commands (⌘K /
+/// ⌘R / ⌘1–4, in `BigScreenCommands`) drive the route; Wall mode is a route like the others.
 struct BigScreenRoot: View {
     @Environment(\.bigScreenData) private var data
     #if os(iOS)
@@ -108,10 +119,16 @@ struct BigScreenRoot: View {
 
     @ViewBuilder private var content: some View {
         #if os(iOS)
-        if sizeClass == .compact {
-            RootView()
-        } else {
-            split
+        // A fold means the Duo: its system bars stand up in a strip only around the native TabView, and the
+        // big views become detail columns inside the tabs, so the 280 pt sidebar split is retired there.
+        // One branch for both poses, so folding keeps RootView (and its selected tab) alive.
+        GeometryReader { proxy in
+            let spansFold = Fold.division(in: proxy) != nil
+            if spansFold || sizeClass == .compact {
+                RootView().environment(\.spansFold, spansFold)
+            } else {
+                split
+            }
         }
         #else
         split

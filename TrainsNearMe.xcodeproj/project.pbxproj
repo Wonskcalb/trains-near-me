@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01F632F370B0260E81B31F23 /* DuoJourneys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD3761BA5EE39050483808D /* DuoJourneys.swift */; };
 		02EC6B751B663B843A49F232 /* WallModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DCE55CCBCB95942498A6321 /* WallModeView.swift */; };
 		0D67B75107BD87BEB7E2A148 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5ED6D5AF89A82E668C3BAD5C /* SwiftUI.framework */; };
 		0E09B59E51EE388D934CAD68 /* LanesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4A03F254F9F4280823B075 /* LanesView.swift */; };
@@ -30,6 +31,7 @@
 		B93EBE051A10F1E7DCBC0734 /* DeparturesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8E057DFB0108130F77AAE /* DeparturesWidget.swift */; };
 		BA94592906FDBECE0E26B092 /* TrainsNearMeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0841E4888C3F59FD6494FD2 /* SNCFCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A265E336545C59C7F21A33A /* SNCFCore */; };
+		C46364CC9B1BD3C163645F5D /* Fold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F61C31CBB0A4D0B3E2F582B /* Fold.swift */; };
 		C9768A59A75AEF411CAD1D35 /* JourneyEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4F0B97D67C6F1BD31A860B /* JourneyEditor.swift */; };
 		CDF19946BEAE7BEA6A5A9D87 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513970A98529F419C18FB0B7 /* RootView.swift */; };
 		D084F4AC32ACA4A4B0B5DECD /* RoundTripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417EF036C914F051F03F5857 /* RoundTripView.swift */; };
@@ -63,6 +65,7 @@
 /* Begin PBXFileReference section */
 		072468D7CF61AC0275D3A463 /* JourneyIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntent.swift; sourceTree = "<group>"; };
 		0F86A92A2E3E41EE7C68A9BA /* MenuBarExtraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarExtraView.swift; sourceTree = "<group>"; };
+		2AD3761BA5EE39050483808D /* DuoJourneys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoJourneys.swift; sourceTree = "<group>"; };
 		2C34AFA0DDEB4CEED989AD1D /* TrainsNearMeWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TrainsNearMeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F3DEB15EE7B3CF12AEC21D2 /* SNCFCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SNCFCore; path = SNCFCore; sourceTree = SOURCE_ROOT; };
 		3DCE55CCBCB95942498A6321 /* WallModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallModeView.swift; sourceTree = "<group>"; };
@@ -75,6 +78,7 @@
 		7493B2EAAED743D0DB07E6B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		74A9BC0C8356D480D72EC4F7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7B9F1C9E57D931EFC0221F94 /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
+		7F61C31CBB0A4D0B3E2F582B /* Fold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fold.swift; sourceTree = "<group>"; };
 		894979E8E627FBDBF7BA0E50 /* ExtraTallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtraTallView.swift; sourceTree = "<group>"; };
 		90066437BF6E7A5AE6A54C25 /* TrainsNearMeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainsNearMeApp.swift; sourceTree = "<group>"; };
 		95CE2524109D16225D1BB68B /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
@@ -157,6 +161,7 @@
 				DFF2E10643CEC9A8ED29159F /* Assets.xcassets */,
 				7B9F1C9E57D931EFC0221F94 /* BackgroundRefresh.swift */,
 				95CE2524109D16225D1BB68B /* BoardView.swift */,
+				2AD3761BA5EE39050483808D /* DuoJourneys.swift */,
 				7493B2EAAED743D0DB07E6B8 /* Info.plist */,
 				DC4F0B97D67C6F1BD31A860B /* JourneyEditor.swift */,
 				56EC3D71442832142A87AC2F /* JourneysView.swift */,
@@ -183,6 +188,7 @@
 			isa = PBXGroup;
 			children = (
 				E2AAF512B30EE75568A01079 /* BigScreenRoot.swift */,
+				7F61C31CBB0A4D0B3E2F582B /* Fold.swift */,
 				349B103A8A86290240CF74CE /* Lanes */,
 				51556DEEFCEB9E99608F9648 /* MenuBar */,
 				B195E034A9F2FFEDCF8BA1BB /* RoundTrip */,
@@ -386,6 +392,8 @@
 				3399F6FEE0A85A496F4BB049 /* BackgroundRefresh.swift in Sources */,
 				5C6E155583BC575E10B6F541 /* BigScreenRoot.swift in Sources */,
 				3AC52F0B79F4935A8BDED042 /* BoardView.swift in Sources */,
+				01F632F370B0260E81B31F23 /* DuoJourneys.swift in Sources */,
+				C46364CC9B1BD3C163645F5D /* Fold.swift in Sources */,
 				C9768A59A75AEF411CAD1D35 /* JourneyEditor.swift in Sources */,
 				5B6AA2742A48149814B55A67 /* JourneysView.swift in Sources */,
 				0E09B59E51EE388D934CAD68 /* LanesView.swift in Sources */,

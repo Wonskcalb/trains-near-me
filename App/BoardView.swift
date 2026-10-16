@@ -19,6 +19,9 @@ struct BoardView: View {
     @State private var loading = false
     /// The departure a tap opened the full-trip sheet for, nil when closed.
     @State private var trip: TripRequest?
+    @State private var showingLines = false
+    /// Swap shows the journey the other way round for this visit, without touching the saved one.
+    @State private var swapped = false
 
     /// A fresh fix is only ever worth asking for where the position decides what is shown.
     private var followsYou: Bool { journey?.nearestStationAsDeparture ?? true }
@@ -39,6 +42,8 @@ struct BoardView: View {
         // route glyph — so the bar carries only the back button a pushed board gets for free.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        // Every icon item is a titled Label so the Duo can stand it up in its strip; "Find me!" stays
+        // text, which the system keeps horizontal at the top, as on a plain iPhone.
         .toolbar {
             if followsYou {
                 // `current()` hands back the system's cached fix while it is under 15 min old,
@@ -46,9 +51,24 @@ struct BoardView: View {
                 // has just got off a train. This asks for a live one.
                 // Named rather than an arrow: it is the one control that does something pulling
                 // down does not, and a toolbar renders a `Label` icon-only whatever its label style.
-                Button("Find me!") { Task { await load(freshLocation: true) } }
-                    .disabled(loading)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Find me!") { Task { await load(freshLocation: true) } }
+                        .disabled(loading)
+                }
             }
+            if journey == nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lines", systemImage: "point.3.connected.trianglepath.dotted") { showingLines = true }
+                        .disabled(origin == nil)
+                }
+            }
+        }
+        .modifier(JourneyToolbar(isEnabled: journey != nil, swap: {
+            swapped.toggle()
+            Task { await load() }
+        }))
+        .navigationDestination(isPresented: $showingLines) {
+            if let origin { StationBoardView(station: origin) }
         }
         .sheet(item: $trip) { request in
             TripSheet(train: request.train, boarding: request.boarding)
@@ -238,17 +258,22 @@ struct BoardView: View {
                 FlapTime(date: next.expectedDeparture)
                 VStack(alignment: .leading, spacing: 4) {
                     if let direction = next.direction {
-                        Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink).lineLimit(1)
+                        Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink)
+                            .lineLimit(2).minimumScaleFactor(0.85)
                     }
                     HStack(spacing: 7) {
                         if let mode = next.mode { ModeChip(mode) }
                         if let number = next.trainNumber {
                             Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                                .lineLimit(1)
                         }
                     }
                     Text(leavesIn(next, now: now))
                         .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
                 }
+                // At 362 pt (an iPhone 17 Pro, the folded Duo) the flaps took their share first and the
+                // destination truncated to "Grenob…"; the words are what the card is read for.
+                .layoutPriority(1)
                 Spacer(minLength: 0)
                 if next.vehicleJourneyID != nil {
                     Image(systemName: "chevron.right")
@@ -423,7 +448,8 @@ struct BoardView: View {
         if let journey {
             // Nearest-station mode needs a fix; without one the configured order applies, as in the widget.
             let location = journey.nearestStationAsDeparture ? await fix(fresh: freshLocation) : nil
-            let leg = JourneySelector.leg(for: journey, at: now, location: location)
+            var leg = JourneySelector.leg(for: journey, at: now, location: location)
+            if swapped { leg = Leg(from: leg.to, to: leg.from) }
             origin = leg.from
             destination = leg.to
             do {
@@ -547,7 +573,13 @@ struct JourneyRow: View {
                 }
                 HStack(spacing: 7) {
                     if let mode = train.mode { ModeChip(mode) }
-                    Text(numberAndDuration).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    // The number goes first when the column is short (the Duo's folded 362 pt): the
+                    // trip sheet still has it, and the duration is what a row is read for.
+                    ViewThatFits(in: .horizontal) {
+                        Text(numberAndDuration)
+                        Text(train.duration.map { "\(Int($0 / 60)) min" } ?? "")
+                    }
+                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
             .opacity(train.isCancelled ? 0.6 : 1)
