@@ -28,9 +28,10 @@ public struct FlapTile: View {
     private static let foldDown = 0.18
     private static let fallIn = 0.22
     // A multi-step change (switching journeys, 4 → 2) runs through every character in between, the way
-    // a Solari board spins to its next value; each step is quick so a full turn stays around a second.
-    private static let fastFold = 0.045
-    private static let fastFall = 0.055
+    // a Solari board spins to its next value; each step is quick, 0.14 s, so a full turn of ten steps
+    // stays under a second and a half and every passing character still registers.
+    private static let fastFold = 0.06
+    private static let fastFall = 0.08
 
     /// The order a flap's drum holds its characters. A real board only turns forward, so going from 4 to 2
     /// passes 5…9, the blank and 0, 1.

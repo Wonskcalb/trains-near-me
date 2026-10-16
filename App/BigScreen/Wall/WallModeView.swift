@@ -301,43 +301,62 @@ struct WallModeView: View {
         }
     }
 
-    private func leaveCaption(_ leave: LeaveBy?, to destination: String?) -> String {
-        if let leave, let destination {
-            return "for the \(WallFormat.time.string(from: leave.train.expectedDeparture)) to \(destination).\n\(leave.walkMinutes) min walk to the platform."
-        }
-        guard let destination else { return "Save a journey to count down\nto its next train." }
+    /// The small line under the train time: where it goes, or why there is nothing to catch.
+    private func leaveDetail(_ leave: LeaveBy?, to destination: String?) -> String {
+        guard let destination else { return "no journey saved" }
+        if leave != nil { return destination }
         if case .endOfService(let first)? = journeys.first(where: { $0.leg == leaveLeg })?.state {
-            return "No train left to \(destination) tonight.\nFirst tomorrow at \(WallFormat.time.string(from: first))."
+            return "first tomorrow \(WallFormat.time.string(from: first))"
         }
-        return "No train you can still make\nto \(destination) right now."
+        return "none to \(destination) now"
     }
 
     private func leaveCard(_ leave: LeaveBy?, to destination: String?, liveNow: Date) -> some View {
         // The hero is a countdown of whole minutes until you must walk out, not a clock time, so it is two
         // bare `FlapTile`s rather than a `FlapTime` (which renders HH:MM) — the same tile, so it flips the
         // same way each minute. Clamped 0–99: a door-leave window never runs to hours.
-        let digits = leave.map { String(format: "%02d", min(99, max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60)))) } ?? "--"
+        let minutes = leave.map { min(99, max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60))) }
+        let digits = minutes.map { String(format: "%02d", $0) } ?? "--"
+        let trainTime = leave.map { WallFormat.time.string(from: $0.train.expectedDeparture) } ?? "--:--"
+        let detail = leaveDetail(leave, to: destination)
         return VStack(alignment: .leading, spacing: 14) {
             Text("LEAVE HOME IN").font(.mono(12, weight: .bold)).tracking(2)
-            HStack(alignment: .bottom, spacing: 12) {
-                HStack(spacing: 5) {
-                    ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
-                        // A dark tile on the amber card, with the amber seam the mockup draws.
-                        FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
-                                 tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
+            HStack(alignment: .center, spacing: 22) {
+                VStack(spacing: 6) {
+                    HStack(spacing: 5) {
+                        ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
+                            // A dark tile on the amber card, with the amber seam the mockup draws.
+                            FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
+                                     tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
+                        }
+                    }
+                    Text("MIN").font(.mono(15, weight: .bold)).tracking(2)
+                }
+                // Two glyphs with their numbers rather than a sentence: the train to catch, and the walk to it.
+                // Both rows stay in every state (a dash in place of a number), so the card never changes size.
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Image(systemName: "tram.fill").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(trainTime).font(.mono(24, weight: .bold))
+                            Text(detail).font(.system(size: 14, weight: .semibold)).opacity(0.7)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Image(systemName: "figure.walk").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+                        Text(leave.map { "\($0.walkMinutes) min" } ?? "-- min").font(.mono(24, weight: .bold))
                     }
                 }
-                Text("MIN").font(.mono(26, weight: .bold)).padding(.bottom, 8)
             }
-            // Two lines in every case, so the card keeps its height when a journey runs out of trains.
-            Text(leaveCaption(leave, to: destination))
-                .font(.system(size: 16, weight: .semibold)).lineSpacing(3)
-                .lineLimit(2, reservesSpace: true)
         }
         .foregroundStyle(Color.onAmber)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24).padding(.vertical, 22)
         .background(Color.amber, in: RoundedRectangle(cornerRadius: 26))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(leave.map { "Leave home in \(minutes ?? 0) minutes for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk" }
+                            ?? "No train to leave for: \(detail)")
     }
 
     // MARK: Footer
