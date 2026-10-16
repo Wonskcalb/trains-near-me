@@ -44,6 +44,9 @@ public extension Color {
     static var rail: Color { tableau("Rail") }
     /// The sleepers of a track rule.
     static var sleeper: Color { tableau("Sleeper") }
+    /// Text on an amber fill (a NEXT tag, a FIRST THAT FITS pill, the leave-by card). Fixed near-black in
+    /// both schemes: amber stays amber, so no adaptive token spans it — `ground` turns to paper on light.
+    static let onAmber = Color(red: 0.055, green: 0.059, blue: 0.067)
 }
 
 /// How a departure's status paints in Tableau: a text colour and the fill it sits on. Kept next to
