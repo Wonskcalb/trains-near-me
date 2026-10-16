@@ -26,6 +26,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
+- Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
 - Big screen: NEAR ME shows the station nearest to you with its next departure and distance, or says why it cannot (location not allowed yet — with an **Allow location** button —, location off, no station within 20 km), falling back to the pinned station.
 - Big screen: watching a train now schedules its reminder and measures delay changes from the moment you watch it, on the Mac and iPad too; a watch is dropped once its service day is over; a token typed after launch is used straight away; boards are no longer fetched twice per refresh.
 - Big screen: the service-day summary (last train tonight, first tomorrow, the Lanes histogram) covers the whole 03:00-to-03:00 day instead of the next dozen trains; "N DISRUPTED TONIGHT" follows the live board.

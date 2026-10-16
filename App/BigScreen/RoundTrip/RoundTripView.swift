@@ -468,7 +468,9 @@ struct RoundTripView: View {
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(spacing: 0) { content() }
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 22))
+            .background(Color.surface)
+            // Clipped so a selected first or last row's edge-to-edge tint follows the card's corners.
+            .clipShape(RoundedRectangle(cornerRadius: 22))
             .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.ink.opacity(0.06), lineWidth: 1))
     }
 
@@ -524,14 +526,13 @@ struct RoundTripView: View {
     }()
 }
 
-/// The amber 8 % fill and inset ring that marks the picked outbound and the first return that fits.
+/// The row padding, and the selected-row tint that marks the picked outbound and the first return that fits.
 private struct RowHighlight: ViewModifier {
     let selected: Bool
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 16).padding(.vertical, 13)
-            .background { if selected { RoundedRectangle(cornerRadius: 16).fill(Color.amber.opacity(0.08)) } }
-            .overlay { if selected { RoundedRectangle(cornerRadius: 16).strokeBorder(Color.amber.opacity(0.55), lineWidth: 1.5) } }
+            .selectedRowBackground(selected)
     }
 }
 
