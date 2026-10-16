@@ -131,11 +131,6 @@ struct JourneysView: View {
     }
 }
 
-// `.sheet(item:)` needs Identifiable; a journey is already its own identity (Hashable).
-extension JourneyConfiguration: @retroactive Identifiable {
-    public var id: Self { self }
-}
-
 /// A journey as a plain row, for the edit list: just where it goes and how it is read, no live board.
 struct CompactJourneyRow: View {
     let journey: JourneyConfiguration

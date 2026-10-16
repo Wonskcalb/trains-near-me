@@ -430,7 +430,7 @@ struct BoardView: View {
                 let departures = try await client.departures(from: leg.from, to: leg.to, at: now)
                 state = .from(departures, now: now)
                 // Foreground re-evaluation of watched trains: raw departures so cancellations survive.
-                await TrainWatcher().reevaluate(against: departures, to: leg)
+                await TrainWatcher.shared.reevaluate(against: departures, to: leg)
             } catch {
                 state = .unavailable(error)
             }
@@ -451,7 +451,7 @@ struct BoardView: View {
                 destination = nil
                 let departures = try await client.departures(from: station, at: now)
                 state = .from(departures, now: now)
-                await TrainWatcher().reevaluate(against: departures)
+                await TrainWatcher.shared.reevaluate(against: departures)
             } catch {
                 state = .unavailable(error)
             }
@@ -632,14 +632,6 @@ func leavesIn(_ train: TrainDeparture, now: Date) -> String {
 /// A minute-count as "HH:MM", for the automatic switch time.
 func clock(_ minuteOfDay: Int) -> String {
     String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
-}
-
-extension TrainServiceError {
-    /// `missingToken`'s own wording tells you to open the app, which is where a reader of this
-    /// screen already is; everything else reads the same here as in a widget.
-    var appDescription: String {
-        self == .missingToken ? "Add your SNCF API token in the Settings tab." : localizedDescription
-    }
 }
 
 // MARK: - Full trip
