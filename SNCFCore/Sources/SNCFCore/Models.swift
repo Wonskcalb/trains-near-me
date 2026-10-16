@@ -105,7 +105,11 @@ public enum BoardState: Equatable, Sendable {
         let today = serviceDay(of: now, calendar: calendar)
         let todays = departures.filter { serviceDay(of: $0.scheduledDeparture, calendar: calendar) == today }
         if todays.isEmpty {
-            guard let first = departures.first(where: { !$0.isCancelled }) else { return .noService }
+            // Nothing left today is the end of service, never "no service": these trains all belong to a
+            // later day, and a short answer holding only a cancelled first train (06:39 cancelled, the
+            // 07:24 beyond the window) says nothing about whether tomorrow runs. Without a train to name,
+            // it is just "no train found"; a caller that fetched the morning names the first one.
+            guard let first = departures.first(where: { !$0.isCancelled }) else { return .noTrains }
             return .endOfService(firstTrain: first.scheduledDeparture)
         }
         if todays.allSatisfy(\.isCancelled) { return .noService }

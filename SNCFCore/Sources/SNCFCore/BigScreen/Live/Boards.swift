@@ -109,7 +109,13 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
         let morning = ((try? await tomorrow(leg, opens)) ?? [])
             .filter { BoardState.serviceDay(of: $0.scheduledDeparture, calendar: calendar) == day }
             .sorted { $0.scheduledDeparture < $1.scheduledDeparture }
-        return JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now,
+        // After the last train the window may hold nothing runnable (only a cancelled first train of
+        // tomorrow): the morning just fetched names the first one, as the station board does.
+        var named = state
+        if state == .noTrains, let first = morning.first(where: { !$0.isCancelled }) {
+            named = .endOfService(firstTrain: first.scheduledDeparture)
+        }
+        return JourneyBoard(journey: config, leg: leg, state: named, fetchedAt: now,
                             tomorrow: Array(morning.prefix(tomorrowCount)))
     }
 

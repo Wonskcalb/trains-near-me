@@ -147,6 +147,18 @@ import Testing
         #expect(board.tomorrow.isEmpty)
     }
 
+    /// 23:30, the last train gone, and the window holding only tomorrow's cancelled 06:39: the board is
+    /// the end of service with the first train the morning names (07:24), never "no service".
+    @Test func afterTheLastTrainACancelledFirstTrainTomorrowIsEndOfService() async {
+        let tonight: LiveJourneyBoards.Fetch = { _, _ in [self.train(6, 39, cancelled: true, day: 9)] }
+        let morning = [train(6, 39, cancelled: true, day: 9), train(7, 24, day: 9)]
+        let tomorrow: LiveJourneyBoards.Fetch = { _, _ in morning }
+        let provider = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris, tomorrow: tomorrow, fetch: tonight)
+        let board = await provider.board(for: Leg(from: grenoble, to: voiron), at: at(23, 30))
+        #expect(board.state == .endOfService(firstTrain: train(7, 24, day: 9).scheduledDeparture))
+        #expect(board.tomorrow == morning)
+    }
+
     // MARK: Station board + via cache
 
     @Test func stationBoardMapsDeparturesAndDegradesOnError() async {

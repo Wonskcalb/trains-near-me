@@ -238,6 +238,13 @@ func fixture(_ name: String) throws -> Data {
         let trains = [train(at(22, 12), cancelled: true), train(at(22, 42), cancelled: true), train(tomorrow(5, 58))]
         #expect(BoardState.from(trains, now: at(21, 0), calendar: paris) == .noService)
     }
+
+    /// After the last train, a short answer holding only tomorrow's cancelled first train is not a day
+    /// without service: nothing tonight says so, and the morning beyond the window may run.
+    @Test func onlyACancelledTrainTomorrowIsNotNoService() {
+        let state = BoardState.from([train(tomorrow(6, 39), cancelled: true)], now: at(23, 30), calendar: paris)
+        #expect(state == .noTrains)
+    }
 }
 
 @Suite struct Refresh {

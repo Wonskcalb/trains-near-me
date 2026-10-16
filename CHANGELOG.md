@@ -28,6 +28,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
 
 ### Fixed
+- After the last train, a cancelled first train tomorrow no longer reads as "no service": the board shows the end of service and names the first train that runs.
 
 - Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
 - Big screen: NEAR ME shows the station nearest to you with its next departure and distance, or says why it cannot (location not allowed yet — with an **Allow location** button —, location off, no station within 20 km), falling back to the pinned station.
