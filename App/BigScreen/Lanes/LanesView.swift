@@ -444,9 +444,9 @@ private struct LaneRow: View {
     // hazard band is for a whole screen; in one lane of a chart it drowned the bars around it.
     private func noService(_ w: CGFloat) -> some View {
         let left = window.x(now, in: w)
-        // With a morning on the lane the stripes stop at the break, where its bars take over.
+        // With a morning on the lane the stripes stop at the break, where its bars take over, and the plate
+        // keeps to NO SERVICE alone: the short evening before the break has no room for the second line.
         let right = board.tomorrow.isEmpty ? w : (window.breakRange(in: w)?.lowerBound ?? w)
-        let until = board.tomorrow.isEmpty ? "No trains until \(LanesFormat.hm.string(from: window.end))" : "No trains tonight"
         return ZStack(alignment: .leading) {
             Color.amber.opacity(0.55)
                 .overlay(Hatch(color: .ink))
@@ -455,8 +455,10 @@ private struct LaneRow: View {
                 .frame(width: max(0, right - left - 6)).offset(x: left + 3)
             HStack(spacing: 12) {
                 Text("NO SERVICE").font(.mono(14, weight: .bold)).tracking(2).foregroundStyle(Color.amber)
-                Text(until)
-                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                if board.tomorrow.isEmpty {
+                    Text("No trains until \(LanesFormat.hm.string(from: window.end))")
+                        .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                }
             }
             .padding(.horizontal, 16).frame(height: 36)
             .background(Color.ground, in: RoundedRectangle(cornerRadius: 9))

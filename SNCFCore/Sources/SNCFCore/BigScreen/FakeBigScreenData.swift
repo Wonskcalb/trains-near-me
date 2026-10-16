@@ -112,9 +112,12 @@ public enum BigScreenFixtures {
     public static let grenobleChamberyTomorrow = morning([(6, 5), (7, 5)], minutes: 45, from: 17701)
     public static let voironValenceTomorrow = morning([(6, 16), (7, 16)], minutes: 70, from: 17801)
 
+    /// Grenoble → Voiron's last train tonight, the "LAST 22:42" of the service-day summary.
+    public static let grenobleVoironLast = journeyTrain(22, 42, arr: (23, 7), number: "17669")
+
     public static let lateJourneyBoards: [JourneyBoard] = [
         JourneyBoard(journey: journeyBoards[0].journey, leg: journeyBoards[0].leg,
-                     state: BoardState.from([grenobleVoironTrains.last!], now: lateNow, calendar: calendar),
+                     state: BoardState.from([grenobleVoironLast], now: lateNow, calendar: calendar),
                      fetchedAt: lateNow, tomorrow: grenobleVoironTomorrow),
         JourneyBoard(journey: journeyBoards[1].journey, leg: journeyBoards[1].leg,
                      state: BoardState.from(grenobleLyonTomorrow, now: lateNow, calendar: calendar),
@@ -344,7 +347,7 @@ extension BigScreenData {
     public static let fakeLateEvening: BigScreenData = makeFake(late: true)
 
     static func makeFake(late: Bool = false) -> BigScreenData {
-        let lastTrain = BigScreenFixtures.grenobleVoironTrains.last!
+        let lastTrain = BigScreenFixtures.grenobleVoironLast
         let leaveBy = late
             ? LeaveBy(train: lastTrain, walkMinutes: 6, leaveAt: lastTrain.expectedDeparture.addingTimeInterval(-6 * 60))
             : BigScreenFixtures.leaveBy

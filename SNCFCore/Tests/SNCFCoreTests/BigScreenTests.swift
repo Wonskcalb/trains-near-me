@@ -26,7 +26,8 @@ import Testing
             #expect(times == times.sorted())
         }
         // Grenoble → Voiron: its 22:42 still to go, then the 05:42 the service-day summary names.
-        #expect(departures(late[0].state).map(\.trainNumber) == ["17663"])
+        #expect(departures(late[0].state).map(\.trainNumber) == ["17669"])
+        #expect(departures(late[0].state).last?.scheduledDeparture == BigScreenFixtures.serviceDaySummary.lastTonight)
         #expect(late[0].tomorrow.first?.scheduledDeparture == BigScreenFixtures.serviceDaySummary.firstTomorrow)
         #expect(late[1].state == .endOfService(firstTrain: BigScreenFixtures.at(6, 17, day: 16)))
         // The 17:40 world is far from its end of service, so it carries no morning.
