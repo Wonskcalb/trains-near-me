@@ -431,8 +431,17 @@ private struct BoardRow: View {
             status.frame(width: columns.status, alignment: .trailing)
         }
         .padding(.horizontal, 20).padding(.vertical, 14)
-        .background(isSelected ? Color.amber.opacity(0.07) : .clear)
-        .overlay { if isSelected { Rectangle().strokeBorder(Color.amber.opacity(0.45), lineWidth: 1.5) } }
+        // The selection is its own rounded pill, inset from the row: a full-bleed square ring ran into the
+        // table card's 24 pt corners and got clipped on the first and last rows. A 14 pt radius set 6/3 pt
+        // in stays inside that corner's curve.
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.amber.opacity(0.07))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.amber.opacity(0.45), lineWidth: 1.5))
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+            }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
     }
