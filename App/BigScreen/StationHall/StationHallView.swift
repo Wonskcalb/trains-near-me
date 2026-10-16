@@ -1,14 +1,541 @@
 import SNCFCore
 import SwiftUI
 
-/// Station hall — sidebar / journey board / train inspector (Main.dc.html).
-// Phase 1 owner fills this.
+/// Station hall — the centre journey board and the right-hand train inspector of Main.dc.html. The
+/// sidebar lives in `BigScreenRoot`; this is the two columns the detail area fills. Fake data only:
+/// everything comes through `BigScreenData`, never `SNCFClient`.
 struct StationHallView: View {
     @Environment(\.bigScreenData) private var data
-    @State private var detail = "Loading…"
+    @Environment(BigScreenModel.self) private var model
+
+    @State private var boards: [JourneyBoard] = []
+    @State private var summary: ServiceDaySummary?
+    /// The train the inspector shows and the board rings; nil closes the inspector.
+    @State private var selected: TrainDeparture?
+    @State private var stops: [TripStop] = []
+    /// Space-pinned trains: local to the screen for Phase 1, not persisted anywhere.
+    @State private var pins: Set<TrainDeparture> = []
+    @FocusState private var boardFocused: Bool
+
+    /// Thu 15 Oct 2026, 17:40 — the fixed fake world. One line to swap for `Date()` when live data lands.
+    private let now = BigScreenFixtures.now
+
+    private var board: JourneyBoard? {
+        guard !boards.isEmpty else { return nil }
+        return boards[min(model.selectedJourney, boards.count - 1)]
+    }
+
+    private var trains: [TrainDeparture] { BoardReading.departures(board?.state) }
 
     var body: some View {
-        BigScreenPlaceholder(route: .stationHall, detail: detail)
-            .task { detail = "\(await data.journeyBoards.boards(at: .now).count) saved journeys" }
+        HStack(spacing: 0) {
+            center
+                .frame(maxWidth: .infinity)
+            Divider().overlay(Color.ink.opacity(0.06))
+            inspector
+                .frame(width: 360)
+        }
+        .background(Color.ground.ignoresSafeArea())
+        .task(id: reloadKey) { await load() }
     }
+
+    /// Re-fetch when the picked journey or ⌘R changes.
+    private var reloadKey: String { "\(model.selectedJourney)-\(model.refreshTick)" }
+
+    private func load() async {
+        boards = await data.journeyBoards.boards(at: now)
+        if let leg = board?.leg { summary = await data.serviceDay.summary(for: leg, at: now) } else { summary = nil }
+        resetSelection()
+        await loadStops()
+    }
+
+    /// Default to the next upcoming train; the inspector's full stopping pattern only exists for trains
+    /// the fake carries stops for (17655 today), so others fall back to their via list.
+    private func resetSelection() {
+        selected = BoardReading.nextUpcoming(board?.state, after: now) ?? trains.first
+    }
+
+    private func loadStops() async {
+        guard let id = selected?.vehicleJourneyID else { stops = []; return }
+        stops = (try? await data.trainStops.stops(forVehicleJourneyID: id)) ?? []
+    }
+
+    // MARK: Centre board
+
+    private var center: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                header
+                chips
+                switch board?.state {
+                case .departures:
+                    hero
+                    boardTable
+                    footer
+                case .noService:
+                    noService
+                case .endOfService(let first):
+                    stateCard("End of service", "Back tomorrow at \(HallFormat.hm(first)).")
+                case .noTrains, .unavailable, nil:
+                    stateCard("No board", "Nothing to show for this journey right now.")
+                }
+            }
+            .padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 24)
+        }
+        // A focusable board so a hardware keyboard can drive it; ⌘-keys stay on the shell.
+        .focusable()
+        .focusEffectDisabled()
+        .focused($boardFocused)
+        .onAppear { boardFocused = true }
+        .onKeyPress(.upArrow) { move(-1); return .handled }
+        .onKeyPress(.downArrow) { move(1); return .handled }
+        .onKeyPress(.space) { togglePin(); return .handled }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                RoutePins(destination: .solid(.amber), originDiameter: 10, destinationDiameter: 14, lineWidth: 2.5)
+                    .frame(width: 14, height: 46)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(board?.leg.from.name ?? " ").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink.opacity(0.7))
+                    Text(board?.leg.to.name ?? "Journey").font(.system(size: 38, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            controls
+        }
+    }
+
+    private var controls: some View {
+        HStack(spacing: 8) {
+            // Board | Lanes: Board is here; Lanes drives the shell route.
+            HStack(spacing: 0) {
+                segment("Board", selected: true) {}
+                segment("Lanes", selected: false) { model.select(.lanes) }
+            }
+            .padding(3).background(Color.raised, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ink.opacity(0.06), lineWidth: 1))
+
+            roundButton("arrow.up.arrow.down", label: "Swap direction") { swapDirection() }
+            roundButton("arrow.up.left.and.arrow.down.right", label: "Open in Wall mode") { model.select(.wall) }
+        }
+        .padding(.top, 4)
+    }
+
+    private func segment(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(selected ? Color.ink : Color.ink.opacity(0.7))
+                .padding(.horizontal, 14).frame(height: 34)
+                .background(selected ? Color.ground.opacity(0.9) : .clear, in: RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func roundButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ink)
+                .frame(width: 44, height: 44)
+                .background(Color.raised.opacity(0.72), in: Circle())
+                .overlay(Circle().stroke(Color.ink.opacity(0.10), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Only works when the reverse journey is also saved; an arbitrary swap needs a reverse-leg fetch,
+    /// which a view cannot do without a provider.
+    private func swapDirection() {
+        guard let leg = board?.leg,
+              let reverse = boards.firstIndex(where: { $0.leg.from.id == leg.to.id && $0.leg.to.id == leg.from.id })
+        else { return }
+        model.select(journey: reverse)
+    }
+
+    private var chips: some View {
+        HStack(spacing: 8) {
+            chip("DIRECT ONLY", color: Color.ink.opacity(0.85), fill: Color.raised)
+            if let journey = board?.journey { chip(HallFormat.directionCapsChip(journey), color: Color.ink.opacity(0.85), fill: Color.raised) }
+            if let disrupted = summary?.disruptedCount, disrupted > 0 {
+                chip("\(disrupted) DISRUPTED TONIGHT", color: Color.caution, fill: Color.cautionBg)
+            }
+        }
+    }
+
+    private func chip(_ text: String, color: Color, fill: Color) -> some View {
+        Text(text).font(.mono(11, weight: .semibold)).tracking(1.1).foregroundStyle(color)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(fill, in: RoundedRectangle(cornerRadius: 9))
+    }
+
+    // MARK: Hero
+
+    @ViewBuilder private var hero: some View {
+        if let next = BoardReading.nextUpcoming(board?.state, after: now) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 22) {
+                    FlapTime(date: next.expectedDeparture, tileWidth: 46, tileHeight: 66, cornerRadius: 9)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("NEXT TRAIN · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
+                            .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
+                        HStack(spacing: 8) {
+                            if let mode = next.mode { ModeChip(mode) }
+                            Text(HallFormat.numberAndDuration(next)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
+                        }
+                        Text(HallFormat.inWords(next.expectedDeparture, from: now))
+                            .font(.mono(15, weight: .semibold)).foregroundStyle(Color.soon)
+                    }
+                    Spacer(minLength: 0)
+                    RemindButton(train: next)
+                }
+                TimeTrack(trains: trains, now: now, axis: .horizontal, minutesSpan: 200, length: 672, metrics: .board)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 14)
+            .background(Color.surface, in: RoundedRectangle(cornerRadius: 24))
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+        }
+    }
+
+    // MARK: Board table
+
+    private var boardTable: some View {
+        let longest = trains.compactMap(\.duration).max() ?? 1
+        return VStack(spacing: 0) {
+            BoardTableHeader()
+            ForEach(Array(trains.enumerated()), id: \.offset) { index, train in
+                BoardRow(train: train, now: now, longestTrip: longest,
+                         isNext: train == BoardReading.nextUpcoming(board?.state, after: now),
+                         isSelected: train == selected, isPinned: pins.contains(train))
+                    .contentShape(Rectangle())
+                    .onTapGesture { select(train) }
+                if index < trains.count - 1 { Divider().overlay(Color.ink.opacity(0.07)) }
+            }
+        }
+        .background(Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+    }
+
+    private var footer: some View {
+        HStack {
+            Text(summary.map { "LAST TRAIN TONIGHT \($0.lastTonight.map(HallFormat.hm) ?? "—") · FIRST TOMORROW \($0.firstTomorrow.map(HallFormat.hm) ?? "—")" } ?? " ")
+            Spacer(minLength: 0)
+            Text("↑↓ to pick a train · Space to pin")
+        }
+        .font(.mono(12)).foregroundStyle(Color.inkSecondary).padding(.horizontal, 4)
+    }
+
+    private var noService: some View {
+        HazardBackground(variant: .band)
+            .frame(height: 260)
+            .overlay {
+                VStack(spacing: 5) {
+                    Text("NO SERVICE").font(.mono(30, weight: .heavy)).tracking(3).foregroundStyle(Color.ink)
+                    Text("Every train of the day is cancelled").font(.subheadline).foregroundStyle(Color.inkSecondary)
+                }
+                .padding(.horizontal, 24).padding(.vertical, 16)
+                .background(Color.ground, in: RoundedRectangle(cornerRadius: 16))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+    }
+
+    private func stateCard(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.headline).foregroundStyle(Color.ink)
+            Text(detail).font(.subheadline).foregroundStyle(Color.inkSecondary)
+        }
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    // MARK: Inspector
+
+    @ViewBuilder private var inspector: some View {
+        if let train = selected, let leg = board?.leg {
+            TrainInspector(train: train, leg: leg, stops: stops, now: now) { selected = nil }
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "tram").font(.system(size: 36)).foregroundStyle(Color.inkSecondary)
+                Text("Select a train").font(.headline).foregroundStyle(Color.inkSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.ground)
+        }
+    }
+
+    // MARK: Selection & keyboard
+
+    private func select(_ train: TrainDeparture) {
+        selected = train
+        Task { await loadStops() }
+    }
+
+    private func move(_ delta: Int) {
+        guard !trains.isEmpty else { return }
+        let current = selected.flatMap { trains.firstIndex(of: $0) } ?? 0
+        let next = min(max(current + delta, 0), trains.count - 1)
+        select(trains[next])
+    }
+
+    private func togglePin() {
+        guard let train = selected else { return }
+        if pins.contains(train) { pins.remove(train) } else { pins.insert(train) }
+    }
+}
+
+// MARK: - Board table rows
+
+private struct BoardTableHeader: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            cell("DEPART → ARRIVE", width: 172)
+            cell("TRAIN", width: 150)
+            Text("TIME ON BOARD").frame(maxWidth: .infinity, alignment: .leading)
+            Text("STATUS").frame(width: 128, alignment: .trailing)
+        }
+        .font(.mono(10.5, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
+        .padding(.horizontal, 20).padding(.vertical, 12)
+        .overlay(alignment: .bottom) { Divider().overlay(Color.ink.opacity(0.07)) }
+    }
+
+    private func cell(_ text: String, width: CGFloat) -> some View {
+        Text(text).frame(width: width, alignment: .leading)
+    }
+}
+
+/// One journey row: departure → arrival, the train, a duration bar, and the status. The ring and amber
+/// wash mark the selected row.
+private struct BoardRow: View {
+    let train: TrainDeparture
+    let now: Date
+    let longestTrip: TimeInterval
+    let isNext: Bool
+    let isSelected: Bool
+    let isPinned: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            departArrive.frame(width: 172, alignment: .leading)
+            trainCell.frame(width: 150, alignment: .leading)
+            onBoard.frame(maxWidth: .infinity, alignment: .leading)
+            status.frame(width: 128, alignment: .trailing)
+        }
+        .padding(.horizontal, 20).padding(.vertical, 14)
+        .background(isSelected ? Color.amber.opacity(0.07) : .clear)
+        .overlay { if isSelected { Rectangle().strokeBorder(Color.amber.opacity(0.45), lineWidth: 1.5) } }
+    }
+
+    private var departArrive: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 9) {
+            Text(HallFormat.hm(train.scheduledDeparture))
+                .font(.mono(22, weight: .bold))
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
+                .strikethrough(train.isCancelled)
+            if let arrival = train.scheduledArrival {
+                DashLine().frame(width: 16, height: 2)
+                Text(HallFormat.hm(arrival)).font(.mono(15)).foregroundStyle(Color.ink.opacity(0.85))
+                    .strikethrough(train.isCancelled)
+            }
+        }
+        .opacity(train.isCancelled ? 0.6 : 1)
+    }
+
+    private var trainCell: some View {
+        HStack(spacing: 7) {
+            if isPinned { Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(Color.amber) }
+            if let mode = train.mode { ModeChip(mode) }
+            if let number = train.trainNumber {
+                Text("N° \(number)").font(.mono(12.5)).foregroundStyle(Color.inkSecondary)
+            }
+        }
+        .opacity(train.isCancelled ? 0.6 : 1)
+    }
+
+    @ViewBuilder private var onBoard: some View {
+        if train.isCancelled {
+            Text("—").font(.mono(12.5)).foregroundStyle(Color.inkSecondary.opacity(0.7))
+        } else if let duration = train.duration {
+            HStack(spacing: 10) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.sleeper).frame(height: 4)
+                        Capsule().fill(Color.rail).frame(width: geo.size.width * min(1, duration / longestTrip), height: 4)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .center)
+                }
+                .frame(width: 100, height: 14)
+                Text("\(Int(duration / 60)) min").font(.mono(12.5)).foregroundStyle(Color.inkSecondary)
+            }
+        } else {
+            Text("—").font(.mono(12.5)).foregroundStyle(Color.inkSecondary.opacity(0.7))
+        }
+    }
+
+    @ViewBuilder private var status: some View {
+        switch train.status {
+        case .onTime:
+            if isNext {
+                HStack(spacing: 8) {
+                    Text("NEXT").font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.ground)
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(Color.amber, in: RoundedRectangle(cornerRadius: 5))
+                    Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+                }
+            } else {
+                Text(HallFormat.relative(train.expectedDeparture, from: now)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
+            }
+        case .delayed, .severelyDelayed:
+            VStack(alignment: .trailing, spacing: 3) {
+                StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+                Text("leaves \(HallFormat.hm(train.expectedDeparture))").font(.mono(11.5)).foregroundStyle(train.status.tableauInk)
+            }
+        case .cancelled:
+            StatusPill("CANCELLED", status: .cancelled)
+        case .unknown:
+            StatusPill("delay ?", status: .unknown)
+        }
+    }
+}
+
+/// A dashed connector between a departure and its arrival.
+private struct DashLine: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: size.height / 2))
+            path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
+            context.stroke(path, with: .color(.inkSecondary.opacity(0.8)), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// The hero's "Remind me" button, mirroring the watch state through `data.watching`.
+struct RemindButton: View {
+    @Environment(\.bigScreenData) private var data
+    let train: TrainDeparture
+    @State private var watched = false
+
+    private var identity: TrainIdentity? { TrainIdentity(train, calendar: BigScreenFixtures.calendar) }
+
+    var body: some View {
+        Button {
+            guard let identity else { return }
+            Task {
+                if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(identity) }
+                watched = await data.watching.isWatched(identity)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: watched ? "bell.fill" : "bell").font(.system(size: 15)).foregroundStyle(Color.amber)
+                Text(watched ? "Reminding" : "Remind me").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
+            }
+            .padding(.horizontal, 16).frame(height: 44)
+            .background(Color.raised, in: Capsule())
+            .overlay(Capsule().stroke(Color.ink.opacity(0.10), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(identity == nil)
+        .task(id: identity) { if let identity { watched = await data.watching.isWatched(identity) } }
+    }
+}
+
+// MARK: - Reading a board
+
+/// Small readers over `BoardState`, shared by the sidebar and the centre so "the next train" means one
+/// thing everywhere.
+enum BoardReading {
+    static func departures(_ state: BoardState?) -> [TrainDeparture] {
+        if case .departures(let trains) = state { return trains }
+        return []
+    }
+
+    /// The soonest train that has not left and is not cancelled — the one the hero, the NEXT tag and the
+    /// sidebar times all point at.
+    static func nextUpcoming(_ state: BoardState?, after now: Date) -> TrainDeparture? {
+        departures(state).first { !$0.isCancelled && $0.expectedDeparture > now }
+    }
+}
+
+// MARK: - Formatting
+
+/// The big-screen time/words helpers. A namespace rather than free functions so they never clash with
+/// the iOS-only `relativeTime`/`clock` in `BoardView`, and so they work on macOS too.
+enum HallFormat {
+    /// The fake world is Europe/Paris; format there so 17:42 reads as 17:42 whatever the device clock is.
+    private static let paris: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "Europe/Paris")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    static func hm(_ date: Date) -> String { paris.string(from: date) }
+
+    /// "now" / "2 min" / "1 h 32".
+    static func relative(_ date: Date, from now: Date) -> String {
+        let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
+        if minutes < 1 { return "now" }
+        if minutes < 60 { return "\(minutes) min" }
+        return "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+    }
+
+    /// The hero's "in 2 min · run" / "leaving now".
+    static func inWords(_ date: Date, from now: Date) -> String {
+        let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
+        if minutes < 1 { return "leaving now" }
+        return "in \(relative(date, from: now))" + (minutes <= 5 ? " · run" : "")
+    }
+
+    static func numberAndDuration(_ train: TrainDeparture) -> String {
+        var parts: [String] = []
+        if let number = train.trainNumber { parts.append("N° \(number)") }
+        if let duration = train.duration { parts.append("\(Int(duration / 60)) min") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// "HH:MM" base-schedule time pushed by a delay, for the inspector's stopping pattern.
+    static func amend(_ hhmm: String, byMinutes minutes: Int) -> String {
+        let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return hhmm }
+        let total = (parts[0] * 60 + parts[1] + minutes + 24 * 60) % (24 * 60)
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+
+    static func clock(_ minuteOfDay: Int) -> String {
+        String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
+    }
+
+    /// The sidebar rule, matching the iOS Journeys tab.
+    static func directionCaps(_ journey: JourneyConfiguration) -> String {
+        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        switch journey.direction {
+        case .forward: return "ALWAYS THIS WAY"
+        case .reverse: return "ALWAYS REVERSED"
+        case .automatic: return "REVERSES \(clock(journey.switchMinute))"
+        }
+    }
+
+    /// The board chip spells "REVERSES AT 13:00" where the sidebar is terser.
+    static func directionCapsChip(_ journey: JourneyConfiguration) -> String {
+        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        switch journey.direction {
+        case .forward: return "ALWAYS THIS WAY"
+        case .reverse: return "ALWAYS REVERSED"
+        case .automatic: return "REVERSES AT \(clock(journey.switchMinute))"
+        }
+    }
+}
+
+#Preview("Station hall") {
+    let model = BigScreenModel()
+    return StationHallView()
+        .environment(model)
+        .frame(width: 1376, height: 1032)
+        .preferredColorScheme(.dark)
 }
