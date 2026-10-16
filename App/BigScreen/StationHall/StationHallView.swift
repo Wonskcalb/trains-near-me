@@ -390,15 +390,14 @@ private struct StationHallBoard: View {
     }
 }
 
-/// The widget's end-of-service treatment: the fixed night gradient and the moon, the first train in
-/// amber mono. Fixed dark whatever the scheme, so the text on it stays light. Shared with the station star.
+/// The widget's end-of-service treatment: the fixed night sky and the moon, the first train in amber mono.
+/// Fixed dark whatever the scheme, so the text on it stays light. Shared with the station board.
 struct EndOfServiceCard: View {
     let first: Date
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "moon.zzz.fill").font(.system(size: 30)).foregroundStyle(Color.white.opacity(0.8))
-                .accessibilityHidden(true)
+        HStack(spacing: 16) {
+            NightMoon(size: 34)
             VStack(alignment: .leading, spacing: 3) {
                 Text("End of service").font(.headline).foregroundStyle(.white)
                 (Text("First train at ") + Text(HallFormat.hm(first)).font(.mono(15, weight: .bold)).foregroundStyle(Color.amber))
@@ -406,15 +405,14 @@ struct EndOfServiceCard: View {
             }
         }
         .padding(22).frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
-                                   startPoint: .top, endPoint: .bottom),
-                    in: RoundedRectangle(cornerRadius: 24))
+        .background { NightSky() }
+        .clipShape(RoundedRectangle(cornerRadius: 24))
     }
 }
 
-/// Where tonight's board stops and tomorrow's first trains begin, shared by every journey view. A thin
-/// band of the end-of-service navy rather than the whole night card, so the rows under it still read as
-/// the same board. The navy is fixed and the text on it light, so it holds on paper and on the dark board.
+/// Where tonight's board stops and tomorrow's first trains begin, shared by every journey view. A real
+/// stretch of night sky, roomy enough to read as the evening's full stop rather than one more row, so the
+/// morning under it reads as a new start. Fixed dark with light text, so it holds on paper and on the board.
 struct TomorrowSplit: View {
     let lastTonight: Date?
     var fontSize: CGFloat = 11.5
@@ -424,23 +422,68 @@ struct TomorrowSplit: View {
     static let navy = Color(red: 0.10, green: 0.13, blue: 0.28)
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "moon.fill").foregroundStyle(Color.amber)
-            Text(text).tracking(1.4).foregroundStyle(Color.white.opacity(0.9))
-                .lineLimit(1).minimumScaleFactor(0.7)
+        HStack(spacing: fontSize * 1.3) {
+            NightMoon(size: fontSize * 3.2)
+            VStack(alignment: .leading, spacing: fontSize * 0.35) {
+                Text("End of service")
+                    .font(.system(size: fontSize * 1.6, weight: .semibold)).foregroundStyle(.white)
+                Text(detail).font(.mono(fontSize, weight: .semibold)).tracking(1.4)
+                    .foregroundStyle(Color.white.opacity(0.7))
+            }
+            .lineLimit(1).minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
         }
-        .font(.mono(fontSize, weight: .semibold))
-        .padding(.horizontal, inset).padding(.vertical, fontSize * 0.7)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Self.navy)
+        .padding(.horizontal, inset)
+        .frame(maxWidth: .infinity, minHeight: fontSize * 7.5, alignment: .leading)
+        .background(NightSky())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("End of service" + (lastTonight.map { ", last train \(HallFormat.hm($0))" } ?? "") + ". Tomorrow:")
         .accessibilityAddTraits(.isHeader)
     }
 
-    private var text: String {
-        guard let lastTonight else { return "END OF SERVICE · TOMORROW" }
-        return "END OF SERVICE · LAST \(HallFormat.hm(lastTonight)) · TOMORROW"
+    private var detail: String {
+        guard let lastTonight else { return "TOMORROW ↓" }
+        return "LAST \(HallFormat.hm(lastTonight)) · TOMORROW ↓"
+    }
+}
+
+/// The night gradient with a scatter of stars. The stars come from a fixed seed, so every render (and
+/// every reload) shows the same sky; it is one static `Canvas`, so it costs nothing between frames.
+struct NightSky: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [TomorrowSplit.navy, Color(red: 0.04, green: 0.05, blue: 0.12)],
+                           startPoint: .top, endPoint: .bottom)
+            Canvas { context, size in
+                var seed: UInt64 = 0x5EED_2026
+                func next() -> Double {
+                    // A tiny LCG: deterministic, no Foundation randomness, so the sky never shuffles.
+                    seed = seed &* 6364136223846793005 &+ 1442695040888963407
+                    return Double(seed >> 11) / Double(1 << 53)
+                }
+                let count = Int(size.width * size.height / 900)
+                for _ in 0..<min(count, 400) {
+                    let x = next() * size.width, y = next() * size.height
+                    let r = 0.4 + next() * next() * 1.2
+                    context.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)),
+                                 with: .color(.white.opacity(0.25 + next() * 0.6)))
+                }
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// A pale crescent with a soft glow, the night card's moon.
+struct NightMoon: View {
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: "moon.fill")
+            .font(.system(size: size))
+            .foregroundStyle(Color(red: 1, green: 0.93, blue: 0.75))
+            .shadow(color: Color(red: 1, green: 0.85, blue: 0.5).opacity(0.55), radius: size * 0.35)
+            .accessibilityHidden(true)
     }
 }
 
