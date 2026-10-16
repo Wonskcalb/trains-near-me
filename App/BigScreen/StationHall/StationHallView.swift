@@ -9,15 +9,21 @@ import SwiftUI
 struct StationHallView: View {
     /// A frozen anchor for the `#Preview` and the screenshot build; nil follows the real clock.
     private let frozenNow: Date?
+    /// Set when the board is one column of the Duo's board | train split, showing this saved journey: the
+    /// inspector moves to the split's detail column and the header controls to the toolbar.
+    private let journey: JourneyConfiguration?
 
-    init(now: Date? = nil) { frozenNow = now }
+    init(now: Date? = nil, journey: JourneyConfiguration? = nil) {
+        frozenNow = now
+        self.journey = journey
+    }
 
     // The hero's "in N min" and the board's countdowns must move on their own: `.everyMinute` re-draws
     // the board at each minute change. The board's state survives the tick (same view identity), and its
     // fetch is keyed on the journey and ⌘R, not on the time, so a tick never costs a request.
     var body: some View {
         TimelineView(.everyMinute) { context in
-            StationHallBoard(now: frozenNow ?? context.date)
+            StationHallBoard(journey: journey, now: frozenNow ?? context.date)
         }
     }
 }
@@ -39,12 +45,17 @@ private struct StationHallBoard: View {
     @State private var pins: Set<TrainDeparture> = []
     @FocusState private var boardFocused: Bool
 
+    /// The saved journey this board shows as a split column; nil is the full station hall.
+    let journey: JourneyConfiguration?
+    private var isColumn: Bool { journey != nil }
+
     /// The clock the board reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
     /// from the `#Preview` and the screenshot build so the mockup lines up.
     let now: Date
 
     private var board: JourneyBoard? {
-        if model.temporaryLeg != nil { return temporary }
+        if model.temporaryLeg != nil, !isColumn { return temporary }
+        if let journey { return boards.first { $0.journey == journey } }
         guard !boards.isEmpty else { return nil }
         return boards[min(model.selectedJourney, boards.count - 1)]
     }
@@ -57,26 +68,56 @@ private struct StationHallBoard: View {
     private var heroTrain: TrainDeparture? { BoardReading.nextUpcoming(board, after: now) }
 
     var body: some View {
-        HStack(spacing: 0) {
-            center
-                .frame(maxWidth: .infinity)
-            Divider().overlay(Color.ink.opacity(0.06))
-            inspector
-                .frame(width: 360)
+        Group {
+            if isColumn {
+                column
+            } else {
+                HStack(spacing: 0) {
+                    center
+                        .frame(maxWidth: .infinity)
+                    Divider().overlay(Color.ink.opacity(0.06))
+                    inspector
+                        .frame(width: 360)
+                }
+                // Keyed on the train so a quick ↑↓ run cancels the lookups it has already left behind.
+                .task(id: selected) { await loadStops() }
+            }
         }
         .background(Color.ground.ignoresSafeArea())
         .task(id: reloadKey) { await load() }
-        // Keyed on the train so a quick ↑↓ run cancels the lookups it has already left behind.
-        .task(id: selected) { await loadStops() }
+    }
+
+    /// The board alone, its pick handed to the split's detail column through the shell model, which is
+    /// where that column's inspector reads it (and fetches the stops).
+    @ViewBuilder private var column: some View {
+        let board = center
+            .onChange(of: selected) { publishSelection() }
+            .onAppear { publishSelection() }
+        #if os(iOS)
+        board.modifier(JourneyToolbar(swap: reverseJourney.map { reverse in { model.journeyPath = [reverse] } }))
+        #else
+        board
+        #endif
+    }
+
+    private func publishSelection() {
+        guard let leg = board?.leg else { return }
+        model.detailTrain = selected.map { PickedTrain(train: $0, leg: leg) }
+    }
+
+    /// The saved journey running the other way, which is all a column's Swap can open.
+    private var reverseJourney: JourneyConfiguration? {
+        guard let leg = board?.leg else { return nil }
+        return boards.first { $0.leg.from.id == leg.to.id && $0.leg.to.id == leg.from.id }?.journey
     }
 
     /// Re-fetch when the picked journey or ⌘R changes.
     private var reloadKey: String {
-        "\(model.selectedJourney)-\(model.refreshTick)-\(model.temporaryLeg.map { "\($0.from.id)>\($0.to.id)" } ?? "")"
+        "\(journey.map { "\($0.stationA.id)>\($0.stationB.id)" } ?? "\(model.selectedJourney)")-\(model.refreshTick)-\(model.temporaryLeg.map { "\($0.from.id)>\($0.to.id)" } ?? "")"
     }
 
     private func load() async {
-        if let leg = model.temporaryLeg {
+        if let leg = model.temporaryLeg, !isColumn {
             temporarySaved = Self.isSaved(leg)
             temporary = await data.journeyBoards.board(for: leg, at: now)
             // The service-day footer costs two more requests, too many for a journey opened for a glance.
@@ -109,12 +150,12 @@ private struct StationHallBoard: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                chips
+                if !isColumn { chips }
                 switch board?.state {
                 case .departures:
                     hero
                     boardTable
-                    footer
+                    if !isColumn { footer }
                 case .noService:
                     noService
                     // The dead night keeps its plate; the morning still runs, so it follows the split.
@@ -125,7 +166,7 @@ private struct StationHallBoard: View {
                     } else {
                         hero
                         boardTable
-                        footer
+                        if !isColumn { footer }
                     }
                 case .unavailable(let error):
                     stateCard("Board unavailable", error.appDescription)
@@ -133,7 +174,7 @@ private struct StationHallBoard: View {
                     stateCard("No board", "Nothing to show for this journey right now.")
                 }
             }
-            .padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 24)
+            .padding(.horizontal, isColumn ? 16 : 32).padding(.top, isColumn ? 8 : 28).padding(.bottom, 24)
         }
         // A focusable board so a hardware keyboard can drive it; ⌘-keys stay on the shell.
         .focusable()
@@ -152,14 +193,23 @@ private struct StationHallBoard: View {
                     .frame(width: 14, height: 46)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(board?.leg.from.name ?? " ").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink.opacity(0.7))
-                    Text(board?.leg.to.name ?? "Journey").font(.system(size: 38, weight: .bold)).foregroundStyle(Color.ink)
+                    Text(board?.leg.to.name ?? "Journey").font(.system(size: isColumn ? 28 : 38, weight: .bold)).foregroundStyle(Color.ink)
                         .lineLimit(1).minimumScaleFactor(0.6)
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            if let leg = model.temporaryLeg { temporaryControls(leg) } else { controls }
+            if isColumn {
+                // A column has no room for a chips row and its controls are in the toolbar, so the chips
+                // stack where the controls were.
+                VStack(alignment: .trailing, spacing: 6) { chipList }
+                    .padding(.top, 4)
+            } else if let leg = model.temporaryLeg {
+                temporaryControls(leg)
+            } else {
+                controls
+            }
         }
     }
 
@@ -236,15 +286,20 @@ private struct StationHallBoard: View {
     }
 
     private var chips: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 8) { chipList }
+    }
+
+    @ViewBuilder private var chipList: some View {
+        Group {
             chip("DIRECT ONLY", color: Color.ink.opacity(0.85), fill: Color.raised)
             if model.temporaryLeg != nil {
                 if !temporarySaved { chip("NOT SAVED", color: Color.ink.opacity(0.85), fill: Color.raised) }
             } else if let journey = board?.journey {
                 chip(HallFormat.directionCapsChip(journey), color: Color.ink.opacity(0.85), fill: Color.raised)
             }
-            // Real time, so read off the live board rather than the day's cached summary.
-            if case let disrupted = trains.filter(\.isRunningLate).count, disrupted > 0 {
+            // Real time, so read off the live board rather than the day's cached summary. Not in a column: it
+            // has no room for a third chip, and the delayed rows say the same thing right under it.
+            if !isColumn, case let disrupted = trains.filter(\.isRunningLate).count, disrupted > 0 {
                 chip("\(disrupted) DISRUPTED TONIGHT", color: Color.caution, fill: Color.cautionBg)
             }
         }
@@ -262,32 +317,49 @@ private struct StationHallBoard: View {
         if let next = heroTrain {
             let isTomorrow = BoardReading.isTomorrow(next, after: now)
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 22) {
-                    FlapTime(date: next.expectedDeparture, tileWidth: 46, tileHeight: 66, cornerRadius: 9, colonColor: .amberText)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("\(isTomorrow ? "FIRST TRAIN TOMORROW" : "NEXT TRAIN") · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
-                            .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
-                        HStack(spacing: 8) {
-                            if let mode = next.mode { ModeChip(mode) }
-                            Text(HallFormat.numberAndDuration(next)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
-                        }
-                        Text(isTomorrow ? "tomorrow · \(HallFormat.inWords(next.expectedDeparture, from: now))"
-                                        : HallFormat.inWords(next.expectedDeparture, from: now))
-                            .font(.mono(15, weight: .semibold)).foregroundStyle(isTomorrow ? Color.inkSecondary : Color.soon)
+                if isColumn {
+                    // Half a portrait Duo is 334 pt: the flaps shrink before the words start to truncate.
+                    ViewThatFits(in: .horizontal) {
+                        heroRow(next, isTomorrow: isTomorrow, tile: 34)
+                        heroRow(next, isTomorrow: isTomorrow, tile: 26)
                     }
-                    Spacer(minLength: 0)
-                    if let leg = board?.leg { RemindButton(train: next, leg: leg) }
+                } else {
+                    heroRow(next, isTomorrow: isTomorrow, tile: 46)
                 }
                 // Tonight over, the track stretches to the morning's first train rather than drawing hours of
                 // empty rail up to the 200-minute mark and stopping short of it.
                 TimeTrack(trains: isTomorrow ? tomorrow : trains, now: now, axis: .horizontal,
                           minutesSpan: isTomorrow ? Int(next.expectedDeparture.timeIntervalSince(now) / 60) + 40 : 200,
-                          length: 672, metrics: .board)
+                          length: isColumn ? nil : 672, metrics: .board)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 14)
+            .padding(.horizontal, isColumn ? 16 : 22).padding(.top, isColumn ? 16 : 20).padding(.bottom, 14)
             .background(Color.surface, in: RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.ink.opacity(0.05), lineWidth: 1))
+        }
+    }
+
+    private func heroRow(_ next: TrainDeparture, isTomorrow: Bool, tile: CGFloat) -> some View {
+        HStack(spacing: isColumn ? 14 : 22) {
+            FlapTime(date: next.expectedDeparture, tileWidth: tile, tileHeight: tile * 66 / 46,
+                     cornerRadius: tile / 5, colonColor: .amberText)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("\(isTomorrow ? "FIRST TRAIN TOMORROW" : "NEXT TRAIN") · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
+                    .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                HStack(spacing: 8) {
+                    if let mode = next.mode { ModeChip(mode) }
+                    Text(HallFormat.numberAndDuration(next)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                Text(isTomorrow ? "tomorrow · \(HallFormat.inWords(next.expectedDeparture, from: now))"
+                                : HallFormat.inWords(next.expectedDeparture, from: now))
+                    .font(.mono(15, weight: .semibold)).foregroundStyle(isTomorrow ? Color.inkSecondary : Color.soon)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            Spacer(minLength: 0)
+            // In a column, watching is the detail column's toolbar action, one tap on the train.
+            if !isColumn, let leg = board?.leg { RemindButton(train: next, leg: leg) }
         }
     }
 
@@ -297,7 +369,7 @@ private struct StationHallBoard: View {
         let longest = rows.compactMap(\.duration).max() ?? 1
         let next = heroTrain
         return VStack(spacing: 0) {
-            BoardTableHeader()
+            if !isColumn { BoardTableHeader() }
             ForEach(Array(trains.enumerated()), id: \.offset) { index, train in
                 boardRow(train, next: next, longest: longest, tomorrow: false)
                 if index < trains.count - 1 { Divider().overlay(Color.ink.opacity(0.07)) }
@@ -318,7 +390,7 @@ private struct StationHallBoard: View {
     private func boardRow(_ train: TrainDeparture, next: TrainDeparture?, longest: TimeInterval, tomorrow: Bool) -> some View {
         Button { select(train) } label: {
             BoardRow(train: train, now: now, longestTrip: longest, isNext: train == next,
-                     isSelected: train == selected, isPinned: pins.contains(train), isTomorrow: tomorrow)
+                     isSelected: train == selected, isPinned: pins.contains(train), isTomorrow: tomorrow, isCompact: isColumn)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -531,16 +603,38 @@ private struct BoardRow: View {
     let isPinned: Bool
     /// A morning row under the split: its countdown reads "tomorrow", hours away being no use.
     var isTomorrow = false
+    /// A split column's row (the Duo's board | train): no time-on-board bar, and the train number only
+    /// while the column has room for it, so the status never truncates.
+    var isCompact = false
     private let columns = BoardColumns()
 
     var body: some View {
-        HStack(spacing: 14) {
-            departArrive.frame(width: columns.departArrive, alignment: .leading)
-            trainCell.frame(width: columns.train, alignment: .leading)
-            onBoard.frame(maxWidth: .infinity, alignment: .leading)
-            status.frame(width: columns.status, alignment: .trailing)
+        Group {
+            if isCompact {
+                HStack(spacing: 12) {
+                    departArrive.fixedSize()
+                    ViewThatFits(in: .horizontal) {
+                        trainCell(withNumber: true)
+                        trainCell(withNumber: false)
+                        // Half a portrait Duo (334 pt): the times and the status are what must fit.
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                    Spacer(minLength: 0)
+                    // Sized first, so the train cell is what gives way, never the status.
+                    status.fixedSize()
+                }
+                .padding(.horizontal, 16)
+            } else {
+                HStack(spacing: 14) {
+                    departArrive.frame(width: columns.departArrive, alignment: .leading)
+                    trainCell.frame(width: columns.train, alignment: .leading)
+                    onBoard.frame(maxWidth: .infinity, alignment: .leading)
+                    status.frame(width: columns.status, alignment: .trailing)
+                }
+                .padding(.horizontal, 20)
+            }
         }
-        .padding(.horizontal, 20).padding(.vertical, 14)
+        .padding(.vertical, 14)
         .selectedRowBackground(isSelected)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
@@ -575,12 +669,14 @@ private struct BoardRow: View {
         .opacity(train.isCancelled ? 0.6 : 1)
     }
 
-    private var trainCell: some View {
+    private var trainCell: some View { trainCell(withNumber: true) }
+
+    private func trainCell(withNumber: Bool) -> some View {
         HStack(spacing: 7) {
             if isPinned { Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(Color.amberText) }
             if let mode = train.mode { ModeChip(mode) }
-            if let number = train.trainNumber {
-                Text("N° \(number)").font(.mono(12.5)).foregroundStyle(Color.inkSecondary)
+            if withNumber, let number = train.trainNumber {
+                Text(isCompact ? number : "N° \(number)").font(.mono(12.5)).foregroundStyle(Color.inkSecondary)
             }
         }
         .opacity(train.isCancelled ? 0.6 : 1)

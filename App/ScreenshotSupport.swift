@@ -21,5 +21,12 @@ enum ScreenshotSupport {
                              latitude: 45.36403405, longitude: 5.59495926)
         SharedSettings.favorites = [JourneyConfiguration(stationA: grenoble, stationB: voiron, direction: .automatic)]
     }
+
+    /// `SCREENSHOT_JOURNEY` opens the first saved journey's board in the Journeys tab, which is the only
+    /// way to capture a pushed board (or the Duo's board | train split) without UI automation.
+    static var openJourney: JourneyConfiguration? {
+        guard ProcessInfo.processInfo.environment["SCREENSHOT_JOURNEY"] != nil else { return nil }
+        return SharedSettings.favorites.first
+    }
 }
 #endif

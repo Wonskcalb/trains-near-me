@@ -10,6 +10,10 @@ struct TrainInspector: View {
     let leg: Leg
     let stops: [TripStop]
     let now: Date
+    /// The detail column of the Duo's board | train split: Watch and Share become that column's toolbar
+    /// items, which the system stands up in its strip, and there is no close button, the board being
+    /// right beside it. iPad and Mac keep them in the body.
+    var actionsInToolbar = false
     var onClose: () -> Void
 
     @State private var watched = false
@@ -36,10 +40,35 @@ struct TrainInspector: View {
             }
             actions
         }
-        .padding(.horizontal, 22).padding(.vertical, 28)
+        .padding(.horizontal, 22).padding(.vertical, actionsInToolbar ? 8 : 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.ground)
         .task(id: identity) { if let identity { watched = await data.watching.isWatched(identity) } }
+        #if os(iOS)
+        .toolbar {
+            if actionsInToolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(watched ? "Watching" : "Watch train", systemImage: watched ? "bell.fill" : "bell") { toggleWatch() }
+                        .prominentToolbarButton()
+                        .disabled(identity == nil)
+                        .accessibilityValue(watched ? "On" : "Off")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: data.eta.shareText(for: train, leg: leg)) {
+                        Label("Share ETA", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
+        #endif
+    }
+
+    private func toggleWatch() {
+        guard let identity else { return }
+        Task {
+            if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(train, to: leg) }
+            watched = await data.watching.isWatched(identity)
+        }
     }
 
     // MARK: Title
@@ -49,11 +78,7 @@ struct TrainInspector: View {
             HStack {
                 Text("TRAIN").font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
                 Spacer(minLength: 0)
-                Button(action: onClose) {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.ink.opacity(0.7))
-                        .frame(width: 32, height: 32).background(Color.raised, in: Circle())
-                }
-                .buttonStyle(.plain).accessibilityLabel("Close inspector")
+                if !actionsInToolbar { closeButton }
             }
             HStack(spacing: 10) {
                 Text(train.trainNumber.map { "N° \($0)" } ?? "Train").font(.mono(28, weight: .bold)).foregroundStyle(Color.ink)
@@ -61,6 +86,14 @@ struct TrainInspector: View {
             }
             Text("to \(headsign)").font(.system(size: 15)).foregroundStyle(Color.ink.opacity(0.7))
         }
+    }
+
+    private var closeButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.ink.opacity(0.7))
+                .frame(width: 32, height: 32).background(Color.raised, in: Circle())
+        }
+        .buttonStyle(.plain).accessibilityLabel("Close inspector")
     }
 
     // MARK: Stat tiles
@@ -77,7 +110,9 @@ struct TrainInspector: View {
 
     private func tile(_ label: String, value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
+            // One line: half a portrait Duo leaves each tile about 100 pt, and "YOU ARRIVE" wrapped there.
             Text(label).font(.mono(10, weight: .semibold)).tracking(1.2).foregroundStyle(Color.inkSecondary)
+                .lineLimit(1).minimumScaleFactor(0.7)
             Text(value).font(.mono(18, weight: .bold)).foregroundStyle(tint)
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
@@ -129,24 +164,7 @@ struct TrainInspector: View {
 
     private var actions: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Button {
-                    guard let identity else { return }
-                    Task {
-                        if watched { await data.watching.unwatch(identity) } else { await data.watching.watch(train, to: leg) }
-                        watched = await data.watching.isWatched(identity)
-                    }
-                } label: {
-                    actionLabel(watched ? "bell.fill" : "bell", watched ? "Watching" : "Watch train")
-                }
-                .buttonStyle(.plain).disabled(identity == nil)
-                .accessibilityValue(watched ? "On" : "Off")
-
-                ShareLink(item: data.eta.shareText(for: train, leg: leg)) {
-                    actionLabel("square.and.arrow.up", "Share ETA")
-                }
-                .buttonStyle(.plain)
-            }
+            if !actionsInToolbar { inlineActions }
             Link(destination: URL(string: "https://www.sncf-connect.com")!) {
                 HStack(spacing: 8) {
                     Text("Tickets & details in SNCF Connect").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
@@ -159,6 +177,21 @@ struct TrainInspector: View {
             Text("Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API.")
                 .font(.system(size: 11)).foregroundStyle(Color.inkSecondary).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var inlineActions: some View {
+        HStack(spacing: 8) {
+            Button(action: toggleWatch) {
+                actionLabel(watched ? "bell.fill" : "bell", watched ? "Watching" : "Watch train")
+            }
+            .buttonStyle(.plain).disabled(identity == nil)
+            .accessibilityValue(watched ? "On" : "Off")
+
+            ShareLink(item: data.eta.shareText(for: train, leg: leg)) {
+                actionLabel("square.and.arrow.up", "Share ETA")
+            }
+            .buttonStyle(.plain)
         }
     }
 
