@@ -24,17 +24,54 @@ private enum LanesRange: String, CaseIterable, Identifiable {
 
 /// The visible time window: a start and a span. `x(_:in:)` maps a date to a point along a track of the
 /// given width; `rawX` is the same without clamping, so a bar can tell it runs past an edge.
+///
+/// Late in the evening the window can hold an axis break: the dead night between tonight's last train and
+/// tomorrow's first, folded into a fixed `breakSpan` of track so the morning sits beside the evening
+/// instead of seven empty hours away. `span` counts the folded track, not the clock.
 private struct LaneWindow: Equatable {
     var start: Date
     var span: TimeInterval
-    var end: Date { start.addingTimeInterval(span) }
+    var gap: DateInterval?
+
+    /// How much track the break takes, in seconds of axis: enough for its zig-zag and "TOMORROW".
+    static let breakSpan: TimeInterval = 25 * 60
+
+    /// The last real moment on screen.
+    var end: Date { unfold(axis(start) + span) }
+
+    /// Seconds of track from a reference, with the break folded.
+    private func axis(_ date: Date) -> TimeInterval {
+        let t = date.timeIntervalSinceReferenceDate
+        guard let gap else { return t }
+        let from = gap.start.timeIntervalSinceReferenceDate, to = gap.end.timeIntervalSinceReferenceDate
+        if t <= from { return t }
+        if t >= to { return t - (to - from) + Self.breakSpan }
+        return from + (t - from) / (to - from) * Self.breakSpan
+    }
+
+    private func unfold(_ a: TimeInterval) -> Date {
+        guard let gap else { return Date(timeIntervalSinceReferenceDate: a) }
+        let from = gap.start.timeIntervalSinceReferenceDate
+        if a <= from { return Date(timeIntervalSinceReferenceDate: a) }
+        if a >= from + Self.breakSpan { return Date(timeIntervalSinceReferenceDate: a + gap.duration - Self.breakSpan) }
+        return Date(timeIntervalSinceReferenceDate: from + (a - from) / Self.breakSpan * gap.duration)
+    }
 
     func rawX(_ date: Date, in width: CGFloat) -> CGFloat {
-        CGFloat(date.timeIntervalSince(start) / span) * width
+        CGFloat((axis(date) - axis(start)) / span) * width
     }
     func x(_ date: Date, in width: CGFloat) -> CGFloat {
         min(width, max(0, rawX(date, in: width)))
     }
+
+    /// The break's left and right edges on the track, when it is on screen.
+    func breakRange(in width: CGFloat) -> ClosedRange<CGFloat>? {
+        guard let gap, gap.start < end, gap.end > start else { return nil }
+        return x(gap.start, in: width)...x(gap.end, in: width)
+    }
+
+    /// Whether an hour mark falls inside the folded night, where it would only crowd the zig-zag.
+    func isFolded(_ date: Date) -> Bool { gap.map { date > $0.start && date < $0.end } ?? false }
 }
 
 struct LanesView: View {
@@ -95,6 +132,8 @@ struct LanesView: View {
     private func load() async {
         boards = await data.journeyBoards.boards(at: now)
         if selectedJourney >= boards.count { selectedJourney = 0 }
+        // The break depends on the boards, so the 4 h window is laid out again once they land.
+        if range == .next4h { window = LanesView.window(for: range, now: now, calendar: calendar, boards: boards) }
         await loadSummary()
     }
 
@@ -128,7 +167,7 @@ struct LanesView: View {
             ForEach(LanesRange.allCases) { option in
                 Button {
                     range = option
-                    window = LanesView.window(for: option, now: now, calendar: calendar)
+                    window = LanesView.window(for: option, now: now, calendar: calendar, boards: boards)
                 } label: {
                     Text(option.rawValue)
                         .font(.mono(12, weight: .semibold))
@@ -198,6 +237,14 @@ struct LanesView: View {
                             .background(Color.amber, in: RoundedRectangle(cornerRadius: 6))
                             .fixedSize().position(x: window.x(now, in: w), y: 10)
                     }
+                    if let fold = window.breakRange(in: w) {
+                        // The night's navy, as on the split row of the boards, so the break reads as the same cut.
+                        Label("TOMORROW", systemImage: "moon.fill")
+                            .font(.mono(10, weight: .bold)).tracking(1).foregroundStyle(Color.white.opacity(0.9))
+                            .padding(.horizontal, 7).padding(.vertical, 4)
+                            .background(TomorrowSplit.navy, in: RoundedRectangle(cornerRadius: 6))
+                            .fixedSize().position(x: (fold.lowerBound + fold.upperBound) / 2, y: 18)
+                    }
                 }
             }
             .frame(height: 28)
@@ -209,7 +256,7 @@ struct LanesView: View {
         guard var tick = calendar.dateInterval(of: .hour, for: window.start)?.start else { return [] }
         if tick < window.start { tick = calendar.date(byAdding: .hour, value: 1, to: tick) ?? tick }
         while tick <= window.end && marks.count <= 48 {
-            marks.append(tick)
+            if !window.isFolded(tick) { marks.append(tick) }
             guard let next = calendar.date(byAdding: .hour, value: 1, to: tick) else { break }
             tick = next
         }
@@ -231,11 +278,16 @@ struct LanesView: View {
         calendar.startOfDay(for: now.addingTimeInterval(-3 * 3600)).addingTimeInterval(3 * 3600)
     }
 
-    fileprivate static func window(for range: LanesRange, now: Date, calendar: Calendar) -> LaneWindow {
+    fileprivate static func window(for range: LanesRange, now: Date, calendar: Calendar,
+                                   boards: [JourneyBoard] = []) -> LaneWindow {
         switch range {
         case .next4h:
             // The mockup sits NOW 20 min in from the left so the just-departed context stays on screen.
-            return LaneWindow(start: now.addingTimeInterval(-20 * 60), span: 240 * 60)
+            let plain = LaneWindow(start: now.addingTimeInterval(-20 * 60), span: 240 * 60)
+            guard let gap = nightGap(boards, now: now), gap.start < plain.end else { return plain }
+            // The evening up to the break, the fold, then about the first two hours of the morning.
+            return LaneWindow(start: plain.start,
+                              span: gap.start.timeIntervalSince(plain.start) + LaneWindow.breakSpan + 2 * 3600, gap: gap)
         case .tonight:
             let end = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600)   // next 03:00
             return LaneWindow(start: now, span: max(60 * 60, end.timeIntervalSince(now)))
@@ -243,6 +295,20 @@ struct LanesView: View {
             let amStart = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600 + 2 * 3600)   // 05:00
             return LaneWindow(start: amStart, span: 6 * 3600)
         }
+    }
+
+    /// The dead night to fold out of the axis: from just after tonight's last bar on any lane (or now, if
+    /// every lane is done) to just before the first morning train. nil when no lane carries a morning, or
+    /// the night is too short to be worth a break.
+    private static func nightGap(_ boards: [JourneyBoard], now: Date) -> DateInterval? {
+        let firsts = boards.compactMap { board in board.tomorrow.map { min($0.scheduledDeparture, $0.expectedDeparture) }.min() }
+        guard let morning = firsts.min() else { return nil }
+        let tonightEnd = boards.flatMap { BoardReading.departures($0.state) }
+            .map { $0.expectedArrival ?? $0.expectedDeparture.addingTimeInterval(20 * 60) }
+            .reduce(now) { max($0, $1) }
+        let from = tonightEnd.addingTimeInterval(10 * 60), to = morning.addingTimeInterval(-15 * 60)
+        guard to.timeIntervalSince(from) > 30 * 60 else { return nil }
+        return DateInterval(start: from, end: to)
     }
 }
 
@@ -292,10 +358,14 @@ private struct LaneRow: View {
         .buttonStyle(.plain)
     }
 
+    /// Tonight's trains: what the label's summary counts.
     private var trains: [TrainDeparture] {
         if case .departures(let list) = board.state { return list }
         return []
     }
+
+    /// What the lane draws: tonight's bars, then the morning's past the axis break.
+    private var laneTrains: [TrainDeparture] { trains + board.tomorrow }
 
     private var summaryText: String {
         if case .noService = board.state { return "EVERY TRAIN CANCELLED" }
@@ -332,7 +402,8 @@ private struct LaneRow: View {
                 LaneGrid(window: window, now: now, hourMarks: hourMarks(w))
                 if case .noService = board.state {
                     noService(w)
-                } else if trains.isEmpty {
+                    bars(w)
+                } else if laneTrains.isEmpty {
                     emptyNote
                 } else {
                     bars(w)
@@ -349,7 +420,7 @@ private struct LaneRow: View {
         guard var tick = calendar.dateInterval(of: .hour, for: window.start)?.start else { return [] }
         if tick < window.start { tick = calendar.date(byAdding: .hour, value: 1, to: tick) ?? tick }
         while tick <= window.end && xs.count <= 48 {
-            xs.append(window.x(tick, in: w))
+            if !window.isFolded(tick) { xs.append(window.x(tick, in: w)) }
             guard let next = calendar.date(byAdding: .hour, value: 1, to: tick) else { break }
             tick = next
         }
@@ -373,16 +444,21 @@ private struct LaneRow: View {
     // hazard band is for a whole screen; in one lane of a chart it drowned the bars around it.
     private func noService(_ w: CGFloat) -> some View {
         let left = window.x(now, in: w)
+        // With a morning on the lane the stripes stop at the break, where its bars take over, and the plate
+        // keeps to NO SERVICE alone: the short evening before the break has no room for the second line.
+        let right = board.tomorrow.isEmpty ? w : (window.breakRange(in: w)?.lowerBound ?? w)
         return ZStack(alignment: .leading) {
             Color.amber.opacity(0.55)
                 .overlay(Hatch(color: .ink))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.vertical, 6)
-                .frame(width: max(0, w - left - 6)).offset(x: left + 3)
+                .frame(width: max(0, right - left - 6)).offset(x: left + 3)
             HStack(spacing: 12) {
                 Text("NO SERVICE").font(.mono(14, weight: .bold)).tracking(2).foregroundStyle(Color.amber)
-                Text("No trains until \(LanesFormat.hm.string(from: window.end))")
-                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                if board.tomorrow.isEmpty {
+                    Text("No trains until \(LanesFormat.hm.string(from: window.end))")
+                        .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                }
             }
             .padding(.horizontal, 16).frame(height: 36)
             .background(Color.ground, in: RoundedRectangle(cornerRadius: 9))
@@ -397,9 +473,9 @@ private struct LaneRow: View {
 
     @ViewBuilder private func bars(_ w: CGFloat) -> some View {
         // The soonest upcoming train that is not cancelled reads as "next" (amber when it is on time).
-        let nextID = trains.first { !$0.isCancelled && $0.expectedDeparture >= now }
+        let nextID = laneTrains.first { !$0.isCancelled && $0.expectedDeparture >= now }
             .flatMap { TrainIdentity($0, calendar: calendar) }
-        ForEach(Array(trains.enumerated()), id: \.offset) { position, train in
+        ForEach(Array(laneTrains.enumerated()), id: \.offset) { position, train in
             let rowY: CGFloat = position % 2 == 0 ? 0 : laneRow2Y
             let isNext = TrainIdentity(train, calendar: calendar) == nextID
             bar(train, rowY: rowY, isNext: isNext, width: w)
@@ -569,6 +645,24 @@ private struct LaneGrid: View {
             for hx in hourMarks {
                 context.fill(Path(CGRect(x: hx - 0.5, y: 0, width: 1, height: size.height)),
                              with: .color(.ink.opacity(0.07)))
+            }
+            if let fold = window.breakRange(in: size.width) {
+                // The folded night: a faint navy wash between two zig-zag cuts, so the axis reads as broken
+                // rather than as an empty stretch of the evening.
+                context.fill(Path(CGRect(x: fold.lowerBound, y: 0, width: fold.upperBound - fold.lowerBound, height: size.height)),
+                             with: .color(TomorrowSplit.navy.opacity(0.14)))
+                for edge in [fold.lowerBound, fold.upperBound] {
+                    var zig = Path()
+                    zig.move(to: CGPoint(x: edge, y: 0))
+                    var y: CGFloat = 0
+                    var side: CGFloat = 1
+                    while y < size.height {
+                        y = min(size.height, y + 6)
+                        zig.addLine(to: CGPoint(x: edge + 3 * side, y: y))
+                        side = -side
+                    }
+                    context.stroke(zig, with: .color(.inkSecondary), lineWidth: 1.3)
+                }
             }
             if now >= window.start && now <= window.end {
                 let nx = window.x(now, in: size.width)
@@ -838,5 +932,12 @@ private struct ServiceMinimap: View {
 #Preview("Lanes") {
     LanesView(now: BigScreenFixtures.now)
         .environment(BigScreenModel())
+        .frame(width: 1376, height: 1032)
+}
+
+#Preview("Lanes · late evening") {
+    LanesView(now: BigScreenFixtures.lateNow)
+        .environment(BigScreenModel())
+        .environment(\.bigScreenData, .fakeLateEvening)
         .frame(width: 1376, height: 1032)
 }

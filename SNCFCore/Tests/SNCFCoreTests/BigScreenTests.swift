@@ -14,6 +14,26 @@ import Testing
         return []
     }
 
+    @Test func lateEveningBoardsCarryTomorrowsMorning() async {
+        let now = BigScreenFixtures.lateNow
+        let late = await BigScreenData.fakeLateEvening.journeyBoards.boards(at: now)
+        #expect(late.map(\.leg) == (await data.journeyBoards.boards(at: now)).map(\.leg))   // same journeys
+        for board in late {
+            #expect(board.state.tonightIsNearlyDone(at: now))
+            #expect(!board.tomorrow.isEmpty)
+            #expect(board.tomorrow.allSatisfy { BoardState.isLaterServiceDay($0.scheduledDeparture, than: now) })
+            let times = board.tomorrow.map(\.scheduledDeparture)
+            #expect(times == times.sorted())
+        }
+        // Grenoble → Voiron: its 22:42 still to go, then the 05:42 the service-day summary names.
+        #expect(departures(late[0].state).map(\.trainNumber) == ["17669"])
+        #expect(departures(late[0].state).last?.scheduledDeparture == BigScreenFixtures.serviceDaySummary.lastTonight)
+        #expect(late[0].tomorrow.first?.scheduledDeparture == BigScreenFixtures.serviceDaySummary.firstTomorrow)
+        #expect(late[1].state == .endOfService(firstTrain: BigScreenFixtures.at(6, 17, day: 16)))
+        // The 17:40 world is far from its end of service, so it carries no morning.
+        #expect(await data.journeyBoards.boards(at: self.now).allSatisfy(\.tomorrow.isEmpty))
+    }
+
     @Test func journeyBoardsMatchTheMockup() async {
         let boards = await data.journeyBoards.boards(at: now)
         #expect(boards.count == 4)

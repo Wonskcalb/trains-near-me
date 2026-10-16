@@ -23,6 +23,7 @@ All notable changes to this project are documented here. The format follows [Kee
   the Wall's LEAVE HOME IN minutes use the same tile.
 - Wall mode keeps the LEAVE HOME IN card when a journey has no train left: its tiles spin to "--" and it says
   why, instead of disappearing and shifting the column.
+- Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
 
 ### Fixed
 

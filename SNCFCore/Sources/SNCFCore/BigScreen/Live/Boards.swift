@@ -16,6 +16,9 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
     private let favorites: @Sendable () -> [JourneyConfiguration]
     private let location: @Sendable () async -> CLLocation?
     private let fetch: Fetch
+    /// The first trains from the next 03:00, asked only when tonight is nearly done. Its own seam because
+    /// production asks it by count, not by window: the morning only needs its first few.
+    private let fetchTomorrow: Fetch
     private let observe: Observe
     private let calendar: Calendar
     /// The free SNCF tier is 5 000 requests a day, so a sidebar of many saved journeys must not open one
@@ -32,6 +35,7 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
                 maxConcurrent: Int = 4,
                 memoLifetime: TimeInterval = 60,
                 observe: @escaping Observe = { _, _ in },
+                tomorrow: @escaping Fetch = { _, _ in [] },
                 fetch: @escaping Fetch) {
         self.favorites = favorites
         self.location = location
@@ -39,6 +43,7 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
         self.maxConcurrent = max(1, maxConcurrent)
         self.memoLifetime = memoLifetime
         self.observe = observe
+        self.fetchTomorrow = tomorrow
         self.fetch = fetch
     }
 
@@ -58,10 +63,18 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
             try await SNCFClient(token: token(), session: session)
                 .departures(from: leg.from, to: leg.to, at: now, within: BoardState.restOfServiceDay(after: now, atLeast: 4 * 3600, calendar: calendar))
         }
+        // A count, not a window: only the morning's first few trains are drawn after the split.
+        let tomorrow: Fetch = { leg, opens in
+            try await SNCFClient(token: token(), session: session)
+                .departures(from: leg.from, to: leg.to, at: opens, count: Self.tomorrowCount)
+        }
         self.init(favorites: favorites, location: location, calendar: calendar, maxConcurrent: maxConcurrent,
                   observe: { trains, leg in await TrainWatcher.shared.reevaluate(against: trains, to: leg) },
-                  fetch: fetch)
+                  tomorrow: tomorrow, fetch: fetch)
     }
+
+    /// How many of tomorrow's first trains a late board carries: about the first two hours of a busy line.
+    static let tomorrowCount = 6
 
     public func boards(at now: Date) async -> [JourneyBoard] {
         let journeys = favorites()
@@ -73,11 +86,11 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
 
     public func board(for leg: Leg, at now: Date) async -> JourneyBoard {
         await Self.board(JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, at: now,
-                         fetch: fetch, observe: observe, calendar: calendar)
+                         fetch: fetch, tomorrow: fetchTomorrow, observe: observe, calendar: calendar)
     }
 
-    private static func board(_ config: JourneyConfiguration, leg: Leg, at now: Date, fetch: Fetch, observe: Observe,
-                              calendar: Calendar) async -> JourneyBoard {
+    private static func board(_ config: JourneyConfiguration, leg: Leg, at now: Date, fetch: Fetch, tomorrow: Fetch,
+                              observe: Observe, calendar: Calendar) async -> JourneyBoard {
         let state: BoardState
         do throws(TrainServiceError) {
             let trains = try await fetch(leg, now)
@@ -86,13 +99,25 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
         } catch {
             state = .unavailable(error)
         }
-        return JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now)
+        guard state.tonightIsNearlyDone(at: now) else {
+            return JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now)
+        }
+        // The extra request, one per journey and only late: the board memo keeps a round of them to one.
+        // A failure here only loses the morning; tonight's board stands.
+        let opens = BoardState.nextServiceDayStart(after: now, calendar: calendar)
+        let day = BoardState.serviceDay(of: opens, calendar: calendar)
+        let morning = ((try? await tomorrow(leg, opens)) ?? [])
+            .filter { BoardState.serviceDay(of: $0.scheduledDeparture, calendar: calendar) == day }
+            .sorted { $0.scheduledDeparture < $1.scheduledDeparture }
+        return JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now,
+                            tomorrow: Array(morning.prefix(tomorrowCount)))
     }
 
     private func fetchAll(_ journeys: [JourneyConfiguration], at now: Date) async -> [JourneyBoard] {
         // The one location fix is resolved once and shared, not fetched per journey.
         let location = await location()
         let fetch = self.fetch
+        let tomorrow = self.fetchTomorrow
         let observe = self.observe
         let calendar = self.calendar
 
@@ -105,7 +130,8 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
                 let config = journeys[index]
                 let leg = JourneySelector.leg(for: config, at: now, location: location, calendar: calendar)
                 group.addTask {
-                    (index, await Self.board(config, leg: leg, at: now, fetch: fetch, observe: observe, calendar: calendar))
+                    (index, await Self.board(config, leg: leg, at: now, fetch: fetch, tomorrow: tomorrow,
+                                             observe: observe, calendar: calendar))
                 }
             }
 
@@ -124,10 +150,33 @@ extension BoardState {
     /// Seconds from `now` to the next 03:00, when the service day closes, floored at `atLeast` so a
     /// window asked at 02:30 still reaches past the night. Set by wall-clock hour, so DST nights hold.
     static func restOfServiceDay(after now: Date, atLeast minimum: TimeInterval, calendar: Calendar) -> TimeInterval {
+        max(nextServiceDayStart(after: now, calendar: calendar).timeIntervalSince(now), minimum)
+    }
+
+    /// The 03:00 that closes `now`'s service day and opens the next one.
+    static func nextServiceDayStart(after now: Date, calendar: Calendar) -> Date {
         let dayStart = serviceDay(of: now, calendar: calendar)
-        let closes = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(minimum)
-        return max(closes.timeIntervalSince(now), minimum)
+        return calendar.date(byAdding: .day, value: 1, to: dayStart)
+            .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(24 * 3600)
+    }
+}
+
+public extension BoardState {
+    /// Whether tonight is close enough to over that a big screen should carry on into tomorrow: fewer
+    /// than three trains still to run (cancelled ones don't count), or none left at all. After about
+    /// 23:00 the rest-of-service-day window holds no morning trains, so this is what pays for the
+    /// extra request. An unavailable board says nothing about tonight, so it never asks.
+    func tonightIsNearlyDone(at now: Date) -> Bool {
+        switch self {
+        case .endOfService, .noService, .noTrains: true
+        case .unavailable: false
+        case .departures(let trains): trains.filter { !$0.isCancelled && $0.expectedDeparture > now }.count < 3
+        }
+    }
+
+    /// Whether `date` falls in a later 03:00 service day than `now`, so the 00:15 train is still tonight.
+    static func isLaterServiceDay(_ date: Date, than now: Date, calendar: Calendar = SNCFTime.calendar) -> Bool {
+        serviceDay(of: date, calendar: calendar) > serviceDay(of: now, calendar: calendar)
     }
 }
 

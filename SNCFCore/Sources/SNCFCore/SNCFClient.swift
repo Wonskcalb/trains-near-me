@@ -19,8 +19,8 @@ public struct SNCFClient {
         self.session = session
     }
 
-    public func departures(from: Station, to: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
-        try await journeys(from: from, to: to, at: date, extra: ["min_nb_journeys": String(Self.departuresPerRequest)])
+    public func departures(from: Station, to: Station, at date: Date, count: Int = departuresPerRequest) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await journeys(from: from, to: to, at: date, extra: ["min_nb_journeys": String(count)])
     }
 
     /// Every direct train in `duration` seconds from `date` — a whole service day in one request for the
