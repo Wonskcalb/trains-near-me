@@ -16,12 +16,17 @@ public struct JourneyBoard: Equatable, Sendable {
     public let leg: Leg
     public let state: BoardState
     public let fetchedAt: Date
+    /// The first trains of the next service day, so a late-evening screen carries on past the
+    /// end-of-service split instead of going empty. Empty until `BoardState.tonightIsNearlyDone` says
+    /// tonight is almost over: it costs a request of its own, paid only then.
+    public let tomorrow: [TrainDeparture]
 
-    public init(journey: JourneyConfiguration, leg: Leg, state: BoardState, fetchedAt: Date) {
+    public init(journey: JourneyConfiguration, leg: Leg, state: BoardState, fetchedAt: Date, tomorrow: [TrainDeparture] = []) {
         self.journey = journey
         self.leg = leg
         self.state = state
         self.fetchedAt = fetchedAt
+        self.tomorrow = tomorrow
     }
 }
 

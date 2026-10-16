@@ -92,6 +92,61 @@ import Testing
         #expect(await seen.legs == [Leg(from: grenoble, to: voiron)])
     }
 
+    // MARK: Tomorrow, late in the evening
+
+    private func train(_ h: Int, _ m: Int, cancelled: Bool = false, day: Int = 8) -> TrainDeparture {
+        let departure = paris.date(from: DateComponents(year: 2026, month: 10, day: day, hour: h, minute: m))!
+        return TrainDeparture(scheduledDeparture: departure, scheduledArrival: departure.addingTimeInterval(1800),
+                              delayMinutes: 0, isCancelled: cancelled, trainNumber: "\(day)\(h)\(m)")
+    }
+
+    @Test func tonightIsNearlyDoneBelowThreeRunningTrains() {
+        let three = BoardState.departures([train(21, 0), train(22, 0), train(23, 0)])
+        #expect(!three.tonightIsNearlyDone(at: at(20, 0)))
+        #expect(three.tonightIsNearlyDone(at: at(21, 0)))           // the 21:00 has left: two to go
+        // A cancelled train is not one you can catch.
+        #expect(BoardState.departures([train(21, 0), train(22, 0, cancelled: true), train(23, 0)])
+                    .tonightIsNearlyDone(at: at(20, 0)))
+        #expect(BoardState.endOfService(firstTrain: at(5, 42)).tonightIsNearlyDone(at: at(23, 30)))
+        #expect(BoardState.noService.tonightIsNearlyDone(at: at(22, 0)))
+        #expect(!BoardState.unavailable(.offline).tonightIsNearlyDone(at: at(22, 0)))
+    }
+
+    @Test func theMorningIsAskedOnlyWhenTonightIsNearlyDone() async {
+        let asked = Asked()
+        let evening = [train(18, 0), train(18, 30), train(19, 0), train(23, 10)]
+        let morning = [train(5, 42, day: 9), train(6, 12, day: 9)]
+        let fetch: LiveJourneyBoards.Fetch = { _, now in evening.filter { $0.scheduledDeparture > now } }
+        let tomorrow: LiveJourneyBoards.Fetch = { _, opens in await asked.add(opens); return morning }
+        let provider = LiveJourneyBoards(favorites: { [self.config(grenoble, voiron)] }, location: { nil }, calendar: paris,
+                                         memoLifetime: 0, tomorrow: tomorrow, fetch: fetch)
+
+        // 17:50: four trains to go, no extra request and no morning on the board.
+        #expect(await provider.boards(at: at(17, 50))[0].tomorrow.isEmpty)
+        #expect(await asked.dates.isEmpty)
+
+        // 22:00: only the 23:10 left, so one more request, from the next 03:00.
+        let late = await provider.boards(at: at(22, 0))[0]
+        #expect(late.state == .departures([train(23, 10)]))
+        #expect(late.tomorrow == morning)
+        let opens = paris.date(from: DateComponents(year: 2026, month: 10, day: 9, hour: 3, minute: 0))!
+        #expect(await asked.dates == [opens])
+    }
+
+    @Test func theMorningKeepsTheNextServiceDayOnlyAndFailsQuietly() async {
+        let morning = [train(5, 42, day: 9), train(6, 12, day: 9), train(4, 0, day: 10)]
+        let tonight: LiveJourneyBoards.Fetch = { _, _ in [] }
+        let tomorrow: LiveJourneyBoards.Fetch = { _, _ in morning }
+        let provider = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris, tomorrow: tomorrow, fetch: tonight)
+        #expect(await provider.board(for: Leg(from: grenoble, to: voiron), at: at(23, 30)).tomorrow == Array(morning.prefix(2)))
+
+        let failing: LiveJourneyBoards.Fetch = { _, _ in throw TrainServiceError.offline }
+        let down = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris, tomorrow: failing, fetch: tonight)
+        let board = await down.board(for: Leg(from: grenoble, to: voiron), at: at(23, 30))
+        #expect(board.state == .noTrains)
+        #expect(board.tomorrow.isEmpty)
+    }
+
     // MARK: Station board + via cache
 
     @Test func stationBoardMapsDeparturesAndDegradesOnError() async {
@@ -183,4 +238,10 @@ private actor Seen {
     private(set) var trains: [TrainDeparture] = []
     private(set) var legs: [Leg] = []
     func add(_ trains: [TrainDeparture], _ leg: Leg) { self.trains += trains; legs.append(leg) }
+}
+
+/// The dates the tomorrow seam was asked from.
+private actor Asked {
+    private(set) var dates: [Date] = []
+    func add(_ date: Date) { dates.append(date) }
 }
