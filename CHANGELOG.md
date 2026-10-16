@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - **A macOS menu-bar extra**: a window-style popover (journey switcher, next train, compact track, the next three trains, journey chips, Open / Wall-mode actions) and a bar label with the amber flap and the next time.
 - **Live data behind all of it**: concurrent journey boards and a cached service-day summary, the round-trip planner, the leave-by countdown (per-station walk time, pinned station, optional MapKit walking ETA), watching a train (a reminder before it leaves and a delay-band / cancellation alert, re-evaluated in the foreground and in iOS background app refresh — never by spending the widget reload budget), and Share ETA.
 - **Go to station** (⌘K) on the big screen searches every SNCF station, accents and case ignored, with ↑↓ / Return / Esc; a pick opens that station's departure board, which can be **pinned for Wall mode**.
+- Station board: a star map, one branch per terminus with its next trains, laid out by real bearing.
+- Tap a branch to open that journey without saving it, and add it to your journeys from there.
 - **Saved journeys can be added, edited, reordered and deleted on the Mac and iPad**: a + in the sidebar's JOURNEYS header, Edit / Move / Delete on each journey, and a Journeys section in Settings.
 - **Settings is a pane of the main window** on the big screen, in the Tableau style, with the same sections on the Mac's Settings window (⌘,).
 - Split-flap times flip, tile by tile, when they change (off with Reduce Motion). A jump of more than one step

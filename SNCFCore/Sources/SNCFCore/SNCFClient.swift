@@ -57,6 +57,22 @@ public struct SNCFClient {
         return try NavitiaParser.stopDepartures(from: data)
     }
 
+    /// Every train leaving one station in `duration` seconds, each with its terminus stop_area — the
+    /// big-screen star. `count` alone cuts a busy station's evening at a fixed number of rows, so the
+    /// window is asked for instead, in the same single request; `depth=2` is what puts the stop_area
+    /// (id, coordinates) under `route.direction`.
+    public func departures(from station: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
+        let data = try await get("stop_areas/\(station.id)/departures", [
+            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+            "duration": String(Int(min(duration, 24 * 3600))),
+            "data_freshness": "base_schedule",
+            "count": "300",
+            "depth": "2",
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.stopDepartures(from: data)
+    }
+
     /// Every stop of one train's run, for the full-trip sheet. The id comes from a board row's
     /// `vehicleJourneyID`, which the parser lifts from the departure's links.
     public func trip(vehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop] {

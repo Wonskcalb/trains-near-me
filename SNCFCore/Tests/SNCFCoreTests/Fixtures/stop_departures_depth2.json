@@ -1,0 +1,346 @@
+{
+ "departures": [
+  {
+   "display_informations": {
+    "commercial_mode": "REGIONAURA",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Lyon Part Dieu (Lyon)",
+    "headsign": "17614",
+    "trip_short_name": "17614",
+    "label": "TER 17614",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T174700",
+    "base_departure_date_time": "20261008T174700",
+    "arrival_date_time": "20261008T174700",
+    "base_arrival_date_time": "20261008T174700",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:FR:Line::17614",
+    "name": "Lyon Part Dieu (Lyon)",
+    "is_frequence": "False",
+    "direction_type": "forward",
+    "direction": {
+     "id": "stop_area:SNCF:87723197",
+     "name": "Lyon Part Dieu (Lyon)",
+     "embedded_type": "stop_area",
+     "quality": 0,
+     "stop_area": {
+      "id": "stop_area:SNCF:87723197",
+      "name": "Lyon Part Dieu",
+      "label": "Lyon Part Dieu (Lyon)",
+      "coord": {
+       "lat": "45.760585",
+       "lon": "4.859435"
+      },
+      "timezone": "Europe/Paris"
+     }
+    }
+   },
+   "links": [
+    {
+     "type": "line",
+     "id": "line:SNCF:FR:Line::X:"
+    },
+    {
+     "type": "vehicle_journey",
+     "id": "vehicle_journey:SNCF:2026-10-08:17614:1187:Train"
+    },
+    {
+     "type": "route",
+     "id": "route:SNCF:FR:Line::17614"
+    }
+   ]
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "REGIONAURA",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Chambéry - Challes-les-Eaux (Chambéry)",
+    "headsign": "17905",
+    "trip_short_name": "17905",
+    "label": "TER 17905",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T175200",
+    "base_departure_date_time": "20261008T175200",
+    "arrival_date_time": "20261008T175200",
+    "base_arrival_date_time": "20261008T175200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:FR:Line::17905",
+    "name": "Chambéry - Challes-les-Eaux (Chambéry)",
+    "is_frequence": "False",
+    "direction_type": "forward",
+    "direction": {
+     "id": "stop_area:SNCF:87741009",
+     "name": "Chambéry - Challes-les-Eaux (Chambéry)",
+     "embedded_type": "stop_area",
+     "quality": 0,
+     "stop_area": {
+      "id": "stop_area:SNCF:87741009",
+      "name": "Chambéry - Challes-les-Eaux",
+      "label": "Chambéry - Challes-les-Eaux (Chambéry)",
+      "coord": {
+       "lat": "45.571171",
+       "lon": "5.919557"
+      },
+      "timezone": "Europe/Paris"
+     }
+    }
+   },
+   "links": [
+    {
+     "type": "line",
+     "id": "line:SNCF:FR:Line::X:"
+    },
+    {
+     "type": "vehicle_journey",
+     "id": "vehicle_journey:SNCF:2026-10-08:17905:1187:Train"
+    },
+    {
+     "type": "route",
+     "id": "route:SNCF:FR:Line::17905"
+    }
+   ]
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "REGIONAURA",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Valence Ville (Valence)",
+    "headsign": "17851",
+    "trip_short_name": "17851",
+    "label": "TER 17851",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T181600",
+    "base_departure_date_time": "20261008T181600",
+    "arrival_date_time": "20261008T181600",
+    "base_arrival_date_time": "20261008T181600",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:FR:Line::17851",
+    "name": "Valence Ville (Valence)",
+    "is_frequence": "False",
+    "direction_type": "forward",
+    "direction": {
+     "id": "stop_area:SNCF:87763003",
+     "name": "Valence Ville (Valence)",
+     "embedded_type": "stop_area",
+     "quality": 0,
+     "stop_area": {
+      "id": "stop_area:SNCF:87763003",
+      "name": "Valence Ville",
+      "label": "Valence Ville (Valence)",
+      "coord": {
+       "lat": "44.928382",
+       "lon": "4.893442"
+      },
+      "timezone": "Europe/Paris"
+     }
+    }
+   },
+   "links": [
+    {
+     "type": "line",
+     "id": "line:SNCF:FR:Line::X:"
+    },
+    {
+     "type": "vehicle_journey",
+     "id": "vehicle_journey:SNCF:2026-10-08:17851:1187:Train"
+    },
+    {
+     "type": "route",
+     "id": "route:SNCF:FR:Line::17851"
+    }
+   ]
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "REGIONAURA",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Saint-André-le-Gaz (Saint-André-le-Gaz)",
+    "headsign": "17616",
+    "trip_short_name": "17616",
+    "label": "TER 17616",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T182200",
+    "base_departure_date_time": "20261008T182200",
+    "arrival_date_time": "20261008T182200",
+    "base_arrival_date_time": "20261008T182200",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:FR:Line::17616",
+    "name": "Lyon Part Dieu (Lyon)",
+    "is_frequence": "False",
+    "direction_type": "forward",
+    "direction": {
+     "id": "stop_area:SNCF:87723197",
+     "name": "Lyon Part Dieu (Lyon)",
+     "embedded_type": "stop_area",
+     "quality": 0,
+     "stop_area": {
+      "id": "stop_area:SNCF:87723197",
+      "name": "Lyon Part Dieu",
+      "label": "Lyon Part Dieu (Lyon)",
+      "coord": {
+       "lat": "45.760585",
+       "lon": "4.859435"
+      },
+      "timezone": "Europe/Paris"
+     }
+    }
+   },
+   "links": [
+    {
+     "type": "line",
+     "id": "line:SNCF:FR:Line::X:"
+    },
+    {
+     "type": "vehicle_journey",
+     "id": "vehicle_journey:SNCF:2026-10-08:17616:1187:Train"
+    },
+    {
+     "type": "route",
+     "id": "route:SNCF:FR:Line::17616"
+    }
+   ]
+  },
+  {
+   "display_informations": {
+    "commercial_mode": "REGIONAURA",
+    "network": "TER Auvergne-Rhône-Alpes",
+    "physical_mode": "TER / Intercités",
+    "direction": "Lyon Part Dieu (Lyon)",
+    "headsign": "17618",
+    "trip_short_name": "17618",
+    "label": "TER 17618",
+    "links": []
+   },
+   "stop_date_time": {
+    "departure_date_time": "20261008T184700",
+    "base_departure_date_time": "20261008T184700",
+    "arrival_date_time": "20261008T184700",
+    "base_arrival_date_time": "20261008T184700",
+    "data_freshness": "base_schedule"
+   },
+   "stop_point": {
+    "id": "stop_point:SNCF:87747006:Train",
+    "name": "Grenoble",
+    "stop_area": {
+     "id": "stop_area:SNCF:87747006",
+     "name": "Grenoble",
+     "coord": {
+      "lat": "45.191463",
+      "lon": "5.714466"
+     }
+    }
+   },
+   "route": {
+    "id": "route:SNCF:FR:Line::17618",
+    "name": "Lyon Part Dieu (Lyon)",
+    "is_frequence": "False",
+    "direction_type": "forward",
+    "direction": {
+     "id": "stop_area:SNCF:87723197",
+     "name": "Lyon Part Dieu (Lyon)",
+     "embedded_type": "stop_area",
+     "quality": 0,
+     "stop_area": {
+      "id": "stop_area:SNCF:87723197",
+      "name": "Lyon Part Dieu",
+      "label": "Lyon Part Dieu (Lyon)",
+      "coord": {
+       "lat": "45.760585",
+       "lon": "4.859435"
+      },
+      "timezone": "Europe/Paris"
+     }
+    }
+   },
+   "links": [
+    {
+     "type": "line",
+     "id": "line:SNCF:FR:Line::X:"
+    },
+    {
+     "type": "vehicle_journey",
+     "id": "vehicle_journey:SNCF:2026-10-08:17618:1187:Train"
+    },
+    {
+     "type": "route",
+     "id": "route:SNCF:FR:Line::17618"
+    }
+   ]
+  }
+ ],
+ "disruptions": [],
+ "pagination": {
+  "items_on_page": 5,
+  "items_per_page": 300,
+  "start_page": 0,
+  "total_result": 5
+ }
+}

@@ -159,6 +159,9 @@ public struct NearbyStation: Equatable, Sendable {
 /// Every saved journey's board, fetched together (the sidebar, Lanes and Wall all need the whole set).
 public protocol JourneyBoardsProviding: Sendable {
     func boards(at now: Date) async -> [JourneyBoard]
+    /// One leg's board on demand, unsaved and not memoised: a journey the station star opens from a
+    /// branch. The same full-service-day window as the saved boards, in one request.
+    func board(for leg: Leg, at now: Date) async -> JourneyBoard
     /// Forget any memoised boards, so the next `boards(at:)` fetches. ⌘R and a journey edit call it.
     func invalidate() async
 }
@@ -171,6 +174,9 @@ public extension JourneyBoardsProviding {
 /// `vehicleJourneyID`, since the station board itself does not carry the stopping pattern.
 public protocol StationBoardProviding: Sendable {
     func board(for station: Station, at now: Date) async -> BoardState
+    /// The rest of the service day (at least 2 h) with each train's terminus — the big-screen star. The
+    /// plain `board(for:at:)` stays a fixed count, which is what the radar and the sidebar want.
+    func serviceDayBoard(for station: Station, at now: Date) async -> BoardState
     func via(forVehicleJourneyID id: String) async -> [String]
 }
 

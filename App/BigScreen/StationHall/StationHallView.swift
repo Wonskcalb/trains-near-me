@@ -27,6 +27,10 @@ private struct StationHallBoard: View {
     @Environment(BigScreenModel.self) private var model
 
     @State private var boards: [JourneyBoard] = []
+    /// The unsaved journey `model.temporaryLeg` names, fetched on its own; nil on a saved journey.
+    @State private var temporary: JourneyBoard?
+    /// Whether the temporary journey is already among the saved ones (it was just added, or was all along).
+    @State private var temporarySaved = false
     @State private var summary: ServiceDaySummary?
     /// The train the inspector shows and the board rings; nil closes the inspector.
     @State private var selected: TrainDeparture?
@@ -40,6 +44,7 @@ private struct StationHallBoard: View {
     let now: Date
 
     private var board: JourneyBoard? {
+        if model.temporaryLeg != nil { return temporary }
         guard !boards.isEmpty else { return nil }
         return boards[min(model.selectedJourney, boards.count - 1)]
     }
@@ -61,9 +66,19 @@ private struct StationHallBoard: View {
     }
 
     /// Re-fetch when the picked journey or ⌘R changes.
-    private var reloadKey: String { "\(model.selectedJourney)-\(model.refreshTick)" }
+    private var reloadKey: String {
+        "\(model.selectedJourney)-\(model.refreshTick)-\(model.temporaryLeg.map { "\($0.from.id)>\($0.to.id)" } ?? "")"
+    }
 
     private func load() async {
+        if let leg = model.temporaryLeg {
+            temporarySaved = Self.isSaved(leg)
+            temporary = await data.journeyBoards.board(for: leg, at: now)
+            // The service-day footer costs two more requests, too many for a journey opened for a glance.
+            summary = nil
+            resetSelection()
+            return
+        }
         boards = await data.journeyBoards.boards(at: now)
         if let leg = board?.leg { summary = await data.serviceDay.summary(for: leg, at: now) } else { summary = nil }
         resetSelection()
@@ -95,7 +110,7 @@ private struct StationHallBoard: View {
                 case .noService:
                     noService
                 case .endOfService(let first):
-                    endOfService(first)
+                    EndOfServiceCard(first: first)
                 case .unavailable(let error):
                     stateCard("Board unavailable", error.appDescription)
                 case .noTrains, nil:
@@ -128,8 +143,34 @@ private struct StationHallBoard: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            controls
+            if let leg = model.temporaryLeg { temporaryControls(leg) } else { controls }
         }
+    }
+
+    private static func isSaved(_ leg: Leg) -> Bool {
+        SharedSettings.favorites.contains { $0.stationA.id == leg.from.id && $0.stationB.id == leg.to.id }
+    }
+
+    /// A journey opened from the station star: back to the star, and the one way to keep it.
+    private func temporaryControls(_ leg: Leg) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                guard !temporarySaved else { return }
+                SavedJourneys.save(SharedSettings.favorites + [JourneyConfiguration(stationA: leg.from, stationB: leg.to)],
+                                   data: data, model: model)
+                temporarySaved = true
+            } label: {
+                Label(temporarySaved ? "In my journeys" : "Add to my journeys", systemImage: temporarySaved ? "star.fill" : "star")
+                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
+                    .padding(.horizontal, 16).frame(minHeight: 44)
+                    .background(Color.raised, in: Capsule())
+                    .overlay(Capsule().stroke(Color.ink.opacity(0.10), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(temporarySaved ? "Saved" : "Not saved")
+            roundButton("chevron.backward", label: "Back to \(leg.from.name)") { model.temporaryLeg = nil }
+        }
+        .padding(.top, 4)
     }
 
     private var controls: some View {
@@ -181,7 +222,11 @@ private struct StationHallBoard: View {
     private var chips: some View {
         HStack(spacing: 8) {
             chip("DIRECT ONLY", color: Color.ink.opacity(0.85), fill: Color.raised)
-            if let journey = board?.journey { chip(HallFormat.directionCapsChip(journey), color: Color.ink.opacity(0.85), fill: Color.raised) }
+            if model.temporaryLeg != nil {
+                if !temporarySaved { chip("NOT SAVED", color: Color.ink.opacity(0.85), fill: Color.raised) }
+            } else if let journey = board?.journey {
+                chip(HallFormat.directionCapsChip(journey), color: Color.ink.opacity(0.85), fill: Color.raised)
+            }
             // Real time, so read off the live board rather than the day's cached summary.
             if case let disrupted = trains.filter(\.isRunningLate).count, disrupted > 0 {
                 chip("\(disrupted) DISRUPTED TONIGHT", color: Color.caution, fill: Color.cautionBg)
@@ -272,24 +317,6 @@ private struct StationHallBoard: View {
             .environment(\.colorScheme, .dark)
     }
 
-    /// The widget's end-of-service treatment: the fixed night gradient and the moon, the first train in
-    /// amber mono. Fixed dark whatever the scheme, so the text on it stays light.
-    private func endOfService(_ first: Date) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: "moon.zzz.fill").font(.system(size: 30)).foregroundStyle(Color.white.opacity(0.8))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("End of service").font(.headline).foregroundStyle(.white)
-                (Text("First train at ") + Text(HallFormat.hm(first)).font(.mono(15, weight: .bold)).foregroundStyle(Color.amber))
-                    .font(.subheadline).foregroundStyle(Color.white.opacity(0.75))
-            }
-        }
-        .padding(22).frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
-                                   startPoint: .top, endPoint: .bottom),
-                    in: RoundedRectangle(cornerRadius: 24))
-    }
-
     private func stateCard(_ title: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.headline).foregroundStyle(Color.ink)
@@ -330,6 +357,28 @@ private struct StationHallBoard: View {
     private func togglePin() {
         guard let train = selected else { return }
         if pins.contains(train) { pins.remove(train) } else { pins.insert(train) }
+    }
+}
+
+/// The widget's end-of-service treatment: the fixed night gradient and the moon, the first train in
+/// amber mono. Fixed dark whatever the scheme, so the text on it stays light. Shared with the station star.
+struct EndOfServiceCard: View {
+    let first: Date
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "moon.zzz.fill").font(.system(size: 30)).foregroundStyle(Color.white.opacity(0.8))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("End of service").font(.headline).foregroundStyle(.white)
+                (Text("First train at ") + Text(HallFormat.hm(first)).font(.mono(15, weight: .bold)).foregroundStyle(Color.amber))
+                    .font(.subheadline).foregroundStyle(Color.white.opacity(0.75))
+            }
+        }
+        .padding(22).frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [Color(red: 0.10, green: 0.13, blue: 0.28), Color(red: 0.04, green: 0.05, blue: 0.12)],
+                                   startPoint: .top, endPoint: .bottom),
+                    in: RoundedRectangle(cornerRadius: 24))
     }
 }
 

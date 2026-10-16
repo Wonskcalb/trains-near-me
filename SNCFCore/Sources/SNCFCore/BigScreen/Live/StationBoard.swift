@@ -10,6 +10,7 @@ public struct LiveStationBoard: StationBoardProviding {
     public typealias Observe = @Sendable ([TrainDeparture]) async -> Void
 
     private let fetchBoard: BoardFetch
+    private let fetchWindow: BoardFetch
     private let fetchTrip: TripFetch
     private let observe: Observe
     private let calendar: Calendar
@@ -17,12 +18,14 @@ public struct LiveStationBoard: StationBoardProviding {
     private let maxVia: Int
     private let cache = ViaCache()
 
+    /// `window` answers `serviceDayBoard`; nil reuses `board`, which is all a test seam needs.
     public init(calendar: Calendar = SNCFTime.calendar, maxVia: Int = 3, observe: @escaping Observe = { _ in },
-                board: @escaping BoardFetch, trip: @escaping TripFetch) {
+                board: @escaping BoardFetch, window: BoardFetch? = nil, trip: @escaping TripFetch) {
         self.calendar = calendar
         self.maxVia = max(0, maxVia)
         self.observe = observe
         self.fetchBoard = board
+        self.fetchWindow = window ?? board
         self.fetchTrip = trip
     }
 
@@ -33,17 +36,34 @@ public struct LiveStationBoard: StationBoardProviding {
         let board: BoardFetch = { station, now in
             try await SNCFClient(token: token(), session: session).departures(from: station, at: now)
         }
+        let window: BoardFetch = { station, now in
+            try await SNCFClient(token: token(), session: session)
+                .departures(from: station, at: now, within: BoardState.restOfServiceDay(after: now, atLeast: 2 * 3600, calendar: calendar))
+        }
         let trip: TripFetch = { id in
             try await SNCFClient(token: token(), session: session).trip(vehicleJourneyID: id)
         }
         self.init(calendar: calendar, maxVia: maxVia,
                   observe: { await TrainWatcher.shared.reevaluate(against: $0) },
-                  board: board, trip: trip)
+                  board: board, window: window, trip: trip)
     }
 
     public func board(for station: Station, at now: Date) async -> BoardState {
         do {
             let trains = try await fetchBoard(station, now)
+            await observe(trains)
+            return BoardState.from(trains, now: now, calendar: calendar)
+        } catch {
+            return .unavailable(error)
+        }
+    }
+
+    /// After the last train the window to 03:00 is empty, and only the count-based board reaches into
+    /// tomorrow for the first train the night treatment shows: that second request is paid at night only.
+    public func serviceDayBoard(for station: Station, at now: Date) async -> BoardState {
+        do {
+            let trains = try await fetchWindow(station, now)
+            if trains.isEmpty { return await board(for: station, at: now) }
             await observe(trains)
             return BoardState.from(trains, now: now, calendar: calendar)
         } catch {

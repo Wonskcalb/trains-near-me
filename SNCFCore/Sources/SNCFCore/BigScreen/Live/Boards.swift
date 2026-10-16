@@ -55,11 +55,8 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
             // The rest of the service day (to the next 03:00, at least Lanes' 4 h window) in the same single
             // request: `min_nb_journeys` alone stops at a dozen trains, about 2 h on a busy line, so Lanes
             // drew empty track where its service-day minimap showed trains.
-            let dayStart = BoardState.serviceDay(of: now, calendar: calendar)
-            let closes = calendar.date(byAdding: .day, value: 1, to: dayStart)
-                .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(4 * 3600)
-            return try await SNCFClient(token: token(), session: session)
-                .departures(from: leg.from, to: leg.to, at: now, within: max(closes.timeIntervalSince(now), 4 * 3600))
+            try await SNCFClient(token: token(), session: session)
+                .departures(from: leg.from, to: leg.to, at: now, within: BoardState.restOfServiceDay(after: now, atLeast: 4 * 3600, calendar: calendar))
         }
         self.init(favorites: favorites, location: location, calendar: calendar, maxConcurrent: maxConcurrent,
                   observe: { trains, leg in await TrainWatcher.shared.reevaluate(against: trains, to: leg) },
@@ -73,6 +70,24 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
     }
 
     public func invalidate() async { await memo.clear() }
+
+    public func board(for leg: Leg, at now: Date) async -> JourneyBoard {
+        await Self.board(JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, at: now,
+                         fetch: fetch, observe: observe, calendar: calendar)
+    }
+
+    private static func board(_ config: JourneyConfiguration, leg: Leg, at now: Date, fetch: Fetch, observe: Observe,
+                              calendar: Calendar) async -> JourneyBoard {
+        let state: BoardState
+        do throws(TrainServiceError) {
+            let trains = try await fetch(leg, now)
+            await observe(trains, leg)
+            state = BoardState.from(trains, now: now, calendar: calendar)
+        } catch {
+            state = .unavailable(error)
+        }
+        return JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now)
+    }
 
     private func fetchAll(_ journeys: [JourneyConfiguration], at now: Date) async -> [JourneyBoard] {
         // The one location fix is resolved once and shared, not fetched per journey.
@@ -90,15 +105,7 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
                 let config = journeys[index]
                 let leg = JourneySelector.leg(for: config, at: now, location: location, calendar: calendar)
                 group.addTask {
-                    let state: BoardState
-                    do throws(TrainServiceError) {
-                        let trains = try await fetch(leg, now)
-                        await observe(trains, leg)
-                        state = BoardState.from(trains, now: now, calendar: calendar)
-                    } catch {
-                        state = .unavailable(error)
-                    }
-                    return (index, JourneyBoard(journey: config, leg: leg, state: state, fetchedAt: now))
+                    (index, await Self.board(config, leg: leg, at: now, fetch: fetch, observe: observe, calendar: calendar))
                 }
             }
 
@@ -110,6 +117,17 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
             }
             return boards.compactMap { $0 }
         }
+    }
+}
+
+extension BoardState {
+    /// Seconds from `now` to the next 03:00, when the service day closes, floored at `atLeast` so a
+    /// window asked at 02:30 still reaches past the night. Set by wall-clock hour, so DST nights hold.
+    static func restOfServiceDay(after now: Date, atLeast minimum: TimeInterval, calendar: Calendar) -> TimeInterval {
+        let dayStart = serviceDay(of: now, calendar: calendar)
+        let closes = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(minimum)
+        return max(closes.timeIntervalSince(now), minimum)
     }
 }
 

@@ -50,8 +50,11 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     /// The train's Navitia vehicle_journey id, carried by a station board so its full list of stops
     /// can be fetched on tap. nil on a journey row, and on boards cached by an older build.
     public let vehicleJourneyID: String?
+    /// The stop_area the train runs to, on a station board asked at `depth=2`: what a journey to that
+    /// terminus is opened with. Optional so boards cached by an older build, which never had it, decode.
+    public let terminus: Station?
 
-    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?, vehicleJourneyID: String? = nil) {
+    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?, vehicleJourneyID: String? = nil, terminus: Station? = nil) {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
         self.direction = direction
@@ -60,6 +63,7 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
         self.isCancelled = isCancelled
         self.trainNumber = trainNumber
         self.vehicleJourneyID = vehicleJourneyID
+        self.terminus = terminus
     }
 
     public var expectedDeparture: Date {

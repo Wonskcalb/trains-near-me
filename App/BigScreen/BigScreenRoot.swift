@@ -55,11 +55,16 @@ enum BigScreenRoute: Hashable, CaseIterable {
     var searchRequested = false
     /// ⌘R bumps this; screens reload when it changes.
     var refreshTick = 0
+    /// An unsaved journey a branch of the station star opened, station → terminus. The station hall board
+    /// shows it inside the `.station` route, so the back button is just clearing it; any other navigation
+    /// drops it, because it is not saved anywhere to come back to.
+    var temporaryLeg: Leg?
 
-    func select(_ route: BigScreenRoute) { self.route = route }
+    func select(_ route: BigScreenRoute) { temporaryLeg = nil; self.route = route }
     /// Picking a journey always returns to the board it feeds.
-    func select(journey index: Int) { selectedJourney = index; route = .stationHall }
-    func show(station: Station) { self.station = station; route = .station }
+    func select(journey index: Int) { temporaryLeg = nil; selectedJourney = index; route = .stationHall }
+    func show(station: Station) { temporaryLeg = nil; self.station = station; route = .station }
+    func open(temporary leg: Leg) { temporaryLeg = leg; route = .station }
     func requestSearch() { searchRequested = true }
     func refresh() { refreshTick += 1 }
 }
@@ -129,7 +134,13 @@ struct BigScreenRoot: View {
         case .wall: WallModeView()
         case .roundTrip: RoundTripView()
         case .station:
-            if let station = model.station { StationBoardView(station: station) } else { StationHallView() }
+            if model.temporaryLeg != nil {
+                StationHallView()
+            } else if let station = model.station {
+                StationBoardView(station: station)
+            } else {
+                StationHallView()
+            }
         case .settings: SettingsView()
         }
     }

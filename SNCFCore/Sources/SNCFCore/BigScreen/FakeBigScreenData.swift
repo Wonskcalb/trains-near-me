@@ -187,6 +187,11 @@ public enum BigScreenFixtures {
 struct FakeJourneyBoards: JourneyBoardsProviding {
     let all: [JourneyBoard]
     func boards(at now: Date) async -> [JourneyBoard] { all }
+    /// The saved board for that leg when the mockup has one, otherwise an empty unsaved board.
+    func board(for leg: Leg, at now: Date) async -> JourneyBoard {
+        all.first { $0.leg.from.id == leg.from.id && $0.leg.to.id == leg.to.id }
+            ?? JourneyBoard(journey: JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, state: .noTrains, fetchedAt: now)
+    }
 }
 
 /// One canned board (the pinned station); the `station` argument is ignored, there is only one in the fake.
@@ -194,6 +199,7 @@ struct FakeStationBoard: StationBoardProviding {
     let state: BoardState
     let viaByVehicle: [String: [String]]
     func board(for station: Station, at now: Date) async -> BoardState { state }
+    func serviceDayBoard(for station: Station, at now: Date) async -> BoardState { state }
     func via(forVehicleJourneyID id: String) async -> [String] { viaByVehicle[id] ?? [] }
 }
 
