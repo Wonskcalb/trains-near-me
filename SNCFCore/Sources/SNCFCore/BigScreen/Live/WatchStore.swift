@@ -43,13 +43,20 @@ public actor TrainWatcher: TrainWatching {
     /// private, so tests can confirm re-evaluation records and persists it.
     var lastSeen: [TrainIdentity: WatchedStatus]
     private var didRequestAuthorization = false
+    /// Hears every alert as it is posted, with a real suspension, so a test can race two re-evaluations.
+    private let onAlert: (@Sendable (WatchAlert, TrainDeparture) async -> Void)?
 
     /// nil — no App Group, a free Apple account on iOS — degrades to in-memory only: watching still works
     /// for the session.
     public init(suiteName: String? = SharedSettings.appGroupSuiteName, schedulesNotifications: Bool = true) {
+        self.init(suiteName: suiteName, schedulesNotifications: schedulesNotifications, onAlert: nil)
+    }
+
+    init(suiteName: String?, schedulesNotifications: Bool, onAlert: (@Sendable (WatchAlert, TrainDeparture) async -> Void)?) {
         let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) }
         self.defaults = defaults
         self.schedulesNotifications = schedulesNotifications
+        self.onAlert = onAlert
         self.watchedSet = Self.decode(Set<TrainIdentity>.self, from: defaults, key: Keys.watched) ?? []
         self.lastSeen = Self.decode([TrainIdentity: WatchedStatus].self, from: defaults, key: Keys.lastSeen) ?? [:]
     }
@@ -84,7 +91,7 @@ public actor TrainWatcher: TrainWatching {
     public func watch(_ train: TrainDeparture, to leg: Leg? = nil, calendar: Calendar) async {
         guard let identity = TrainIdentity(train, calendar: calendar) else { return }
         watchedSet.insert(identity)
-        lastSeen[identity] = WatchedStatus(train)
+        lastSeen[identity] = WatchedStatus(train, leg: leg)
         save()
         await ensureAuthorization()
         await scheduleReminder(for: train, identity: identity, to: leg)
@@ -99,18 +106,29 @@ public actor TrainWatcher: TrainWatching {
     /// Trains from a service day already over are dropped, so background refresh stops fetching for them.
     public func reevaluate(against trains: [TrainDeparture], to leg: Leg? = nil,
                            calendar: Calendar = SNCFTime.calendar, now: Date = .now) async {
+        // Decide and record everything before the first await: the actor is reentrant, so two boards
+        // re-checked together (journeys fetched four at a time, the station board) would otherwise both
+        // read the old `lastSeen` while the first was posting, and both fire the same alert.
+        var alerts: [(WatchAlert, TrainDeparture, Leg?)] = []
+        var reminders: [(TrainDeparture, TrainIdentity, Leg?)] = []
         for train in trains {
             guard let identity = TrainIdentity(train, calendar: calendar) else { continue }
             adoptNumberedWatch(of: train, as: identity, calendar: calendar)
             guard watchedSet.contains(identity) else { continue }
-            if let alert = Self.alert(from: lastSeen[identity]?.status, to: train.status) {
-                await fire(alert, for: train, to: leg)
-            }
-            lastSeen[identity] = WatchedStatus(train)
-            await scheduleReminder(for: train, identity: identity, to: leg)
+            let previous = lastSeen[identity]
+            // A station board carries no leg: the one the train was watched on keeps naming it.
+            let named = leg ?? previous?.leg
+            if let alert = Self.alert(from: previous?.status, to: train.status) { alerts.append((alert, train, named)) }
+            let seen = WatchedStatus(train, leg: named)
+            lastSeen[identity] = seen
+            // Only a train whose time moved needs its reminder moved; rewriting it on every refresh also
+            // rewrote its text with whatever leg the refresh happened to carry.
+            if previous?.sameTiming(as: seen) != true { reminders.append((train, identity, named)) }
         }
         prune(now: now, calendar: calendar)
         save()
+        for (alert, train, named) in alerts { await fire(alert, for: train, to: named) }
+        for (train, identity, named) in reminders { await scheduleReminder(for: train, identity: identity, to: named) }
     }
 
     /// Journey rows had no vehicle-journey id before 2026-10, so a watch made on one was stored `.numbered`.
@@ -210,6 +228,7 @@ public actor TrainWatcher: TrainWatching {
     }
 
     private func fire(_ alert: WatchAlert, for train: TrainDeparture, to leg: Leg?) async {
+        await onAlert?(alert, train)
         guard schedulesNotifications else { return }
         #if canImport(UserNotifications)
         let content = UNMutableNotificationContent()
@@ -242,14 +261,23 @@ struct WatchedStatus: Codable, Equatable, Sendable {
     /// When the train was timetabled to leave, so a vehicle-journey watch can be dropped once its day is
     /// over. Optional so last-seen records written before it existed still decode.
     let departure: Date?
+    /// The leg it was watched on, which names its reminder and alerts when a station board (which has no
+    /// leg) re-checks it. Optional for the same reason.
+    let leg: Leg?
 
-    init(_ train: TrainDeparture) {
+    init(_ train: TrainDeparture, leg: Leg? = nil) {
         delayMinutes = train.delayMinutes
         isCancelled = train.isCancelled
         departure = train.scheduledDeparture
+        self.leg = leg
     }
 
     var status: DepartureStatus { .from(delayMinutes: delayMinutes, cancelled: isCancelled) }
+
+    /// Same time and same cancellation: the reminder already scheduled still stands.
+    func sameTiming(as other: WatchedStatus) -> Bool {
+        delayMinutes == other.delayMinutes && isCancelled == other.isCancelled && departure == other.departure
+    }
 }
 
 extension TrainIdentity {
