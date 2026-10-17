@@ -210,6 +210,15 @@ public enum StationLines {
     /// The floor on a narrow screen, where the terminus name rides above its lane in place of the upper
     /// label row: the name, the dot and one label row under it, 8 pt clear of the next lane's name.
     public static let compactPitch = 80.0
+    /// The floor on a short screen (the Duo's inner display on its side), measured rather than padded: a
+    /// next chip's lower edge sits `labelOffset` + 14 pt under its lane, the next lane's upper-row label
+    /// (a time or a pill, never the next chip) 11 pt over `labelOffset` above its own, and 7 pt between
+    /// them is the least that still reads as two lanes. 96 left a 669 pt screen three lanes.
+    public static let densePitch = 2 * labelOffset + nextChipHalfHeight + labelHalfHeight + 7
+    /// Half the height of the next train's chip (a 17 pt mono time in 3 pt of padding), and of any other
+    /// label (a 16 pt time, or a 12 pt pill in its padding): what a label row reaches past `labelOffset`.
+    public static let nextChipHalfHeight = 14.0
+    public static let labelHalfHeight = 11.0
     /// The mockup's pitch, which a roomy screen never spreads past.
     public static let maximumPitch = 130.0
     /// How far a label row sits from its lane: just clear of the 20 pt next dot, closer to its own lane
