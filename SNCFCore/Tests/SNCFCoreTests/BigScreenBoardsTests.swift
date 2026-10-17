@@ -24,7 +24,7 @@ import Testing
         let configs = [config(a, b), config(a, c), config(b, c)]
         let trains = sampleTrains
 
-        let fetch: LiveJourneyBoards.Fetch = { leg, _ in
+        let fetch: LiveJourneyBoards.Fetch = { leg, _ throws(TrainServiceError) in
             if leg.from.id == "A", leg.to.id == "C" { throw TrainServiceError.quotaExceeded }
             return trains
         }
@@ -140,7 +140,7 @@ import Testing
         let provider = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris, tomorrow: tomorrow, fetch: tonight)
         #expect(await provider.board(for: Leg(from: grenoble, to: voiron), at: at(23, 30)).tomorrow == Array(morning.prefix(2)))
 
-        let failing: LiveJourneyBoards.Fetch = { _, _ in throw TrainServiceError.offline }
+        let failing: LiveJourneyBoards.Fetch = { _, _ throws(TrainServiceError) in throw TrainServiceError.offline }
         let down = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris, tomorrow: failing, fetch: tonight)
         let board = await down.board(for: Leg(from: grenoble, to: voiron), at: at(23, 30))
         #expect(board.state == .noTrains)
@@ -169,7 +169,7 @@ import Testing
         let ok = LiveStationBoard(calendar: paris, board: okBoard, trip: noTrip)
         #expect(await ok.board(for: grenoble, at: at(18, 0)) == .departures(trains))
 
-        let downBoard: LiveStationBoard.BoardFetch = { _, _ in throw TrainServiceError.offline }
+        let downBoard: LiveStationBoard.BoardFetch = { _, _ throws(TrainServiceError) in throw TrainServiceError.offline }
         let down = LiveStationBoard(calendar: paris, board: downBoard, trip: noTrip)
         #expect(await down.board(for: grenoble, at: at(18, 0)) == .unavailable(.offline))
     }
@@ -194,7 +194,7 @@ import Testing
     @Test func aFailedViaLookupIsAskedAgain() async {
         let calls = Counter()
         let noBoard: LiveStationBoard.BoardFetch = { _, _ in [] }
-        let trip: LiveStationBoard.TripFetch = { _ in await calls.bump(); throw TrainServiceError.offline }
+        let trip: LiveStationBoard.TripFetch = { _ throws(TrainServiceError) in await calls.bump(); throw TrainServiceError.offline }
         let provider = LiveStationBoard(calendar: paris, board: noBoard, trip: trip)
         #expect(await provider.via(forVehicleJourneyID: "vj:1").isEmpty)
         #expect(await provider.via(forVehicleJourneyID: "vj:1").isEmpty)
@@ -230,7 +230,7 @@ import Testing
         let ok = LiveTrainStops(fetch: okFetch)
         #expect(try await ok.stops(forVehicleJourneyID: "x") == stops)
 
-        let badFetch: LiveTrainStops.Fetch = { _ in throw TrainServiceError.malformedResponse }
+        let badFetch: LiveTrainStops.Fetch = { _ throws(TrainServiceError) in throw TrainServiceError.malformedResponse }
         let bad = LiveTrainStops(fetch: badFetch)
         await #expect(throws: TrainServiceError.malformedResponse) {
             try await bad.stops(forVehicleJourneyID: "x")
@@ -252,7 +252,7 @@ import Testing
 
     @Test func aFailedStopsLookupIsAskedAgain() async {
         let calls = Counter()
-        let fetch: LiveTrainStops.Fetch = { _ in await calls.bump(); throw TrainServiceError.offline }
+        let fetch: LiveTrainStops.Fetch = { _ throws(TrainServiceError) in await calls.bump(); throw TrainServiceError.offline }
         let provider = LiveTrainStops(fetch: fetch)
         _ = try? await provider.stops(forVehicleJourneyID: "vj:1")
         _ = try? await provider.stops(forVehicleJourneyID: "vj:1")

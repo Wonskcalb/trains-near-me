@@ -5,24 +5,59 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push to the same branch or PR makes the running checks moot.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The app uses the iOS / macOS 27.1 SDK (the iPhone Duo's fold regions, ArrangementView, the extra-tall
+# widget family), which `macos-latest` doesn't have yet: its newest Xcode is 26.x. The `xcode-27` image
+# (a preview) does; each job selects the newest Xcode 27 installed there and prints it, so a failure
+# names the toolchain it ran on.
+env:
+  XCODE_MAJOR: "27"
+
 jobs:
-  test-and-build:
-    runs-on: macos-latest
+  tests:
+    name: SNCFCore tests
+    runs-on: xcode-27
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
+      - name: Select Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_${XCODE_MAJOR}*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] || xcode=/Applications/Xcode.app
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+          swift --version
       - name: Unit tests
         run: swift test --package-path SNCFCore
 
-      # No Apple account on CI: build unsigned to catch compile errors in the app and widget.
-      - name: Build app and widget (macOS)
+  # No Apple account on CI: build unsigned to catch compile errors in the app and widget.
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: xcode-27
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            destination: generic/platform=macOS
+          - platform: iOS
+            destination: generic/platform=iOS Simulator
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_${XCODE_MAJOR}*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] || xcode=/Applications/Xcode.app
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+      - name: Build app and widget
         run: >
           xcodebuild -project TrainsNearMe.xcodeproj -scheme TrainsNearMe
-          -configuration Release -destination "generic/platform=macOS"
-          DEVELOPMENT_TEAM= CODE_SIGNING_ALLOWED=NO build
-
-      - name: Build app and widget (iOS)
-        run: >
-          xcodebuild -project TrainsNearMe.xcodeproj -scheme TrainsNearMe
-          -configuration Release -destination "generic/platform=iOS Simulator"
+          -configuration Release -destination "${{ matrix.destination }}"
+          -derivedDataPath build
           DEVELOPMENT_TEAM= CODE_SIGNING_ALLOWED=NO build

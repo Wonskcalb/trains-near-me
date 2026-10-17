@@ -245,7 +245,7 @@ import Testing
 
     @Test func aFailedMorningLeavesTonightStanding() async {
         let tonight = [train(23, 10, to: Self.lyon)]
-        let failing: LiveStationBoard.BoardFetch = { _, _ in throw TrainServiceError.offline }
+        let failing: LiveStationBoard.BoardFetch = { _, _ throws(TrainServiceError) in throw TrainServiceError.offline }
         let board = LiveStationBoard(calendar: paris, board: { _, _ in [] }, window: { _, _ in tonight },
                                      tomorrow: failing, trip: { _ in [] })
         #expect(await board.serviceDayBoard(for: grenoble, at: at(22, 0)) == StationDayBoard(state: .departures(tonight)))
