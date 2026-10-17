@@ -4,11 +4,15 @@ import Foundation
 public enum SharedSettings {
     static let tokenKey = "sncfToken"
 
-    /// The group id comes from Info.plist (`SNCFAppGroup`) so it can carry the per-platform shape:
-    /// the team prefix on macOS, a "group." prefix on iOS.
+    /// The App Group suite name from Info.plist (`SNCFAppGroup`), carrying the per-platform shape: the
+    /// team prefix on macOS, a "group." prefix on iOS. Public so the big-screen providers read it from
+    /// here instead of each repeating the Info.plist lookup. nil without a group (a free Apple account).
+    public static var appGroupSuiteName: String? {
+        Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String
+    }
+
     static var defaults: UserDefaults? {
-        guard let group = Bundle.main.object(forInfoDictionaryKey: "SNCFAppGroup") as? String else { return nil }
-        return UserDefaults(suiteName: group)
+        appGroupSuiteName.flatMap { UserDefaults(suiteName: $0) }
     }
 
     /// Whether the app and the widget actually share storage. False without a real signing team on
@@ -46,6 +50,10 @@ public enum SharedSettings {
         defaults?.set(data, forKey: "board.\(kind)#\(signature)")
     }
 
+    /// Posted (on the writer's thread) whenever `favorites` is written, so a window that did not make the
+    /// edit — the Mac's main window when the ⌘, Settings window changed the list — refreshes too.
+    public static let favoritesDidChange = Notification.Name("SharedSettings.favoritesDidChange")
+
     /// The journeys saved in the app. Kept in the App Group so the widget's station picker can
     /// suggest their stations, and in the app's own defaults when there is no group — a free Apple
     /// account on iOS — where the only thing lost is those suggestions.
@@ -57,6 +65,7 @@ public enum SharedSettings {
         set {
             guard let data = try? JSONEncoder().encode(newValue) else { return }
             (defaults ?? .standard).set(data, forKey: "favorites")
+            NotificationCenter.default.post(name: favoritesDidChange, object: nil)
         }
     }
 

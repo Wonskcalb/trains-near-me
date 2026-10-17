@@ -48,6 +48,21 @@ public enum RefreshPlanner {
 
     static func clamp(_ date: Date, from: Date, to: Date) -> Date { min(max(date, from), to) }
 
+    /// When a screen that polls on its own (the menu-bar label, which runs all day and night) should fetch
+    /// again: every `refreshInterval` while a train still runs tonight, then nothing until `staleAfter`
+    /// before the morning's first, or an idle hour when there is no first train to name.
+    public static func nextPoll(after fetchedAt: Date, state: BoardState, tomorrow: [TrainDeparture]) -> Date {
+        let retry = fetchedAt.addingTimeInterval(refreshInterval)
+        if case .unavailable = state { return retry }
+        if case .departures(let trains) = state, trains.contains(where: { !$0.isCancelled && $0.expectedDeparture > fetchedAt }) {
+            return retry
+        }
+        var first = tomorrow.first { !$0.isCancelled }?.expectedDeparture
+        if first == nil, case .endOfService(let firstTrain) = state { first = firstTrain }
+        guard let first else { return fetchedAt.addingTimeInterval(idleRefreshInterval) }
+        return max(first.addingTimeInterval(-staleAfter), retry)
+    }
+
     public static func isStale(fetchedAt: Date, at date: Date) -> Bool {
         date.timeIntervalSince(fetchedAt) >= staleAfter
     }

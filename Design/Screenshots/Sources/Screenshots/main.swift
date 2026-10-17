@@ -38,6 +38,29 @@ let radar = DeparturesEntry(date: now, fetchedAt: now, board: .radar(grenoble), 
     radarTrain(18, 40, "Gap", mode: "Car"), radarTrain(19, 02, "Lyon Perrache", delay: 23),
 ]))
 
+// The extra-tall (DuoWidget) widget renders straight from a timeline entry, like the other widgets, so
+// it is the one big-screen view this SNCFCore-only renderer can draw. Fed the mockup's fixture world
+// (Grenoble → Voiron at 17:40, 17655 +12, 17657 cancelled, 17661 +24) so it matches DuoWidget.dc.html.
+let bigNow = BigScreenFixtures.now
+let extraTallEntry = DeparturesEntry(
+    date: bigNow, fetchedAt: bigNow,
+    board: .trip(Leg(from: BigScreenFixtures.grenoble, to: BigScreenFixtures.voiron)),
+    state: BoardState.from(BigScreenFixtures.grenobleVoironTrains, now: bigNow, calendar: BigScreenFixtures.calendar))
+
+struct ExtraTall: View {
+    var body: some View {
+        ExtraTallView(entry: extraTallEntry)
+            // WidgetKit insets a widget's content by its content margins; outside it nothing does, so the
+            // harness applies DuoWidget.dc.html's 20/20/16 here rather than the view, which would then be
+            // padded twice on a real desktop.
+            .padding(EdgeInsets(top: 20, leading: 20, bottom: 16, trailing: 20))
+            .frame(width: 364, height: 800)
+            // containerBackground draws nothing outside WidgetKit, so paint the surface here (as the preview does).
+            .background(Color.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
+    }
+}
+
 func size(_ family: WidgetFamily) -> CGSize {
     switch family {
     case .systemSmall: CGSize(width: 170, height: 170)
@@ -127,4 +150,9 @@ MainActor.assumeIsolated {
     png(Sheet(dark: true), dark: true, "widget-dark.png")
     png(StatesSheet(), dark: false, "widget-states.png")
     png(SocialPreview(), dark: true, "social-preview.png", scale: 1)
+
+    // The big-screen extra-tall widget, dark and light (DuoWidget.dc.html draws both).
+    try? FileManager.default.createDirectory(at: output.appendingPathComponent("BigScreen"), withIntermediateDirectories: true)
+    png(ExtraTall(), dark: false, "BigScreen/widget-extratall-light.png")
+    png(ExtraTall(), dark: true, "BigScreen/widget-extratall-dark.png")
 }

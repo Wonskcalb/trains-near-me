@@ -10,6 +10,8 @@ fi
 copy=Design/Screenshots/Sources/Screenshots/Widget
 rm -rf "$copy" && mkdir -p "$copy"
 cp Widget/*.swift "$copy/"
+# DeparturesView now references ExtraTallView (the extra-tall family), so the copy needs it to compile.
+cp Widget/ExtraTall/*.swift "$copy/"
 
 # Outside WidgetKit the family is read-only and containerBackground draws nothing,
 # so the copy takes the family as a parameter and paints its background itself.
@@ -24,4 +26,4 @@ for expected in 'var family: WidgetFamily' '.padding(16).background {'; do
 done
 
 swift run --package-path Design/Screenshots -c release Screenshots "$PWD/Design"
-ls -1 Design/*.png
+ls -1 Design/*.png Design/BigScreen/*.png

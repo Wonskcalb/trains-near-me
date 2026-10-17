@@ -1,0 +1,432 @@
+#if os(macOS)
+import AppKit
+import SNCFCore
+import SwiftUI
+
+// The macOS menu-bar extra (MenuBar.dc.html): a bar label and a window-style popover. Everything is
+// driven by `data.journeyBoards` — live from the app's scene, the mockup `.fake` in the previews.
+// macOS only — the menu bar is the one place this scene exists.
+
+/// The bar item: the amber "A Flap" mark and the next train's time + minutes-until ("17:42 · 2′").
+/// A single flap mark rather than a four-tile `FlapTime`, because the menu bar has room for one glyph
+/// and the time is already spelled out in the text beside it (MenuBar.dc.html's label).
+struct MenuBarLabel: View {
+    @Environment(\.bigScreenData) private var data
+    /// A frozen clock for the preview; nil follows the real one.
+    var now: Date?
+    @State private var trains: [TrainDeparture] = []
+    @State private var clock = Date()
+    /// When the label fetches again: `RefreshPlanner.nextPoll`, or at once after a journey edit.
+    @State private var nextFetch = Date.distantPast
+
+    var body: some View {
+        // No TimelineView here: macOS turns the label into the status item's image on every render, and
+        // that image swap asks SwiftUI for another update. A timeline restarting from `.now` on each render
+        // never settles, so the app spun at launch. A plain state tick, set once a minute, is all it needs.
+        HStack(spacing: 6) {
+            FlapMark()
+            // Once tonight is over the label names the morning's first time, behind a moon instead of a
+            // countdown hours long.
+            if let next = MenuBarFormat.next(in: trains, after: now ?? clock),
+               BoardReading.isTomorrow(next, after: now ?? clock) {
+                Image(systemName: "moon.fill").font(.system(size: 10, weight: .semibold))
+            }
+            Text(text(at: now ?? clock)).font(.mono(12.5, weight: .semibold))
+        }
+        // The minute tick recounts "2′" and moves on to the next train once one leaves, from the trains
+        // already held; only the delays need a fetch. One journey's board, not every saved one, every 15
+        // min while trains run, then nothing until shortly before the morning's first: about 70 requests
+        // a day instead of a hundred per journey, night included.
+        .task {
+            while !Task.isCancelled {
+                if (now ?? .now) >= nextFetch {
+                    let at = now ?? .now
+                    if let board = await Self.primaryBoard(from: data, at: at) {
+                        trains = BoardReading.departures(board.state) + board.tomorrow
+                        nextFetch = RefreshPlanner.nextPoll(after: at, state: board.state, tomorrow: board.tomorrow)
+                    } else {
+                        trains = []
+                        nextFetch = at.addingTimeInterval(RefreshPlanner.refreshInterval)
+                    }
+                }
+                try? await Task.sleep(for: .seconds(60))
+                clock = .now
+            }
+        }
+        // A journey edit or ⌘R names a new primary journey or asks for fresh delays: fetch on the next tick.
+        .onReceive(NotificationCenter.default.publisher(for: SharedSettings.favoritesDidChange).receive(on: RunLoop.main)) { _ in
+            nextFetch = .distantPast
+        }
+    }
+
+    private func text(at clock: Date) -> String {
+        guard let next = MenuBarFormat.next(in: trains, after: clock) else { return "—" }
+        let time = MenuBarFormat.hm.string(from: next.expectedDeparture)
+        if BoardReading.isTomorrow(next, after: clock) { return time }
+        return "\(time) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: clock))′"
+    }
+
+    /// The primary (first saved) journey's board, carried on into the morning's first when it holds them,
+    /// so the label never goes blank after the last train. Asked on its own leg, not through the every-
+    /// journey round: the label only ever shows this one. With nothing saved (the mockup data in the
+    /// previews) the boards stand in, which costs no request live.
+    static func primaryBoard(from data: BigScreenData, at now: Date) async -> JourneyBoard? {
+        guard let primary = SharedSettings.favorites.first else { return await data.journeyBoards.boards(at: now).first }
+        let location = primary.nearestStationAsDeparture ? await LocationFix.shared.current() : nil
+        let leg = JourneySelector.leg(for: primary, at: now, location: location, calendar: SNCFTime.calendar)
+        return await data.journeyBoards.board(for: leg, at: now)
+    }
+}
+
+/// The popover: a journey switcher, a refresh button, the next train as a flap, a compact time track,
+/// the next three trains, journey chips, and the Open / Wall actions (MenuBar.dc.html).
+struct MenuBarExtraView: View {
+    @Environment(\.bigScreenData) private var data
+    @Environment(\.openWindow) private var openWindow
+    // Shared with the main window's BigScreenRoot: ⌘3 leaves "wall" here and that window switches route.
+    @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
+    /// A frozen clock for the preview; nil follows the real one.
+    var frozenNow: Date?
+    @State private var clock = Date()
+    private var now: Date { frozenNow ?? clock }
+
+    @State private var boards: [JourneyBoard] = []
+    @State private var selected = 0
+
+    private var board: JourneyBoard? { boards.indices.contains(selected) ? boards[selected] : nil }
+
+    init(now: Date? = nil) { frozenNow = now }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            header
+            // Trains that have left, or a cancelled first row, never become the hero. Tonight's run on into
+            // the morning's first, so the popover carries on past the last train instead of going blank.
+            let trains = (BoardReading.departures(board?.state) + (board?.tomorrow ?? [])).filter { $0.expectedDeparture > now }
+            if let next = MenuBarFormat.next(in: trains, after: now) {
+                let after = trains.filter { $0 != next && $0.expectedDeparture >= next.expectedDeparture }
+                let heroIsTomorrow = BoardReading.isTomorrow(next, after: now)
+                if heroIsTomorrow { split(rounded: true) }
+                hero(next, tomorrow: heroIsTomorrow)
+                // The hero already carries the imminent train, so the track and list show the ones after it.
+                // A morning hero has hours of empty rail before it, so it goes without the track.
+                if !heroIsTomorrow {
+                    TimeTrack(trains: after.filter { !BoardReading.isTomorrow($0, after: now) }, now: now, axis: .horizontal,
+                              minutesSpan: 200, length: 324, metrics: .compact)
+                }
+                nextTrains(Array(after.prefix(3)), splitBeforeTomorrow: !heroIsTomorrow)
+            } else {
+                noDepartures
+            }
+            chips
+            actions
+        }
+        .padding(16)
+        .frame(width: 372, alignment: .leading)
+        .background(Color.surface)
+        .task {
+            clock = Date()
+            boards = await data.journeyBoards.boards(at: now)
+            // The open popover keeps its countdowns and its hero current from what it holds.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                clock = Date()
+            }
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack {
+            journeySwitcher
+            Spacer()
+            Button(action: refresh) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ink)
+                    .frame(width: 32, height: 32)
+                    .background(Color.raised, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Refresh")
+        }
+    }
+
+    // A menu so the chevron and the list come for free; its own indicator is hidden since the glyph
+    // already carries one.
+    private var journeySwitcher: some View {
+        Menu {
+            ForEach(boards.indices, id: \.self) { i in
+                Button(boards[i].leg.to.name) { selected = i }
+            }
+        } label: {
+            HStack(spacing: 9) {
+                RoutePins(lineColor: .inkSecondary, destination: .solid(.amber),
+                          originDiameter: 7, destinationDiameter: 9, lineWidth: 1.8, lineLength: 10)
+                Text(board.map { "\($0.leg.from.name) → \($0.leg.to.name)" } ?? "Trains near me")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.ink)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.inkSecondary)
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    // MARK: Hero
+
+    private func hero(_ next: TrainDeparture, tomorrow: Bool) -> some View {
+        HStack(spacing: 14) {
+            FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 30, tileHeight: 44,
+                     seamColor: .surface, cornerRadius: 6, colonColor: .amberText)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(tomorrow ? "tomorrow · in \(MenuBarFormat.duration(next.expectedDeparture.timeIntervalSince(now)))"
+                              : "in \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: now)) min")
+                    .font(.mono(14, weight: .semibold))
+                    .foregroundStyle(tomorrow ? Color.inkSecondary : Color.soon)
+                Text(subtitle(next, arrival: true))
+                    .font(.mono(11.5))
+                    .foregroundStyle(Color.inkSecondary)
+            }
+        }
+    }
+
+    // MARK: Next three trains
+
+    /// The next three; when tonight's give way to the morning's partway down, the compact split sits
+    /// between them (once the hero itself is tomorrow's, the split is already above it).
+    private func nextTrains(_ trains: [TrainDeparture], splitBeforeTomorrow: Bool) -> some View {
+        let firstTomorrow = splitBeforeTomorrow ? trains.firstIndex { BoardReading.isTomorrow($0, after: now) } : nil
+        return VStack(spacing: 0) {
+            ForEach(Array(trains.enumerated()), id: \.offset) { i, train in
+                if i == firstTomorrow {
+                    split(rounded: false)
+                } else if i > 0 {
+                    Divider().overlay(Color.ink.opacity(0.06))
+                }
+                row(train)
+            }
+        }
+        .background(Color.raised, in: RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Rounded when it stands alone above a morning hero, square inside the list.
+    private func split(rounded: Bool) -> some View {
+        TomorrowSplit(lastTonight: BoardReading.lastTonight(board?.state), fontSize: 10, inset: 12)
+            .clipShape(RoundedRectangle(cornerRadius: rounded ? 8 : 0))
+    }
+
+    private func row(_ train: TrainDeparture) -> some View {
+        HStack(spacing: 10) {
+            Text(MenuBarFormat.hm.string(from: train.scheduledDeparture))
+                .font(.mono(15, weight: .bold))
+                .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amberText)
+                .strikethrough(train.isCancelled)
+                .fixedSize()
+                .frame(minWidth: 52, alignment: .leading)
+            Text(subtitle(train, arrival: false))
+                .font(.mono(12))
+                .foregroundStyle(Color.inkSecondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            trailing(train)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+    }
+
+    @ViewBuilder private func trailing(_ train: TrainDeparture) -> some View {
+        switch train.status {
+        case .cancelled: StatusPill("CANCELLED", status: .cancelled)
+        case .delayed, .severelyDelayed: StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+        case .unknown: StatusPill("delay ?", status: .unknown)
+        case .onTime:
+            Text(BoardReading.isTomorrow(train, after: now) ? "tomorrow" : MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
+                .font(.mono(12)).foregroundStyle(Color.inkSecondary)
+        }
+    }
+
+    // The secondary line: "TER 17655 · leaves 18:24" when a row is delayed, "· arr. 19:37" otherwise,
+    // just the number when cancelled. `arrival` keeps the hero on "arr." even when it is running late.
+    private func subtitle(_ train: TrainDeparture, arrival: Bool) -> String {
+        var line = ""
+        if let mode = train.mode { line += mode + " " }
+        if let number = train.trainNumber { line += number }
+        if train.isCancelled { return line }
+        let late = train.status == .delayed || train.status == .severelyDelayed || train.status == .unknown
+        if late, !arrival {
+            line += " · leaves " + MenuBarFormat.hm.string(from: train.expectedDeparture)
+        } else if let arrives = train.expectedArrival {
+            line += " · arr. " + MenuBarFormat.hm.string(from: arrives)
+        }
+        return line
+    }
+
+    private var noDepartures: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "moon.zzz")
+            Text(noDeparturesText).font(.mono(13))
+        }
+        .foregroundStyle(Color.inkSecondary)
+        .frame(maxWidth: .infinity, minHeight: 60)
+    }
+
+    private var noDeparturesText: String {
+        switch board?.state {
+        case .noService: "No service tonight"
+        case .endOfService(let first): "Service over · first " + MenuBarFormat.hm.string(from: first)
+        case .noTrains: "No trains"
+        case .unavailable(let error): error.terse
+        default: "No departures"
+        }
+    }
+
+    // MARK: Chips
+
+    // A horizontal scroller rather than a wrapping row: journey names vary in length and SwiftUI has no
+    // stock flow layout; scrolling keeps every chip reachable without reimplementing one.
+    private var chips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(boards.indices, id: \.self) { i in chip(boards[i], index: i) }
+            }
+        }
+    }
+
+    private func chip(_ board: JourneyBoard, index i: Int) -> some View {
+        let isSelected = i == selected
+        return Button { selected = i } label: {
+            HStack(spacing: 6) {
+                // The selected journey's troubles are shown in the board above, so only the others carry
+                // the at-a-glance dot (MenuBar.dc.html).
+                if !isSelected, let dot = statusDot(board.state) {
+                    Circle().fill(dot).frame(width: 6, height: 6)
+                }
+                Text(board.leg.to.name).font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? Color.surface : Color.ink)
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(isSelected ? Color.ink : Color.clear, in: Capsule())
+            .overlay(Capsule().stroke(Color.ink.opacity(isSelected ? 0 : 0.12), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func statusDot(_ state: BoardState) -> Color? {
+        switch state {
+        case .noService, .unavailable:
+            return .stop
+        case .departures(let trains):
+            if trains.contains(where: { $0.status == .cancelled || $0.status == .severelyDelayed }) { return .stop }
+            if trains.contains(where: { $0.status == .delayed || $0.status == .unknown }) { return .caution }
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    // MARK: Actions
+
+    private var actions: some View {
+        VStack(spacing: 0) {
+            Divider().overlay(Color.ink.opacity(0.07))
+            action("Open Trains near me", shortcut: "⌘O", perform: openMain)
+                .keyboardShortcut("o", modifiers: .command)
+            action("Wall mode on this display", shortcut: "⌘3", perform: openWall)
+                .keyboardShortcut("3", modifiers: .command)
+            HStack {
+                Text("Data © SNCF · not affiliated")
+                Spacer()
+                Text(MenuBarFormat.hm.string(from: now))
+            }
+            .font(.mono(11))
+            .foregroundStyle(Color.inkSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+        }
+    }
+
+    private func action(_ title: String, shortcut: String, perform: @escaping () -> Void) -> some View {
+        Button(action: perform) {
+            HStack {
+                Text(title).font(.system(size: 13.5)).foregroundStyle(Color.ink)
+                Spacer()
+                Text(shortcut).font(.mono(12)).foregroundStyle(Color.inkSecondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func refresh() {
+        Task {
+            clock = Date()
+            await data.journeyBoards.invalidate()
+            boards = await data.journeyBoards.boards(at: now)
+        }
+    }
+
+    // Open (or raise) the main window and bring the app forward. ⌘3 also sets the pending route so the
+    // window lands on Wall mode — BigScreenRoot reads it on appear (cold open) and on change (already open).
+    private func openMain() {
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "main")
+    }
+
+    private func openWall() {
+        pendingRoute = "wall"
+        openMain()
+    }
+}
+
+/// The amber "A Flap" bar mark: one tile with the ground-coloured split-flap seam across its middle.
+private struct FlapMark: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(Color.amber)
+            .frame(width: 13, height: 15)
+            .overlay(Color.ground.frame(height: 1))
+            .accessibilityHidden(true)
+    }
+}
+
+/// Times and durations for the popover: Paris, like `FlapTime`, so the flap and the text beside it
+/// never disagree.
+enum MenuBarFormat {
+    static let hm = SNCFTime.hhmmFormatter
+
+    static func minutesUntil(_ date: Date, from now: Date) -> Int {
+        max(0, Int((date.timeIntervalSince(now) / 60).rounded()))
+    }
+
+    /// The first train still to leave that is not cancelled — the one the label and the hero name.
+    static func next(in trains: [TrainDeparture], after now: Date) -> TrainDeparture? {
+        trains.first { !$0.isCancelled && $0.expectedDeparture > now }
+    }
+
+    static func duration(_ seconds: TimeInterval) -> String {
+        SNCFTime.duration(minutes: Int(seconds / 60))
+    }
+}
+
+#Preview("Popover") {
+    MenuBarExtraView(now: BigScreenFixtures.now)
+}
+
+#Preview("Popover · late evening") {
+    MenuBarExtraView(now: BigScreenFixtures.lateNow)
+        .environment(\.bigScreenData, .fakeLateEvening)
+}
+
+#Preview("Label") {
+    MenuBarLabel(now: BigScreenFixtures.now)
+}
+#endif

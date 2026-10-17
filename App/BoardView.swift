@@ -10,7 +10,16 @@ import SwiftUI
 struct BoardView: View {
     /// nil is the radar, which finds its own station.
     let journey: JourneyConfiguration?
+    /// The radar's station, picked row and pushed screens, which outlive this view across a Duo fold.
+    @Binding private var nearMe: NearMeState
 
+    init(journey: JourneyConfiguration?, nearMe: Binding<NearMeState> = .constant(NearMeState())) {
+        self.journey = journey
+        _nearMe = nearMe
+    }
+
+    @Environment(\.spansFold) private var spansFold
+    @Environment(BigScreenModel.self) private var model
     @State private var origin: Station?
     /// nil on the radar, which has no destination.
     @State private var destination: Station?
@@ -19,9 +28,19 @@ struct BoardView: View {
     @State private var loading = false
     /// The departure a tap opened the full-trip sheet for, nil when closed.
     @State private var trip: TripRequest?
+    /// Swap shows the journey the other way round for this visit, without touching the saved one.
+    @State private var swapped = false
+    @State private var added = false
 
     /// A fresh fix is only ever worth asking for where the position decides what is shown.
     private var followsYou: Bool { journey?.nearestStationAsDeparture ?? true }
+    /// The radar as the list column of the Duo's list | map split, where the map is always beside it.
+    private var isColumn: Bool { spansFold && journey == nil }
+    /// A journey a terminus of the line map opened, not among the saved ones until "Add to my journeys".
+    private var isUnsaved: Bool {
+        guard let journey, !added else { return false }
+        return !SharedSettings.favorites.contains { $0.stationA.id == journey.stationA.id && $0.stationB.id == journey.stationB.id }
+    }
 
     var body: some View {
         // Trains that have left have to drop off the list on their own: unlike a widget, a screen
@@ -35,28 +54,59 @@ struct BoardView: View {
             // Also on coming back to a screen whose delays have gone stale; pull down for the rest.
             if state == nil || RefreshPlanner.isStale(fetchedAt: fetchedAt, at: .now) { await load() }
         }
-        // The headers are drawn in the content — the radar's dish has to sweep, the journey has its
-        // route glyph — so the bar carries only the back button a pushed board gets for free.
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // A journey's header is drawn in the content (its route glyph), so its bar carries only the back
+        // button a pushed board gets for free. The radar takes the bar's large title, as every tab does,
+        // so its List | Lines switch sits under the title the way Journeys' does.
+        .navigationTitle(journey == nil ? "Near me" : "")
+        .navigationBarTitleDisplayMode(journey == nil ? .large : .inline)
+        // Every icon item is a titled Label so the Duo can stand it up in its strip; "Find me!" stays
+        // text, which the system keeps horizontal at the top, as on a plain iPhone.
         .toolbar {
+            if journey == nil {
+                // The dish a large title cannot carry: it sweeps while a position is being found.
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .foregroundStyle(Color.amber)
+                        .symbolEffect(.variableColor.iterative, isActive: loading)
+                        .accessibilityLabel(loading ? "Finding your position" : "Radar")
+                }
+            }
             if followsYou {
                 // `current()` hands back the system's cached fix while it is under 15 min old,
                 // which is right for a board that reloads on its own and wrong for someone who
                 // has just got off a train. This asks for a live one.
                 // Named rather than an arrow: it is the one control that does something pulling
                 // down does not, and a toolbar renders a `Label` icon-only whatever its label style.
-                Button("Find me!") { Task { await load(freshLocation: true) } }
-                    .disabled(loading)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Find me!") { Task { await load(freshLocation: true) } }
+                        .disabled(loading)
+                }
+            }
+            if isUnsaved, let journey {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Add to my journeys", systemImage: "star") {
+                        SavedJourneys.save(SharedSettings.favorites + [journey])
+                        added = true
+                    }
+                }
             }
         }
+        // Round trip reads the saved journeys, so an unsaved one gets it once it is added.
+        .modifier(JourneyToolbar(isEnabled: journey != nil && !isUnsaved,
+                                 leg: origin.flatMap { from in destination.map { Leg(from: from, to: $0) } },
+                                 swap: {
+            swapped.toggle()
+            Task { await load() }
+        }))
+        // The line map's Refresh lands here too, so the list beside it is never older than the map.
+        .onChange(of: model.refreshTick) { Task { await load() } }
         .sheet(item: $trip) { request in
             TripSheet(train: request.train, boarding: request.boarding)
         }
     }
 
-    /// Opens the full-trip sheet, but only for a row that carries a vehicle_journey id — journey
-    /// rows have none, so a tap there does nothing rather than open an empty sheet.
+    /// Opens the full-trip sheet, but only for a row that carries a vehicle_journey id — a board cached
+    /// by an older build has none, so a tap there does nothing rather than open an empty sheet.
     private func showTrip(_ train: TrainDeparture) {
         guard train.vehicleJourneyID != nil else { return }
         trip = TripRequest(train: train, boarding: origin?.name)
@@ -83,26 +133,8 @@ struct BoardView: View {
 
     // MARK: Headers
 
-    /// The radar's own title, drawn rather than handed to the navigation bar: a large title is
-    /// rendered from a plain string, so an interpolated symbol is dropped on the way in. Drawing it
-    /// also buys the one thing a title cannot do — the dish sweeps while a position is being found.
-    private var radarTitle: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Color.amber)
-                .symbolEffect(.variableColor.iterative, isActive: loading)
-            Text("Near me").font(.largeTitle.bold()).foregroundStyle(Color.ink)
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
     @ViewBuilder private var header: some View {
-        if journey == nil {
-            radarTitle
-        } else {
+        if journey != nil {
             VStack(alignment: .leading, spacing: 14) {
                 routeHeader
                 chips
@@ -190,8 +222,13 @@ struct BoardView: View {
                     ForEach(rows, id: \.element) { idx, train in
                         RadarRow(train: train, now: now)
                             .padding(.horizontal, 16).padding(.vertical, 13)
+                            .selectedRowBackground(isColumn && nearMe.selected == train)
                             .contentShape(Rectangle())
-                            .onTapGesture { showTrip(train) }
+                            // Beside the map a tap picks the row; tapping the picked row again opens its trip.
+                            .onTapGesture {
+                                if isColumn, nearMe.selected != train { nearMe.selected = train } else { showTrip(train) }
+                            }
+                            .accessibilityAddTraits(isColumn && nearMe.selected == train ? .isSelected : [])
                         if idx < rows.count - 1 { rowDivider }
                     }
                 }
@@ -230,36 +267,53 @@ struct BoardView: View {
                 Spacer(minLength: 8)
                 HStack(spacing: 6) {
                     Circle().fill(Color.soon).frame(width: 7, height: 7)
-                    Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(next.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
-            HStack(alignment: .center, spacing: 16) {
-                FlapTime(date: next.expectedDeparture)
-                VStack(alignment: .leading, spacing: 4) {
-                    if let direction = next.direction {
-                        Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink).lineLimit(1)
-                    }
-                    HStack(spacing: 7) {
-                        if let mode = next.mode { ModeChip(mode) }
-                        if let number = next.trainNumber {
-                            Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
-                        }
-                    }
-                    Text(leavesIn(next, now: now))
-                        .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+            if isColumn {
+                // Half a portrait Duo is 334 pt: the flaps shrink before the destination breaks mid-word.
+                ViewThatFits(in: .horizontal) {
+                    heroRow(next: next, now: now, tile: 36)
+                    heroRow(next: next, now: now, tile: 26)
                 }
-                Spacer(minLength: 0)
-                if next.vehicleJourneyID != nil {
-                    Image(systemName: "chevron.right")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
-                }
+            } else {
+                heroRow(next: next, now: now, tile: 36)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
+    }
+
+    private func heroRow(next: TrainDeparture, now: Date, tile: CGFloat) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            FlapTime(date: next.expectedDeparture, tileWidth: tile, tileHeight: tile * 52 / 36)
+            VStack(alignment: .leading, spacing: 4) {
+                if let direction = next.direction {
+                    Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink)
+                        .lineLimit(2).minimumScaleFactor(0.85)
+                }
+                HStack(spacing: 7) {
+                    if let mode = next.mode { ModeChip(mode) }
+                    if let number = next.trainNumber {
+                        Text("N° \(number)").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                Text(leavesIn(next, now: now))
+                    .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+            }
+            // At 362 pt (an iPhone 17 Pro, the folded Duo) the flaps took their share first and the
+            // destination truncated to "Grenob…"; the words are what the card is read for.
+            .layoutPriority(1)
+            Spacer(minLength: 0)
+            if next.vehicleJourneyID != nil {
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.inkSecondary.opacity(0.6))
+            }
+        }
     }
 
     private var loadingCard: some View {
@@ -290,7 +344,7 @@ struct BoardView: View {
                 Text("End of service").font(.headline).foregroundStyle(.white)
                 (Text("First train at ")
                     .foregroundColor(.white.opacity(0.75))
-                 + Text(firstTrain, format: .dateTime.hour().minute())
+                 + Text(firstTrain.formatted(SNCFTime.hourMinute))
                     .font(.mono(15, weight: .semibold)).foregroundColor(.amber))
                     .font(.subheadline)
             }
@@ -347,7 +401,7 @@ struct BoardView: View {
 
     private func updatedLine(now: Date) -> some View {
         let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
-        let time = fetchedAt.formatted(date: .omitted, time: .shortened)
+        let time = fetchedAt.formatted(SNCFTime.shortTime)
         return HStack(spacing: 7) {
             Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
             Text(stale ? "Delays last checked at \(time) — out of date" : "Updated at \(time) · pull to refresh")
@@ -423,11 +477,15 @@ struct BoardView: View {
         if let journey {
             // Nearest-station mode needs a fix; without one the configured order applies, as in the widget.
             let location = journey.nearestStationAsDeparture ? await fix(fresh: freshLocation) : nil
-            let leg = JourneySelector.leg(for: journey, at: now, location: location)
+            var leg = JourneySelector.leg(for: journey, at: now, location: location)
+            if swapped { leg = Leg(from: leg.to, to: leg.from) }
             origin = leg.from
             destination = leg.to
             do {
-                state = .from(try await client.departures(from: leg.from, to: leg.to, at: now), now: now)
+                let departures = try await client.departures(from: leg.from, to: leg.to, at: now)
+                state = .from(departures, now: now)
+                // Foreground re-evaluation of watched trains: raw departures so cancellations survive.
+                await TrainWatcher.shared.reevaluate(against: departures, to: leg)
             } catch {
                 state = .unavailable(error)
             }
@@ -445,8 +503,11 @@ struct BoardView: View {
                     return
                 }
                 origin = station
+                nearMe.station = station
                 destination = nil
-                state = .from(try await client.departures(from: station, at: now), now: now)
+                let departures = try await client.departures(from: station, at: now)
+                state = .from(departures, now: now)
+                await TrainWatcher.shared.reevaluate(against: departures)
             } catch {
                 state = .unavailable(error)
             }
@@ -465,12 +526,12 @@ struct RadarRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                     .font(.mono(19, weight: .semibold))
                     .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                     .strikethrough(train.isCancelled)
                 if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text(train.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(train.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .semibold))
                         .foregroundStyle(train.status.tableauInk)
                 }
@@ -528,13 +589,13 @@ struct JourneyRow: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 10) {
-                    Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                    Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(24, weight: .bold))
                         .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                         .strikethrough(train.isCancelled)
                     if train.scheduledArrival != nil {
                         DashConnector()
-                        Text(train.scheduledArrival!, format: .dateTime.hour().minute())
+                        Text(train.scheduledArrival!.formatted(SNCFTime.hourMinute))
                             .font(.mono(16, weight: .medium))
                             .foregroundStyle(Color.ink.opacity(0.85))
                             .strikethrough(train.isCancelled)
@@ -542,7 +603,13 @@ struct JourneyRow: View {
                 }
                 HStack(spacing: 7) {
                     if let mode = train.mode { ModeChip(mode) }
-                    Text(numberAndDuration).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    // The number goes first when the column is short (the Duo's folded 362 pt): the
+                    // trip sheet still has it, and the duration is what a row is read for.
+                    ViewThatFits(in: .horizontal) {
+                        Text(numberAndDuration)
+                        Text(train.duration.map { "\(Int($0 / 60)) min" } ?? "")
+                    }
+                    .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
             .opacity(train.isCancelled ? 0.6 : 1)
@@ -572,7 +639,7 @@ struct JourneyRow: View {
                 .fixedSize()
         case .delayed, .severelyDelayed:
             StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
-            Text("leaves \(train.expectedDeparture.formatted(date: .omitted, time: .shortened))")
+            Text("leaves \(train.expectedDeparture.formatted(SNCFTime.shortTime))")
                 .font(.mono(12)).foregroundStyle(train.status.tableauInk)
         case .cancelled:
             StatusPill("CANCELLED", status: .cancelled)
@@ -627,14 +694,6 @@ func leavesIn(_ train: TrainDeparture, now: Date) -> String {
 /// A minute-count as "HH:MM", for the automatic switch time.
 func clock(_ minuteOfDay: Int) -> String {
     String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
-}
-
-extension TrainServiceError {
-    /// `missingToken`'s own wording tells you to open the app, which is where a reader of this
-    /// screen already is; everything else reads the same here as in a widget.
-    var appDescription: String {
-        self == .missingToken ? "Add your SNCF API token in the Settings tab." : localizedDescription
-    }
 }
 
 // MARK: - Full trip

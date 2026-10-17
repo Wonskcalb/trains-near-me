@@ -90,7 +90,8 @@ public enum NavitiaParser {
             mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: originStop, significantDelays: journey.status == "SIGNIFICANT_DELAYS"),
             isCancelled: cancelled,
-            trainNumber: info?.tripShortName ?? info?.headsign
+            trainNumber: info?.tripShortName ?? info?.headsign,
+            vehicleJourneyID: section.links?.first { $0.type == "vehicle_journey" }?.id
         )
     }
 
@@ -110,8 +111,30 @@ public enum NavitiaParser {
             delayMinutes: delay(at: stop, significantDelays: linked.contains { $0.severity?.effect == "SIGNIFICANT_DELAYS" }),
             isCancelled: isCancelled(linked, at: stop),
             trainNumber: info?.tripShortName ?? info?.headsign,
-            vehicleJourneyID: board.links?.first { $0.type == "vehicle_journey" }?.id
+            vehicleJourneyID: board.links?.first { $0.type == "vehicle_journey" }?.id,
+            terminus: terminus(board.route?.direction?.stopArea, headsign: info?.direction)
         )
+    }
+
+    /// `route.direction` is the route's end, which a short working of the same route never reaches: it
+    /// only names the train's terminus when the train's own headsign is that station ("Lyon Part Dieu
+    /// (Lyon)" against stop_area "Lyon Part Dieu"). The town in brackets is dropped and the rest must be
+    /// equal: a prefix let stop_area "Lyon" claim a train to "Lyon Perrache (Lyon)". Otherwise nil, and
+    /// the headsign is resolved on demand.
+    static func terminus(_ area: StopArea?, headsign: String?) -> Station? {
+        guard let area, let name = area.name, let coord = area.coord,
+              let lat = Double(coord.lat), let lon = Double(coord.lon) else { return nil }
+        if let headsign {
+            let station = headsign.components(separatedBy: " (").first ?? headsign
+            guard folded(station) == folded(name) else { return nil }
+        }
+        return Station(id: area.id, name: name, latitude: lat, longitude: lon)
+    }
+
+    /// Letters and digits only, case and accents dropped: "Part-Dieu" and "Part Dieu" are one name.
+    static func folded(_ text: String) -> String {
+        String(text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+            .unicodeScalars.filter(CharacterSet.alphanumerics.contains).map(Character.init))
     }
 
     /// Decodes a `/vehicle_journeys/{id}` response into the train's full stopping pattern.
@@ -234,6 +257,8 @@ struct Section: Decodable {
     let from: Place?
     let to: Place?
     let displayInformations: DisplayInformations?
+    /// A public-transport section links its `vehicle_journey`, the same id a station board carries.
+    let links: [Link]?
 }
 
 struct Place: Decodable {
@@ -309,8 +334,18 @@ struct BoardDeparture: Decodable {
     let stopDateTime: StopDateTime?
     let displayInformations: DisplayInformations?
     let stopPoint: StopPoint?
+    /// At `depth=2`, `route.direction.stop_area` is the terminus with its id and coordinates.
+    let route: Route?
     /// Top-level links carry the `vehicle_journey` id used to fetch the train's full run.
     let links: [Link]?
+}
+
+struct Route: Decodable {
+    let direction: RouteDirection?
+}
+
+struct RouteDirection: Decodable {
+    let stopArea: StopArea?
 }
 
 struct StopDateTime: Decodable {

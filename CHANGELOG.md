@@ -4,9 +4,69 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-### Fixed
+### Added
+- **The big screen**: the Tableau look taken to every surface with room to spare, built on frozen data contracts (with a mockup `.fake` behind previews, screenshots and tests), iPad support, an axis-parameterised time track (horizontal or vertical) and a shared app shell with ⌘K / ⌘R / ⌘1–4 / ↑↓ / Space.
+- **Station hall** on iPad and Mac: a sidebar of saved journeys and the nearest station, a journey board with a split-flap next-train hero and the full-width time track, and an inspector that draws the selected train's stopping pattern (your leg solid, the rest dashed), with **Watch train** and **Share ETA**.
+- **Lanes**: every saved journey on one time axis, each train a bar from departure to arrival (delays slide off a dashed ghost at the timetabled slot, cancellations hatched, a whole lane striped when nothing runs), a Watch / Stops popover, the service-day minimap and a NEXT 4 H / TONIGHT / TOMORROW AM range picker.
+- **Wall mode**: a full-screen, always-dark departure board with a split-flap clock, a LEAVE HOME IN countdown, the saved journeys, a disruption ticker, and the display kept awake while it is shown. Picking a journey card puts that journey's trains on the board (arrival and trip time, its LEAVE HOME IN, its disruptions); the **Station** card shows every departure from the pinned station, or the nearest one. It opens on the last card picked (the first journey to begin with) and is an ordinary page: the sidebar stays and any view leaves it.
+- **Round trip (Duo)**: the outbound board and the way back side by side, a minimum-stay stepper that re-tags the returns (TOO EARLY / FIRST THAT FITS / LAST TRAIN), the paper pairing pill across the hinge, and **Watch both trains**.
+- **Extra-tall widget**: the time track turned vertical with a written label beside each marker, on the `.systemExtraLargePortrait` family where iOS / macOS 27 offers it.
+- iPhone Duo: the app follows the system's vertical bars when folded, and opens a journey into board | train on the inner display.
+- iPhone Duo: Round trip opens across both halves, outbound and way back, tied across the fold without putting anything on it.
+- iPhone Duo: Near me opens into the list and the nearest station's line map side by side.
+- **A macOS menu-bar extra**: a window-style popover (journey switcher, next train, compact track, the next three trains, journey chips, Open / Wall-mode actions) and a bar label with the amber flap and the next time.
+- **Live data behind all of it**: concurrent journey boards and a cached service-day summary, the round-trip planner, the leave-by countdown (per-station walk time, pinned station, optional MapKit walking ETA), watching a train (a reminder before it leaves and a delay-band / cancellation alert, re-evaluated in the foreground and in iOS background app refresh — never by spending the widget reload budget), and Share ETA.
+- **Go to station** (⌘K) on the big screen searches every SNCF station, accents and case ignored, with ↑↓ / Return / Esc; a pick opens that station's departure board, which can be **pinned for Wall mode**.
+- Station board: a line map, the station on the left and one lane per terminus flowing right, grouped by side of the line, with each train placed at its time.
+- Tap a lane to open that journey without saving it, and add it to your journeys from there.
+- On the station board's line map, a departing train fades its label, slides back to the station along its lane, and the next one takes its place.
+- The station board and the Wall's station mode carry on into tomorrow late in the evening.
+- **Saved journeys can be added, edited, reordered and deleted on the Mac and iPad**: a + in the sidebar's JOURNEYS header, Edit / Move / Delete on each journey, and a Journeys section in Settings.
+- **Settings is a pane of the main window** on the big screen, in the Tableau style, with the same sections on the Mac's Settings window (⌘,).
+- Split-flap times flip, tile by tile, when they change (off with Reduce Motion). A jump of more than one step
+  spins the drum forward through every character in between, as a station board does when it changes journey;
+  the Wall's LEAVE HOME IN minutes use the same tile.
+- Wall mode keeps the LEAVE HOME IN card when a journey has no train left: its tiles spin to "--" and it says
+  why, instead of disappearing and shifting the column.
+- Late in the evening, journey views carry on into tomorrow: an end-of-service split, then the first trains of the next day.
+- iPhone Duo: on its side like a desk clock, Wall mode puts the clock and LEAVE HOME IN on top and the trains and controls below.
 
-- The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app is now iPhone-only and portrait-only, so it no longer claims iPad support.
+### Changed
+- **The macOS bundle id lost its `.mac` suffix** (one id now serves iOS and macOS): an existing Mac install is a different app to the system. Its widgets, token and saved journeys do not carry over; remove the old app and add the widgets again.
+- The location prompt now says the position, rounded to about 100 m, is also used for the walking time to the station (Apple Maps), not only to find it.
+- iPhone and iPhone Duo: four tabs (Near me, Journeys, Wall, Settings), with List | Lines and List | Lanes switches in place of hidden toolbar icons; the Duo turns to Wall when set down half-open. Every tab reads title, switch, then its own controls.
+- The menu-bar label follows the first saved journey only, and stops asking after the last train until shortly before the morning's first.
+
+### Fixed
+- Every train time and clock reads in Paris time, whatever zone the device is set to (the split-flaps, the time-track hours, the widgets and the menu bar used the device's).
+- The 03:00 service day holds on the two DST mornings.
+- ⌘R and every refresh ask about the current time: a screen no longer reloads with the time it was opened at, which showed trains that had left as next.
+- Round trip lists the way back to the end of the service day, and LAST TRAIN is the real last train, not the twelfth one fetched; a new stay or a re-picked outbound no longer refetches.
+- LEAVE HOME IN moves on as soon as a train can no longer be made, instead of staying at 00 for up to five minutes; a walk you set is no longer replaced by the Apple Maps estimate; Station mode no longer reads "too tight to walk".
+- A watched train fires one alert per change, and its reminder keeps the destination after a station-board refresh.
+- Lanes: TOMORROW AM shows the morning at any hour; the axis labels no longer overprint; the lanes get the room on a folded Duo; an empty and a loading state.
+- Station hall on an iPad in portrait: the controls fit, the sidebar no longer covers the board, the inspector opens as a sheet, and with nothing saved it offers to add a journey. A refresh keeps the train you picked; Swap opens the way back even when it is not saved.
+- Journeys edited in the Mac's Settings window show in the main window at once.
+- The extra-tall widget no longer labels the last fetched train "LAST".
+- Accent buttons and the selected tab are readable on the light palette.
+- Tapping a terminus on the line map opens its journey inside the iPhone tabs too.
+- iPhone Duo: Journeys stays readable half open, with its columns kept clear of the fold.
+- Wall mode fits any screen: one scrolling column on an iPhone, the board and LEAVE HOME IN either side of the Duo's fold, and no more fixed widths spilling off both edges.
+- After the last train, a cancelled first train tomorrow no longer reads as "no service": the board shows the end of service and names the first train that runs.
+- The station line map scrolls instead of squeezing a busy station's lanes, fits narrow screens, and its time labels open the train like its dots.
+
+- Selected rows: a full-width amber tint with a bar on the left edge, instead of an inset ring that sat unevenly in the table.
+- Big screen: NEAR ME shows the station nearest to you with its next departure and distance, or says why it cannot (location not allowed yet — with an **Allow location** button —, location off, no station within 20 km), falling back to the pinned station.
+- Big screen: watching a train now schedules its reminder and measures delay changes from the moment you watch it, on the Mac and iPad too; a watch is dropped once its service day is over; a token typed after launch is used straight away; boards are no longer fetched twice per refresh.
+- Big screen: the service-day summary (last train tonight, first tomorrow, the Lanes histogram) covers the whole 03:00-to-03:00 day instead of the next dozen trains; "N DISRUPTED TONIGHT" follows the live board.
+- Big screen: the menu-bar label and Wall mode keep themselves current (departed trains drop off, a cancelled train is never "next"); the time track no longer draws a second amber dot at "now", its delay arcs bow as designed, and VoiceOver reads it as one sentence.
+- Big screen: no amber text on paper in the light palette, the Lanes popover stays an ink card in both schemes, and the end-of-service board gets the widget's night treatment.
+- Big screen: the appearance setting (System / Light / Dark) now applies everywhere, not only to the Settings pane: the sidebar, station hall, inspector, station board, round trip, the ⌘, window and the menu-bar popover follow it. On light, accent text turns to ink and the split-flap tiles to ink with amber digits; Wall mode, the Lanes ink popover and the NO SERVICE hazard stay dark by design. Switching back to System applies at once on macOS, without the window having to lose focus first.
+- Big screen: ⌘1–4 (Station hall, Lanes, Wall mode, Round trip), ⌘K and ⌘R are real menu commands in the View menu (and the iPad keyboard overlay) instead of hidden buttons that did not always fire.
+- Big screen: the Wall's clock and LEAVE HOME IN, and the station hall's "in N min", now advance at each minute change on their own instead of only on a reload.
+- Lanes draws every train of the service day its minimap counts, not only the next dozen.
+- Journey boards show each train's stopping pattern again (the vehicle journey is now read from the journey sections).
+- The iOS upload to App Store Connect was rejected for declaring no `UISupportedInterfaceOrientations`; the app now declares them: portrait only on iPhone, every orientation on iPad (the app runs on both; the widget extension stays iPhone-only).
 - Version and build number now come from `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` instead of a hard-coded 1.0 (1), which App Store Connect would have rejected on a second upload; declares no non-exempt encryption so TestFlight skips the export-compliance prompt.
 
 ## [1.2.0] - 2026-10-14

@@ -19,7 +19,21 @@ public struct SNCFClient {
         self.session = session
     }
 
-    public func departures(from: Station, to: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
+    public func departures(from: Station, to: Station, at date: Date, count: Int = departuresPerRequest) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await journeys(from: from, to: to, at: date, extra: ["min_nb_journeys": String(count)])
+    }
+
+    /// Every direct train in `duration` seconds from `date` — a whole service day in one request for the
+    /// big-screen summary, where `min_nb_journeys` alone stops at a dozen. Navitia caps the window at 24 h
+    /// and `max_nb_journeys` bounds the answer on a very busy line.
+    public func departures(from: Station, to: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await journeys(from: from, to: to, at: date, extra: [
+            "timeframe_duration": String(Int(min(duration, 24 * 3600))),
+            "max_nb_journeys": "150",
+        ])
+    }
+
+    private func journeys(from: Station, to: Station, at date: Date, extra: [String: String]) async throws(TrainServiceError) -> [TrainDeparture] {
         let data = try await get("journeys", [
             "from": from.id,
             "to": to.id,
@@ -28,8 +42,7 @@ public struct SNCFClient {
             "data_freshness": "base_schedule",
             "max_nb_transfers": "0",
             "direct_path": "none",
-            "min_nb_journeys": String(Self.departuresPerRequest),
-        ])
+        ].merging(extra) { _, new in new })
         return try NavitiaParser.departures(from: data, origin: from, destination: to)
     }
 
@@ -39,6 +52,36 @@ public struct SNCFClient {
             "from_datetime": NavitiaParser.dateFormatter.string(from: date),
             "data_freshness": "base_schedule",
             "count": String(Self.boardDeparturesPerRequest),
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.stopDepartures(from: data)
+    }
+
+    /// Every train leaving one station in `duration` seconds, each with its terminus stop_area — the
+    /// station line map. `count` alone cuts a busy station's evening at a fixed number of rows, so the
+    /// window is asked for instead, in the same single request; `depth=2` is what puts the stop_area
+    /// (id, coordinates) under `route.direction`.
+    public func departures(from station: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
+        let data = try await get("stop_areas/\(station.id)/departures", [
+            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+            "duration": String(Int(min(duration, 24 * 3600))),
+            "data_freshness": "base_schedule",
+            "count": "300",
+            "depth": "2",
+            "disable_geojson": "true",
+        ])
+        return try NavitiaParser.stopDepartures(from: data)
+    }
+
+    /// The first `count` trains leaving one station from `date`, each with its terminus (`depth=2`): a
+    /// late big-screen board's next morning, where a count is enough and a window would have to guess
+    /// how long the first trains take to come.
+    public func departures(from station: Station, at date: Date, count: Int) async throws(TrainServiceError) -> [TrainDeparture] {
+        let data = try await get("stop_areas/\(station.id)/departures", [
+            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+            "data_freshness": "base_schedule",
+            "count": String(count),
+            "depth": "2",
             "disable_geojson": "true",
         ])
         return try NavitiaParser.stopDepartures(from: data)

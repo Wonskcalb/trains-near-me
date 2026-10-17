@@ -16,6 +16,8 @@ let widgetFamilies: [WidgetFamily] = {
     #if os(iOS)
     families += [.accessoryRectangular, .accessoryCircular]
     #endif
+    // The vertical extra-tall family only exists on iOS/macOS 27; offer it there (both widgets inherit this).
+    if #available(iOS 27, macOS 27, *) { families.append(.systemExtraLargePortrait) }
     return families
 }()
 
@@ -72,17 +74,20 @@ struct DeparturesView: View {
     private var secondaryColor: Color { onDark ? Color.white.opacity(0.7) : .inkSecondary }
 
     var body: some View {
-        #if os(iOS)
         switch family {
+        #if os(iOS)
         case .accessoryCircular, .accessoryRectangular:
             // iOS 17+ refuses to render a widget that doesn't adopt containerBackground — without it
             // the Lock Screen shows "Please adopt containerBackground API" instead of the board.
             AccessoryBoard(entry: entry).containerBackground(.clear, for: .widget)
-        default: panel
-        }
-        #else
-        panel
         #endif
+        case .systemExtraLargePortrait:
+            // The vertical-track extra-tall layout (OS 27 only; the case never matches below it). Falls
+            // back to the panel when there is no board to draw — ExtraTallView assumes an upcoming train.
+            if entry.upcoming.isEmpty { panel } else { ExtraTallView(entry: entry) }
+        default:
+            panel
+        }
     }
 
     private var panel: some View {
@@ -140,7 +145,7 @@ struct DeparturesView: View {
                 .font(.mono(10, weight: .medium))
                 .foregroundStyle(entry.isStale ? AnyShapeStyle(Color.caution) : AnyShapeStyle(secondaryColor))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(date: .omitted, time: .shortened))")
+                .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(SNCFTime.shortTime))")
             }
             RefreshButton(compact: compact, kind: entry.kind, signature: entry.signature)
         }
@@ -269,14 +274,14 @@ struct AccessoryBoard: View {
                 VStack(spacing: 0) {
                     Image(systemName: "tram.fill").font(.system(size: 9))
                     if let next = entry.upcoming.first {
-                        Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                        Text(next.expectedDeparture.formatted(SNCFTime.hourMinute))
                     } else {
                         Text("--:--")
                     }
                 }
                 .font(.mono(13, weight: .semibold))
             }
-            .accessibilityLabel(entry.upcoming.first.map { "Next train at \($0.expectedDeparture.formatted(date: .omitted, time: .shortened))" } ?? entry.shortStatus)
+            .accessibilityLabel(entry.upcoming.first.map { "Next train at \($0.expectedDeparture.formatted(SNCFTime.shortTime))" } ?? entry.shortStatus)
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.caption).fontWeight(.semibold).lineLimit(1).widgetAccentable()
@@ -296,7 +301,7 @@ struct AccessoryRow: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+            Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                 .font(.mono(12, weight: .semibold))
                 .strikethrough(train.isCancelled)
             switch train.status {
@@ -320,8 +325,8 @@ struct EndOfService: View {
     let compact: Bool
 
     private var day: Text {
-        Calendar.current.isDate(firstTrain, inSameDayAs: now.addingTimeInterval(86400))
-            ? Text("tomorrow") : Text(firstTrain, format: .dateTime.weekday(.wide))
+        SNCFTime.calendar.isDate(firstTrain, inSameDayAs: now.addingTimeInterval(86400))
+            ? Text("tomorrow") : Text(firstTrain.formatted(Date.FormatStyle(timeZone: SNCFTime.calendar.timeZone).weekday(.wide)))
     }
 
     var body: some View {
@@ -334,7 +339,7 @@ struct EndOfService: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("End of service").font(.system(size: compact ? 14 : 15, weight: .semibold)).foregroundStyle(.white)
                 (Text("First train ") + day + Text(" at ")
-                    + Text(firstTrain, format: .dateTime.hour().minute())
+                    + Text(firstTrain.formatted(SNCFTime.hourMinute))
                         .font(.mono(compact ? 12 : 13, weight: .bold))
                         .foregroundStyle(Color.amber))
                     .font(.system(size: compact ? 12 : 13))
@@ -352,7 +357,7 @@ struct DepartureRow: View {
         // On the small widget a delay badge leaves little room, and "25 min" used to wrap
         // onto a second line, so the middle column shrinks rather than wraps.
         HStack(spacing: compact ? 4 : 6) {
-            Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+            Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                 .font(.mono(compact ? 14 : 15, weight: .semibold))
                 .foregroundStyle(train.isCancelled ? Color.inkSecondary : .ink)
                 .strikethrough(train.isCancelled)

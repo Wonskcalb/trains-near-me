@@ -29,6 +29,16 @@ public extension Color {
     static var inkSecondary: Color { tableau("InkSecondary") }
     /// The one accent. Amber is a fill on light and a text colour on dark, never text on light.
     static var amber: Color { tableau("Amber") }
+    /// The accent as a text colour: amber on dark, ink on light, because amber text on paper fails
+    /// contrast and the Timetable rules keep amber a fill there.
+    static var amberText: Color { tableau("AmberText") }
+    /// The system tint (buttons, toolbar items, the selected tab): `#FFC23D` on dark, a deep amber
+    /// (`#8A5A00`, about 5:1 on the `#F2EFE8` ground) on light, where the fill amber read as text failed
+    /// contrast. Fills stay `amber`.
+    static var amberTint: Color { tableau("AmberTint") }
+    /// A split-flap tile: raised on dark, ink on light, so the amber digit always sits on a dark tile
+    /// (the light extra-tall widget's treatment).
+    static var flapTile: Color { tableau("FlapTile") }
     /// "Leaving soon" / clear to go. Named `soon` rather than `clear` so it never shadows the
     /// system's transparent `Color.clear`, which the widgets rely on for an untinted row.
     static var soon: Color { tableau("Clear") }
@@ -44,6 +54,13 @@ public extension Color {
     static var rail: Color { tableau("Rail") }
     /// The sleepers of a track rule.
     static var sleeper: Color { tableau("Sleeper") }
+    /// The station board's two sides of the line: a warm rail above the time axis and a cool one below,
+    /// so a lane reads as belonging to its group without a legend. Darker on paper, lighter on the board.
+    static var railWarm: Color { tableau("RailWarm") }
+    static var railCool: Color { tableau("RailCool") }
+    /// Text on an amber fill (a NEXT tag, a FIRST THAT FITS pill, the leave-by card). Fixed near-black in
+    /// both schemes: amber stays amber, so no adaptive token spans it — `ground` turns to paper on light.
+    static let onAmber = Color(red: 0.055, green: 0.059, blue: 0.067)
 }
 
 /// How a departure's status paints in Tableau: a text colour and the fill it sits on. Kept next to
