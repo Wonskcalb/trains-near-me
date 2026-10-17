@@ -831,8 +831,22 @@ struct LaneTrainPopover: View {
     @State private var stops: [TripStop] = []
     @State private var watched = false
     @State private var showStops = false
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
 
     private var identity: TrainIdentity? { TrainIdentity(train) }
+
+    /// On a compact width iOS turns a popover into a full sheet, which left this 280 pt card floating in
+    /// the middle of a blank white page. There it becomes a bottom drawer the width of the screen instead;
+    /// with room to spare (iPad, the unfolded Duo, the Mac) it stays a real popover.
+    private var isDrawer: Bool {
+        #if os(iOS)
+        sizeClass == .compact
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -842,8 +856,15 @@ struct LaneTrainPopover: View {
             buttons
             if showStops { stopList }
         }
-        .padding(16).frame(width: 280)
+        .padding(isDrawer ? 20 : 16)
+        .frame(width: isDrawer ? nil : 280)
+        .frame(maxWidth: isDrawer ? .infinity : nil, maxHeight: isDrawer ? .infinity : nil, alignment: .topLeading)
         .background(Color.ground)
+        // Inside the forced-dark scope so the drawer's own background resolves to the card's ink too.
+        .presentationCompactAdaptation(.sheet)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.ground)
         .environment(\.colorScheme, .dark)
         .task {
             if let identity { watched = await data.watching.isWatched(identity) }
