@@ -32,6 +32,10 @@ public extension Color {
     /// The accent as a text colour: amber on dark, ink on light, because amber text on paper fails
     /// contrast and the Timetable rules keep amber a fill there.
     static var amberText: Color { tableau("AmberText") }
+    /// The system tint (buttons, toolbar items, the selected tab): `#FFC23D` on dark, a deep amber
+    /// (`#8A5A00`, about 5:1 on the `#F2EFE8` ground) on light, where the fill amber read as text failed
+    /// contrast. Fills stay `amber`.
+    static var amberTint: Color { tableau("AmberTint") }
     /// A split-flap tile: raised on dark, ink on light, so the amber digit always sits on a dark tile
     /// (the light extra-tall widget's treatment).
     static var flapTile: Color { tableau("FlapTile") }

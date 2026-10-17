@@ -42,5 +42,26 @@ enum ScreenshotSupport {
     static var station: Station? {
         ProcessInfo.processInfo.environment["SCREENSHOT_STATION"].flatMap(Station.init(entityIdentifier:))
     }
+
+    /// `SCREENSHOT_ROUTE` (stationHall, lanes, wall, roundTrip, station) opens that screen of the iPad /
+    /// regular-width shell, which never builds the tabs the other hooks drive. `station` shows
+    /// `SCREENSHOT_STATION`.
+    static var route: BigScreenRoute? {
+        switch ProcessInfo.processInfo.environment["SCREENSHOT_ROUTE"] {
+        case "stationHall": .stationHall
+        case "lanes": .lanes
+        case "wall": .wall
+        case "roundTrip": .roundTrip
+        case "station": .station
+        default: nil
+        }
+    }
+
+    /// The shell's hooks: the seed (so an iPad launch has a journey too) and the route.
+    @MainActor static func apply(to model: BigScreenModel) {
+        seedIfNeeded()
+        guard let route else { return }
+        if route == .station, let station { model.show(station: station) } else { model.select(route) }
+    }
 }
 #endif

@@ -48,7 +48,9 @@ public struct FlapTime: View {
             Text(":")
                 .font(.monoFixed(tileHeight * 0.54, weight: .bold))
                 .foregroundStyle(colonColor ?? digitColor)
-                .frame(width: 10)
+                // Wider with the tiles: at the wall clock's 74 pt the colon outgrew 10 pt and the next
+                // tile hid half of it.
+                .frame(width: max(10, tileHeight * 0.2))
             tile(digits, 2)
             tile(digits, 3)
         }

@@ -676,26 +676,30 @@ struct WallModeView: View {
         }
         // Two glyphs with their numbers rather than a sentence: the train to catch, and the walk to it.
         // Both rows stay in every state (a dash in place of a number), so the card never changes size.
-        let glyphs = VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "tram.fill").font(.system(size: 20, weight: .semibold)).frame(width: 26)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(trainTime).font(.mono(24, weight: .bold))
-                    Text(detail).font(.system(size: 14, weight: .semibold)).opacity(0.7)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                }
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "figure.walk").font(.system(size: 20, weight: .semibold)).frame(width: 26)
-                Text(leave.map { "\($0.walkMinutes) min" } ?? "-- min").font(.mono(24, weight: .bold))
+        let trainRow = HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "tram.fill").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(trainTime).font(.mono(24, weight: .bold))
+                Text(detail).font(.system(size: 14, weight: .semibold)).opacity(0.7)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
         }
+        let walkRow = HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "figure.walk").font(.system(size: 20, weight: .semibold)).frame(width: 26)
+            Text(leave.map { "\($0.walkMinutes) min" } ?? "-- min").font(.mono(24, weight: .bold))
+        }
+        let glyphs = VStack(alignment: .leading, spacing: 14) { trainRow; walkRow }
         return VStack(alignment: .leading, spacing: 14) {
             Text("LEAVE HOME IN").font(.mono(12, weight: .bold)).tracking(2)
-            // Beside the tiles where the card is wide enough, under them where it is not (half a Duo, the
-            // desk clock): the same pieces, never smaller.
+            // Beside the tiles where the card is wide enough; under them where it is not (half a Duo, the
+            // desk clock), the train and the walk side by side so the card's width is not left empty;
+            // stacked only where even that does not fit. The same pieces, never smaller.
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .center, spacing: 22) { tiles; glyphs }
+                VStack(alignment: .leading, spacing: 14) {
+                    tiles
+                    HStack(alignment: .top, spacing: 28) { trainRow; walkRow }
+                }
                 VStack(alignment: .leading, spacing: 14) { tiles; glyphs }
             }
         }
@@ -851,7 +855,7 @@ private struct WallBoardRow: View {
                 .strikethrough(train.isCancelled, color: Color.ink)
                 .lineLimit(1)
             Text(secondLine)
-                .font(.mono(12.5, weight: .medium)).foregroundStyle(Color.inkSecondary).lineLimit(1)
+                .font(.mono(12.5, weight: .medium)).foregroundStyle(Color.inkSecondary).lineLimit(1).minimumScaleFactor(0.75)
         }
         .opacity(train.isCancelled ? 0.55 : 1)
     }

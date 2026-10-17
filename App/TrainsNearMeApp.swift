@@ -80,7 +80,8 @@ private struct FollowsAppearance: ViewModifier {
             }
         }
         #else
-        content.preferredColorScheme(appearance.colorScheme)
+        // Every scene's root, so the accessible tint reaches the Settings pane and the iPad shell too.
+        content.tint(.amberTint).preferredColorScheme(appearance.colorScheme)
         #endif
     }
 }

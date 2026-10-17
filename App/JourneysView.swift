@@ -42,7 +42,7 @@ struct JourneysView: View {
             }
             Button("Add a journey", systemImage: "plus") { adding = true }
         }
-        .tint(.amber)
+        .tint(.amberTint)
         .refreshable { await boards.load(journeys, from: data, fresh: true) }
         .sheet(isPresented: $adding) {
             EditJourneyView { journey in

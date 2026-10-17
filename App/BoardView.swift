@@ -54,13 +54,23 @@ struct BoardView: View {
             // Also on coming back to a screen whose delays have gone stale; pull down for the rest.
             if state == nil || RefreshPlanner.isStale(fetchedAt: fetchedAt, at: .now) { await load() }
         }
-        // The headers are drawn in the content — the radar's dish has to sweep, the journey has its
-        // route glyph — so the bar carries only the back button a pushed board gets for free.
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // A journey's header is drawn in the content (its route glyph), so its bar carries only the back
+        // button a pushed board gets for free. The radar takes the bar's large title, as every tab does,
+        // so its List | Lines switch sits under the title the way Journeys' does.
+        .navigationTitle(journey == nil ? "Near me" : "")
+        .navigationBarTitleDisplayMode(journey == nil ? .large : .inline)
         // Every icon item is a titled Label so the Duo can stand it up in its strip; "Find me!" stays
         // text, which the system keeps horizontal at the top, as on a plain iPhone.
         .toolbar {
+            if journey == nil {
+                // The dish a large title cannot carry: it sweeps while a position is being found.
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .foregroundStyle(Color.amber)
+                        .symbolEffect(.variableColor.iterative, isActive: loading)
+                        .accessibilityLabel(loading ? "Finding your position" : "Radar")
+                }
+            }
             if followsYou {
                 // `current()` hands back the system's cached fix while it is under 15 min old,
                 // which is right for a board that reloads on its own and wrong for someone who
@@ -123,26 +133,8 @@ struct BoardView: View {
 
     // MARK: Headers
 
-    /// The radar's own title, drawn rather than handed to the navigation bar: a large title is
-    /// rendered from a plain string, so an interpolated symbol is dropped on the way in. Drawing it
-    /// also buys the one thing a title cannot do — the dish sweeps while a position is being found.
-    private var radarTitle: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Color.amber)
-                .symbolEffect(.variableColor.iterative, isActive: loading)
-            Text("Near me").font(.largeTitle.bold()).foregroundStyle(Color.ink)
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
     @ViewBuilder private var header: some View {
-        if journey == nil {
-            radarTitle
-        } else {
+        if journey != nil {
             VStack(alignment: .leading, spacing: 14) {
                 routeHeader
                 chips

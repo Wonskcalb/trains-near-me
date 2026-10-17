@@ -120,6 +120,9 @@ struct BigScreenRoot: View {
             .onAppear { consumePendingRoute() }
             .onChange(of: pendingRoute) { _, _ in consumePendingRoute() }
         #endif
+        #if DEBUG && os(iOS)
+            .task { ScreenshotSupport.apply(to: model) }
+        #endif
     }
 
     #if os(macOS)
