@@ -179,4 +179,50 @@ import Testing
         #expect(await watcher.watched().isEmpty)
         #expect(await TrainWatcher(suiteName: name, schedulesNotifications: false).watched().isEmpty)
     }
+
+    /// Two boards carrying the same watched train are re-checked at once (the journey boards four at a
+    /// time, the station board beside them). The alert is posted with a real suspension, which is where the
+    /// second call used to slip in and read the old status: one change must still be one alert.
+    @Test func concurrentReevaluationsFireOneAlert() async {
+        let name = suite()
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let alerts = AlertLog()
+        let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false) { alert, _ in
+            await alerts.record(alert)
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        let onTime = BigScreenFixtures.grenobleVoironTrains[0]
+        await watcher.watch(onTime, calendar: cal)
+        let cancelled = TrainDeparture(scheduledDeparture: onTime.scheduledDeparture, scheduledArrival: onTime.scheduledArrival,
+                                       mode: onTime.mode, delayMinutes: nil, isCancelled: true,
+                                       trainNumber: onTime.trainNumber, vehicleJourneyID: onTime.vehicleJourneyID)
+
+        async let first: Void = watcher.reevaluate(against: [cancelled], calendar: cal, now: BigScreenFixtures.now)
+        async let second: Void = watcher.reevaluate(against: [cancelled], calendar: cal, now: BigScreenFixtures.now)
+        _ = await (first, second)
+
+        #expect(await alerts.all == [.cancelled])
+    }
+
+    /// A station board re-checks a watched train with no leg; the one it was watched on stays recorded, so
+    /// its reminder keeps naming the destination.
+    @Test func aStationBoardRecheckKeepsTheWatchedLeg() async {
+        let name = suite()
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let leg = Leg(from: BigScreenFixtures.grenoble, to: BigScreenFixtures.voiron)
+        let train = BigScreenFixtures.grenobleVoironTrains[1]
+        let id = TrainIdentity(train, calendar: cal)!
+        let watcher = TrainWatcher(suiteName: name, schedulesNotifications: false)
+        await watcher.watch(train, to: leg, calendar: cal)
+
+        await watcher.reevaluate(against: [train], to: nil, calendar: cal, now: BigScreenFixtures.now)
+
+        #expect(await watcher.lastSeen[id]?.leg == leg)
+        #expect(await TrainWatcher(suiteName: name, schedulesNotifications: false).lastSeen[id]?.leg == leg)
+    }
+}
+
+private actor AlertLog {
+    private(set) var all: [WatchAlert] = []
+    func record(_ alert: WatchAlert) { all.append(alert) }
 }

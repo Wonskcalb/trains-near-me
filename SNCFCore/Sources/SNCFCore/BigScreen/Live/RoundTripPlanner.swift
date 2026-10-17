@@ -8,20 +8,36 @@ import Foundation
 public enum RoundTripPlanner {
 
     /// Choose the outbound, tag the returns, and package the plan. `returnLeg` is the reverse of `outbound`.
+    /// `returnBoard` is the whole way back as fetched; only the trains from the chosen arrival on are
+    /// listed, so a re-pick or a new stay re-plans from the same two boards without a request.
+    /// `returnsCoverServiceDay` says the board runs to the 03:00 close: only then is its last train tonight
+    /// truly the LAST TRAIN, rather than the last one a capped answer happened to hold.
     public static func plan(outbound: Leg,
                             outboundOptions: [TrainDeparture],
-                            returnOptions returns: [TrainDeparture],
+                            returnOptions returnBoard: [TrainDeparture],
                             pick: TrainIdentity?,
                             stay minimumStay: TimeInterval,
                             at now: Date,
-                            calendar: Calendar = .current) -> RoundTripPlan {
+                            returnsCoverServiceDay: Bool = false,
+                            calendar: Calendar = SNCFTime.calendar) -> RoundTripPlan {
         let selected = selectedOutbound(from: outboundOptions, pick: pick, at: now, calendar: calendar)
+        let arrival = selected?.expectedArrival
+        let returns = arrival.map { arrival in returnBoard.filter { $0.expectedDeparture >= arrival } } ?? returnBoard
+        let tonight = BoardState.serviceDay(of: now, calendar: calendar)
         return RoundTripPlan(outbound: outbound,
                              returnLeg: Leg(from: outbound.to, to: outbound.from),
                              minimumStay: minimumStay,
                              outboundOptions: outboundOptions,
                              selectedOutbound: selected,
-                             returnOptions: tagReturns(returns, arrival: selected?.expectedArrival, stay: minimumStay))
+                             returnOptions: tagReturns(returns, arrival: arrival, stay: minimumStay) { trains in
+                                 // The last train back runs tonight; a morning row past 03:00 never is it.
+                                 guard returnsCoverServiceDay else { return nil }
+                                 return trains.lastIndex {
+                                     !$0.isCancelled && BoardState.serviceDay(of: $0.scheduledDeparture, calendar: calendar) == tonight
+                                 }
+                             },
+                             returnBoard: returnBoard,
+                             returnsCoverServiceDay: returnsCoverServiceDay)
     }
 
     /// The chosen outbound: the one matching `pick` when it is still on the board (an explicit choice wins,
@@ -37,18 +53,20 @@ public enum RoundTripPlanner {
     }
 
     /// Tag each return against `arrival + stay`. Ordered by expected departure the fit never goes backwards:
-    /// `tooEarly`* then `firstThatFits` then `laterBy` (non-decreasing minutes) then `lastTrain`.
-    static func tagReturns(_ returns: [TrainDeparture], arrival: Date?, stay minimumStay: TimeInterval) -> [ReturnOption] {
+    /// `tooEarly`* then `firstThatFits` then `laterBy` (non-decreasing minutes) then `lastTrain`. `lastIndex`
+    /// picks the row that is the service day's last train, nil when the list does not show it.
+    static func tagReturns(_ returns: [TrainDeparture], arrival: Date?, stay minimumStay: TimeInterval,
+                           lastIndex: ([TrainDeparture]) -> Int?) -> [ReturnOption] {
         let sorted = returns.sorted {
             $0.expectedDeparture != $1.expectedDeparture
                 ? $0.expectedDeparture < $1.expectedDeparture
                 : $0.scheduledDeparture < $1.scheduledDeparture
         }
         guard !sorted.isEmpty else { return [] }
-        let lastIndex = sorted.count - 1
+        let lastIndex = lastIndex(sorted)
 
         // Nothing runs out, so there is no arrival to pair against: nothing can fit. Dim every row but keep
-        // the final one as the last train back — it is still the board's last useful row.
+        // the last train back marked — it is still the board's last useful row.
         guard let arrival else {
             return sorted.enumerated().map { index, train in
                 ReturnOption(train: train, fit: index == lastIndex ? .lastTrain : .tooEarly)
@@ -65,7 +83,7 @@ public enum RoundTripPlanner {
         return sorted.enumerated().map { index, train in
             let fit: ReturnFit
             if index == lastIndex, train.expectedDeparture >= threshold {
-                // Precedence: the final row is LAST TRAIN whenever it is catchable by time, and that wins
+                // Precedence: the last train is LAST TRAIN whenever it is catchable by time, and that wins
                 // over first-that-fits / later-by on that one row. Consequence: on a day whose only fitting
                 // return is also the last of the service day, it is tagged `lastTrain`, so there is no
                 // `firstThatFits` and `pairedReturn` is nil.
@@ -84,5 +102,16 @@ public enum RoundTripPlanner {
             }
             return ReturnOption(train: train, fit: fit)
         }
+    }
+}
+
+public extension RoundTripPlan {
+    /// The same two boards planned again for another outbound or stay: what the stepper and a re-pick
+    /// call, so neither costs a request.
+    func replanned(pick: TrainIdentity?, stay: TimeInterval, at now: Date,
+                   calendar: Calendar = SNCFTime.calendar) -> RoundTripPlan {
+        RoundTripPlanner.plan(outbound: outbound, outboundOptions: outboundOptions, returnOptions: returnBoard,
+                              pick: pick, stay: stay, at: now, returnsCoverServiceDay: returnsCoverServiceDay,
+                              calendar: calendar)
     }
 }

@@ -15,7 +15,8 @@ struct RootView: View {
     @Environment(\.spansFold) private var spansFold
     @Environment(BigScreenModel.self) private var model
 
-    static let wallTab = 2
+    /// Nonisolated: `ScreenshotSupport` reads it from a nonisolated default.
+    nonisolated static let wallTab = 2
 
     // Selection-based so the screenshot script can open a specific tab; defaults to the first tab,
     // which is the plain behaviour in Release.
@@ -42,7 +43,7 @@ struct RootView: View {
                 .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
                 .tag(3)
         }
-        .tint(.amber)
+        .tint(.amberTint)
         .preferredColorScheme(appearance.colorScheme)
         // Set down half open, the Duo becomes a desk clock. Only on the way into the posture (or launching
         // in it), so another tab can still be picked while it stands, and opening it keeps that tab.
@@ -90,7 +91,7 @@ struct RootView: View {
             NavigationStack(path: $nearMe.path) {
                 Group {
                     if nearMe.showsLines {
-                        NearMeLines(nearMe: $nearMe)
+                        NearMeLines(nearMe: $nearMe).navigationTitle("Near me")
                     } else {
                         BoardView(journey: nil, nearMe: $nearMe)
                     }
@@ -111,8 +112,8 @@ struct RootView: View {
             NavigationStack(path: $model.journeyPath) {
                 Group {
                     if model.showsLanes {
-                        // Lanes draws its own title, so the bar keeps only the switch above it.
-                        LanesView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                        // The tab's title over the switch, as on List; Lanes' own heading and controls follow.
+                        LanesView().navigationTitle("Journeys")
                     } else {
                         JourneysView()
                     }

@@ -19,7 +19,6 @@ struct BoardView: View {
     }
 
     @Environment(\.spansFold) private var spansFold
-    @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
     @State private var origin: Station?
     /// nil on the radar, which has no destination.
@@ -55,13 +54,23 @@ struct BoardView: View {
             // Also on coming back to a screen whose delays have gone stale; pull down for the rest.
             if state == nil || RefreshPlanner.isStale(fetchedAt: fetchedAt, at: .now) { await load() }
         }
-        // The headers are drawn in the content — the radar's dish has to sweep, the journey has its
-        // route glyph — so the bar carries only the back button a pushed board gets for free.
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // A journey's header is drawn in the content (its route glyph), so its bar carries only the back
+        // button a pushed board gets for free. The radar takes the bar's large title, as every tab does,
+        // so its List | Lines switch sits under the title the way Journeys' does.
+        .navigationTitle(journey == nil ? "Near me" : "")
+        .navigationBarTitleDisplayMode(journey == nil ? .large : .inline)
         // Every icon item is a titled Label so the Duo can stand it up in its strip; "Find me!" stays
         // text, which the system keeps horizontal at the top, as on a plain iPhone.
         .toolbar {
+            if journey == nil {
+                // The dish a large title cannot carry: it sweeps while a position is being found.
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .foregroundStyle(Color.amber)
+                        .symbolEffect(.variableColor.iterative, isActive: loading)
+                        .accessibilityLabel(loading ? "Finding your position" : "Radar")
+                }
+            }
             if followsYou {
                 // `current()` hands back the system's cached fix while it is under 15 min old,
                 // which is right for a board that reloads on its own and wrong for someone who
@@ -76,7 +85,7 @@ struct BoardView: View {
             if isUnsaved, let journey {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Add to my journeys", systemImage: "star") {
-                        SavedJourneys.save(SharedSettings.favorites + [journey], data: data, model: model)
+                        SavedJourneys.save(SharedSettings.favorites + [journey])
                         added = true
                     }
                 }
@@ -124,26 +133,8 @@ struct BoardView: View {
 
     // MARK: Headers
 
-    /// The radar's own title, drawn rather than handed to the navigation bar: a large title is
-    /// rendered from a plain string, so an interpolated symbol is dropped on the way in. Drawing it
-    /// also buys the one thing a title cannot do — the dish sweeps while a position is being found.
-    private var radarTitle: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Color.amber)
-                .symbolEffect(.variableColor.iterative, isActive: loading)
-            Text("Near me").font(.largeTitle.bold()).foregroundStyle(Color.ink)
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
     @ViewBuilder private var header: some View {
-        if journey == nil {
-            radarTitle
-        } else {
+        if journey != nil {
             VStack(alignment: .leading, spacing: 14) {
                 routeHeader
                 chips
@@ -276,7 +267,7 @@ struct BoardView: View {
                 Spacer(minLength: 8)
                 HStack(spacing: 6) {
                     Circle().fill(Color.soon).frame(width: 7, height: 7)
-                    Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(next.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
@@ -353,7 +344,7 @@ struct BoardView: View {
                 Text("End of service").font(.headline).foregroundStyle(.white)
                 (Text("First train at ")
                     .foregroundColor(.white.opacity(0.75))
-                 + Text(firstTrain, format: .dateTime.hour().minute())
+                 + Text(firstTrain.formatted(SNCFTime.hourMinute))
                     .font(.mono(15, weight: .semibold)).foregroundColor(.amber))
                     .font(.subheadline)
             }
@@ -410,7 +401,7 @@ struct BoardView: View {
 
     private func updatedLine(now: Date) -> some View {
         let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
-        let time = fetchedAt.formatted(date: .omitted, time: .shortened)
+        let time = fetchedAt.formatted(SNCFTime.shortTime)
         return HStack(spacing: 7) {
             Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
             Text(stale ? "Delays last checked at \(time) — out of date" : "Updated at \(time) · pull to refresh")
@@ -535,12 +526,12 @@ struct RadarRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                     .font(.mono(19, weight: .semibold))
                     .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                     .strikethrough(train.isCancelled)
                 if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text(train.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(train.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .semibold))
                         .foregroundStyle(train.status.tableauInk)
                 }
@@ -598,13 +589,13 @@ struct JourneyRow: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 10) {
-                    Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                    Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(24, weight: .bold))
                         .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                         .strikethrough(train.isCancelled)
                     if train.scheduledArrival != nil {
                         DashConnector()
-                        Text(train.scheduledArrival!, format: .dateTime.hour().minute())
+                        Text(train.scheduledArrival!.formatted(SNCFTime.hourMinute))
                             .font(.mono(16, weight: .medium))
                             .foregroundStyle(Color.ink.opacity(0.85))
                             .strikethrough(train.isCancelled)
@@ -648,7 +639,7 @@ struct JourneyRow: View {
                 .fixedSize()
         case .delayed, .severelyDelayed:
             StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
-            Text("leaves \(train.expectedDeparture.formatted(date: .omitted, time: .shortened))")
+            Text("leaves \(train.expectedDeparture.formatted(SNCFTime.shortTime))")
                 .font(.mono(12)).foregroundStyle(train.status.tableauInk)
         case .cancelled:
             StatusPill("CANCELLED", status: .cancelled)

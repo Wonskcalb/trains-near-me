@@ -223,28 +223,21 @@ public enum BigScreenFixtures {
         journeyTrain(19, 46, arr: (20, 11), number: "17660"),
     ]
 
-    public static let roundTripReturns: [ReturnOption] = [
-        ReturnOption(train: TrainDeparture(scheduledDeparture: at(20, 6), scheduledArrival: at(20, 31), mode: "TER",
-                                           delayMinutes: 0, isCancelled: false, trainNumber: nil, vehicleJourneyID: nil),
-                     fit: .tooEarly),
-        ReturnOption(train: journeyTrain(20, 42, arr: (21, 7), number: "17663"), fit: .firstThatFits),
-        ReturnOption(train: journeyTrain(21, 12, arr: (21, 37), number: "17665"), fit: .laterBy(minutes: 30)),
-        ReturnOption(train: journeyTrain(21, 42, arr: (22, 7), number: "17667"), fit: .laterBy(minutes: 60)),
-        ReturnOption(train: journeyTrain(22, 42, arr: (23, 7), number: "17669"), fit: .lastTrain),
+    /// The Duo mockup's way back, which the planner tags: one too early, the first that fits, two later,
+    /// and the last train of the day (the board runs to the 03:00 close).
+    public static let roundTripReturns = [
+        TrainDeparture(scheduledDeparture: at(20, 6), scheduledArrival: at(20, 31), mode: "TER",
+                       delayMinutes: 0, isCancelled: false, trainNumber: nil, vehicleJourneyID: nil),
+        journeyTrain(20, 42, arr: (21, 7), number: "17663"),
+        journeyTrain(21, 12, arr: (21, 37), number: "17665"),
+        journeyTrain(21, 42, arr: (22, 7), number: "17667"),
+        journeyTrain(22, 42, arr: (23, 7), number: "17669"),
     ]
 
-    public static let roundTripPlan = RoundTripPlan(
-        outbound: Leg(from: voiron, to: grenoble), returnLeg: Leg(from: grenoble, to: voiron),
-        minimumStay: 150 * 60, outboundOptions: roundTripOutbound,
-        selectedOutbound: roundTripOutbound.first, returnOptions: roundTripReturns)
-
-    // MARK: Leave by (Wall right column)
-
-    /// "LEAVE HOME IN … for the 17:46 to Grenoble. 6 min walk to the platform." The leave time is the
-    /// train's departure minus the walk; the mockup's hero "04" flap is illustrative (at 17:40 with a
-    /// 6-minute walk it is 0), so the fake derives `leaveAt` consistently instead.
-    public static let leaveBy = LeaveBy(
-        train: journeyTrain(17, 46, arr: (18, 11), number: "17652"), walkMinutes: 6, leaveAt: at(17, 40))
+    public static let roundTripPlan = RoundTripPlanner.plan(
+        outbound: Leg(from: voiron, to: grenoble), outboundOptions: roundTripOutbound,
+        returnOptions: roundTripReturns, pick: nil, stay: 150 * 60, at: now,
+        returnsCoverServiceDay: true, calendar: calendar)
 
     public static func isGrenobleVoiron(_ leg: Leg) -> Bool {
         let ids = Set([leg.from.id, leg.to.id])
@@ -261,6 +254,10 @@ struct FakeJourneyBoards: JourneyBoardsProviding {
     func board(for leg: Leg, at now: Date) async -> JourneyBoard {
         all.first { $0.leg.from.id == leg.from.id && $0.leg.to.id == leg.to.id }
             ?? JourneyBoard(journey: JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, state: .noTrains, fetchedAt: now)
+    }
+    /// The late-evening fixture's mornings, the only ones the mockup draws.
+    func morning(for leg: Leg, at now: Date) async -> [TrainDeparture] {
+        BigScreenFixtures.lateJourneyBoards.first { $0.leg.from.id == leg.from.id && $0.leg.to.id == leg.to.id }?.tomorrow ?? []
     }
 }
 
@@ -288,25 +285,26 @@ struct FakeServiceDay: ServiceDayProviding {
     }
 }
 
-/// Returns the one Duo scenario whatever is asked; the stepper / re-pick are Phase 1's to wire.
+/// The one Duo scenario, re-planned for the pick and the stay asked, as the live plan is.
 struct FakeRoundTrip: RoundTripPlanning {
     let plan: RoundTripPlan
-    func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan { plan }
+    func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan {
+        plan.replanned(pick: pick, stay: minimumStay, at: now)
+    }
 }
 
 /// An actor so the pinned station survives across calls, like the real App-Group-backed setting will.
 actor FakeLeaveBy: LeaveByProviding {
     private var pinned: Station?
-    private let canned: LeaveBy
 
-    init(pinned: Station?, leaveBy: LeaveBy) {
+    init(pinned: Station?) {
         self.pinned = pinned
-        self.canned = leaveBy
     }
 
     func pinnedStation() -> Station? { pinned }
     func pin(_ station: Station?) { pinned = station }
-    func leaveBy(toCatch leg: Leg, at now: Date) -> LeaveBy? { canned }
+    /// The mockup's "6 min walk to the platform".
+    func walkMinutes(to station: Station) -> Int { 6 }
 }
 
 /// Watch state is per-instance and in-memory; the real one writes through the App Group and schedules a
@@ -363,27 +361,17 @@ struct FakeETA: ETAComposing {
         return lines.joined(separator: "\n")
     }
 
-    private static let time: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+    private static let time = SNCFTime.hhmmFormatter
 }
 
 extension BigScreenData {
     /// The fake at 22:30 (`BigScreenFixtures.lateNow`): every journey board past or near its end of
     /// service and carrying tomorrow's first trains, and Voiron's station board the same. The other
-    /// providers are the 17:40 ones, except that LEAVE HOME IN points at the last train still to catch.
+    /// providers are the 17:40 ones.
     public static let fakeLateEvening: BigScreenData = makeFake(late: true)
 
     static func makeFake(late: Bool = false) -> BigScreenData {
-        let lastTrain = BigScreenFixtures.grenobleVoironLast
-        let leaveBy = late
-            ? LeaveBy(train: lastTrain, walkMinutes: 6, leaveAt: lastTrain.expectedDeparture.addingTimeInterval(-6 * 60))
-            : BigScreenFixtures.leaveBy
-        return BigScreenData(
+        BigScreenData(
             journeyBoards: FakeJourneyBoards(all: late ? BigScreenFixtures.lateJourneyBoards : BigScreenFixtures.journeyBoards),
             stationBoard: late
                 ? FakeStationBoard(state: BoardState.from(BigScreenFixtures.voironLateTrains, now: BigScreenFixtures.lateNow,
@@ -393,7 +381,7 @@ extension BigScreenData {
             trainStops: FakeTrainStops(stopsByVehicle: BigScreenFixtures.stopsByVehicle),
             serviceDay: FakeServiceDay(main: BigScreenFixtures.serviceDaySummary),
             roundTrip: FakeRoundTrip(plan: BigScreenFixtures.roundTripPlan),
-            leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron, leaveBy: leaveBy),
+            leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron),
             watching: FakeTrainWatching(),
             eta: FakeETA(),
             stationSearch: FakeStationSearch(stations: BigScreenFixtures.searchableStations,

@@ -83,16 +83,24 @@ public struct RoundTripPlan: Equatable, Sendable {
     /// The chosen outbound; nil when nothing runs out. Its arrival is the left side of the hinge pill.
     public let selectedOutbound: TrainDeparture?
     public let returnOptions: [ReturnOption]
+    /// The way back as fetched, from the earliest possible arrival on: what `replanned` re-tags when the
+    /// pick or the stay changes, so neither needs a request.
+    public let returnBoard: [TrainDeparture]
+    /// Whether `returnBoard` runs to the 03:00 close, which is what makes its last train tonight LAST TRAIN.
+    public let returnsCoverServiceDay: Bool
 
     public init(outbound: Leg, returnLeg: Leg, minimumStay: TimeInterval,
                 outboundOptions: [TrainDeparture], selectedOutbound: TrainDeparture?,
-                returnOptions: [ReturnOption]) {
+                returnOptions: [ReturnOption], returnBoard: [TrainDeparture]? = nil,
+                returnsCoverServiceDay: Bool = false) {
         self.outbound = outbound
         self.returnLeg = returnLeg
         self.minimumStay = minimumStay
         self.outboundOptions = outboundOptions
         self.selectedOutbound = selectedOutbound
         self.returnOptions = returnOptions
+        self.returnBoard = returnBoard ?? returnOptions.map(\.train)
+        self.returnsCoverServiceDay = returnsCoverServiceDay
     }
 
     /// The arrival shown on the left of the hinge pill (18:11 ··· 20:42 in the mockup).
@@ -164,9 +172,12 @@ public struct NearbyStation: Equatable, Sendable {
 /// Every saved journey's board, fetched together (the sidebar, Lanes and Wall all need the whole set).
 public protocol JourneyBoardsProviding: Sendable {
     func boards(at now: Date) async -> [JourneyBoard]
-    /// One leg's board on demand, unsaved and not memoised: a journey the station star opens from a
-    /// branch. The same full-service-day window as the saved boards, in one request.
+    /// One leg's board on demand, unsaved and not memoised: a journey a station-map lane opens, or the
+    /// menu-bar label's one journey. The same full-service-day window as the saved boards, in one request.
     func board(for leg: Leg, at now: Date) async -> JourneyBoard
+    /// The next service day's first trains on one leg, memoised per morning: Lanes' TOMORROW AM before
+    /// the boards carry them on their own (`JourneyBoard.tomorrow`, filled only late in the evening).
+    func morning(for leg: Leg, at now: Date) async -> [TrainDeparture]
     /// Forget any memoised boards, so the next `boards(at:)` fetches. ⌘R and a journey edit call it.
     func invalidate() async
 }
@@ -193,9 +204,9 @@ public struct StationDayBoard: Equatable, Sendable {
 /// `vehicleJourneyID`, since the station board itself does not carry the stopping pattern.
 public protocol StationBoardProviding: Sendable {
     func board(for station: Station, at now: Date) async -> BoardState
-    /// The rest of the service day (at least 2 h) with each train's terminus — the big-screen star — and
-    /// late in the evening the next morning. The plain `board(for:at:)` stays a fixed count, which is what
-    /// the radar and the sidebar want.
+    /// The rest of the service day (at least 2 h) with each train's terminus, which the station line map
+    /// draws, and late in the evening the next morning. The plain `board(for:at:)` stays a fixed count,
+    /// which is what the radar and the sidebar want.
     func serviceDayBoard(for station: Station, at now: Date) async -> StationDayBoard
     func via(forVehicleJourneyID id: String) async -> [String]
 }
@@ -205,8 +216,8 @@ public protocol TrainStopsProviding: Sendable {
     func stops(forVehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop]
 }
 
-/// The 03:00 service-day summary for one direction (the Lanes minimap, the station-hall footer, the
-/// extra-tall widget's "LAST 22:42"). nil when the day could not be summarised.
+/// The 03:00 service-day summary for one direction (the Lanes minimap, the station-hall footer and its
+/// end-of-service split). nil when the day could not be summarised.
 public protocol ServiceDayProviding: Sendable {
     func summary(for leg: Leg, at now: Date) async -> ServiceDaySummary?
 }
@@ -217,11 +228,13 @@ public protocol RoundTripPlanning: Sendable {
     func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan
 }
 
-/// The leave-by countdown, and the single "pinned" station the Wall's Station board shows.
+/// The single "pinned" station the Wall's Station board shows, and the walk behind LEAVE HOME IN. The
+/// countdown itself is `LiveLeaveBy.firstCatchable(in:walk:now:)` over a board the screen already holds.
 public protocol LeaveByProviding: Sendable {
     func pinnedStation() async -> Station?
     func pin(_ station: Station?) async
-    func leaveBy(toCatch leg: Leg, at now: Date) async -> LeaveBy?
+    /// Minutes on foot to the station: the user's own figure when set, otherwise an estimate.
+    func walkMinutes(to station: Station) async -> Int
 }
 
 /// Watching a train (a reminder before it leaves, an alert if the delay or cancellation changes).

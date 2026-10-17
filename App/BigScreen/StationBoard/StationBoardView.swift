@@ -293,8 +293,14 @@ private struct StationLinesBoard: View {
     private func open(_ terminus: Station?, _ name: String) {
         openFailure = nil
         Task {
-            guard let target = await resolve(terminus, name), target.id != station.id else {
+            guard let target = await resolve(terminus, name) else {
                 openFailure = "Couldn’t find a station called \(name)."
+                return
+            }
+            // A headsign that resolves back to this station (a loop, or a search's best match) has no
+            // journey to open; say that rather than claim the station does not exist.
+            guard target.id != station.id else {
+                openFailure = "\(name) is this station: there is no journey to open."
                 return
             }
             model.open(temporary: Leg(from: station, to: target))
@@ -447,11 +453,11 @@ private struct MapGeometry {
         axisBand = layout.height > viewport.height + 0.5 || width > viewport.width + 0.5 ? 40 : 0
         if axisBand > 0 { layout = fit(band: axisBand) }
         pitch = layout.pitch
-        size = CGSize(width: max(width, viewport.width), height: max(layout.height, viewport.height))
+        let contentHeight = max(layout.height, viewport.height)
         let margins = StationLines.margins(above: sides.above.count, below: sides.below.count,
                                            pitch: Double(pitch), capsuleHeight: capsule)
         // Centred in what is left over when it all fits; from the top when it scrolls.
-        let firstY = axisBand + max(0, size.height - layout.height) / 2 + CGFloat(margins.top)
+        let firstY = axisBand + max(0, contentHeight - layout.height) / 2 + CGFloat(margins.top)
         stationY = firstY + CGFloat(sides.above.count) * pitch
 
         func label(_ fan: [Int]) -> String? {
@@ -494,6 +500,16 @@ private struct MapGeometry {
                               summary: Self.summary(lane, shown: shown)))
         }
         self.lanes = lanes
+        // A label hangs off its stop (the next one reads on to its right): one near the end of the axis ran
+        // past the content and was cut ("05:39 tomorro"). The content widens to hold the furthest one, and
+        // the map scrolls that little bit further instead.
+        var labelsEnd: CGFloat = 0
+        for stop in lanes.flatMap(\.stops) where stop.row != .hidden {
+            let half = (stop.labelWidth + 40) / 2
+            let right: CGFloat = stop.kind == .next ? stop.x - 14 + 2 * half : stop.x + half
+            labelsEnd = max(labelsEnd, right)
+        }
+        size = CGSize(width: max(width, viewport.width, labelsEnd + 8), height: contentHeight)
     }
 
     private static func stop(_ train: TrainDeparture, id: String, isNext: Bool, other: Bool,
@@ -802,7 +818,8 @@ private struct MapFrame: View, Animatable {
     /// run into the first lane's time labels.
     private func groupLabel(_ text: String) -> some View {
         Text(text).font(.mono(11, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
-            .lineLimit(2).frame(width: map.curveEnd - 8, alignment: .leading).accessibilityAddTraits(.isHeader)
+            .lineLimit(3).minimumScaleFactor(0.75)
+            .frame(width: map.curveEnd - 8, alignment: .leading).accessibilityAddTraits(.isHeader)
     }
 
     /// Under the capsule, wrapping inside the band: centred on a 40 pt capsule, a long name ran off the
@@ -910,7 +927,7 @@ private struct MapFrame: View, Animatable {
                     .lineLimit(1).truncationMode(.middle)
                 if let summary = lane.summary {
                     Text(summary.text).font(.mono(9.5, weight: .semibold)).tracking(0.8)
-                        .foregroundStyle(summary.color).lineLimit(1).layoutPriority(-1)
+                        .foregroundStyle(summary.color).lineLimit(1).minimumScaleFactor(0.7).layoutPriority(-1)
                 }
             }
             .padding(.horizontal, 6).frame(height: 22)

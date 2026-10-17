@@ -35,3 +35,27 @@ import Testing
         #expect(text == "On the 17:46 (TER 17652), to Grenoble, on time")
     }
 }
+
+/// Every train time is Paris wall-clock whatever zone the process runs in, so the helpers are checked
+/// against an instant whose New York and UTC readings differ from the Paris one.
+@Suite struct SNCFTimeFormatting {
+    let departure = BigScreenFixtures.at(17, 42)   // 15:42 UTC, 11:42 in New York
+
+    @Test func hhmmIsParisAnd24Hour() {
+        #expect(SNCFTime.hhmm(departure) == "17:42")
+        #expect(SNCFTime.hhmmFormatter.timeZone == TimeZone(identifier: "Europe/Paris"))
+    }
+
+    @Test func theLocaleStylesCarryParis() {
+        var style = SNCFTime.hourMinute
+        style.locale = Locale(identifier: "fr_FR")
+        #expect(departure.formatted(style) == "17:42")
+        #expect(SNCFTime.shortTime.timeZone == TimeZone(identifier: "Europe/Paris"))
+    }
+
+    @Test func durationWords() {
+        #expect(SNCFTime.duration(minutes: 0) == "0 min")
+        #expect(SNCFTime.duration(minutes: 59) == "59 min")
+        #expect(SNCFTime.duration(minutes: 65) == "1 h 05")
+    }
+}

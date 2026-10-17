@@ -106,7 +106,7 @@ public enum BoardState: Equatable, Sendable {
     case unavailable(TrainServiceError)
 
     /// Only trains of the current service day are listed; later ones mean the day is over.
-    public static func from(_ departures: [TrainDeparture], now: Date, calendar: Calendar = .current) -> BoardState {
+    public static func from(_ departures: [TrainDeparture], now: Date, calendar: Calendar = SNCFTime.calendar) -> BoardState {
         if departures.isEmpty { return .noTrains }
         let today = serviceDay(of: now, calendar: calendar)
         let todays = departures.filter { serviceDay(of: $0.scheduledDeparture, calendar: calendar) == today }
@@ -122,9 +122,19 @@ public enum BoardState: Equatable, Sendable {
         return .departures(todays)
     }
 
-    /// Night trains up to 03:00 still belong to the previous evening's service.
-    static func serviceDay(of date: Date, calendar: Calendar) -> Date {
-        calendar.startOfDay(for: date.addingTimeInterval(-3 * 3600))
+    /// Night trains up to 03:00 still belong to the previous evening's service. Read off the wall-clock
+    /// hour, not by subtracting 3 h: on a DST morning three hours of absolute time is two or four on the
+    /// clock, which put 03:00 on 29 March in the 28th's day and 02:30 on 25 October in the 25th's.
+    public static func serviceDay(of date: Date, calendar: Calendar = SNCFTime.calendar) -> Date {
+        let day = calendar.startOfDay(for: date)
+        guard calendar.component(.hour, from: date) < 3 else { return day }
+        return calendar.date(byAdding: .day, value: -1, to: day) ?? day
+    }
+
+    /// The 03:00 that opens `now`'s service day.
+    public static func serviceDayStart(of now: Date, calendar: Calendar = SNCFTime.calendar) -> Date {
+        let day = serviceDay(of: now, calendar: calendar)
+        return calendar.date(bySettingHour: 3, minute: 0, second: 0, of: day) ?? day.addingTimeInterval(3 * 3600)
     }
 }
 
@@ -137,6 +147,42 @@ public enum SNCFTime {
         calendar.timeZone = TimeZone(identifier: "Europe/Paris")!
         return calendar
     }()
+
+    // Every train time and every clock the app draws is Paris wall-clock: a 17:42 train reads 17:42 on a
+    // Mac set to New York too, the way the station board prints it. One formatter rather than one per
+    // screen, so the flaps and the text beside them can never disagree.
+
+    /// "17:42", 24-hour whatever the locale: the split-flap convention the big screen draws everywhere.
+    public static func hhmm(_ date: Date) -> String { hhmmFormatter.string(from: date) }
+
+    public static let hhmmFormatter = formatter("HH:mm")
+
+    /// A fixed-pattern Paris formatter ("EEE d MMM", "HHmm"), POSIX so the pattern is never localised.
+    public static func formatter(_ format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = format
+        return formatter
+    }
+
+    /// The widgets' and the iPhone app's hour and minute: the reader's locale (12 h where that is the
+    /// habit), Paris time. The same text as `.dateTime.hour().minute()` on a Paris-zoned device.
+    public static var hourMinute: Date.FormatStyle {
+        var style = Date.FormatStyle.dateTime.hour().minute()
+        style.timeZone = calendar.timeZone
+        return style
+    }
+
+    /// `formatted(date: .omitted, time: .shortened)` in Paris time, for VoiceOver and "Updated at".
+    public static var shortTime: Date.FormatStyle {
+        Date.FormatStyle(date: .omitted, time: .shortened, timeZone: calendar.timeZone)
+    }
+
+    /// Minutes as "5 min" or "1 h 05": the countdown and trip-time wording every board shares.
+    public static func duration(minutes: Int) -> String {
+        minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+    }
 }
 
 public enum TrainServiceError: Error, Equatable, Sendable {

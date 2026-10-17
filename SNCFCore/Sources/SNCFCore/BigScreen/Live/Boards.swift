@@ -28,6 +28,7 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
     /// within this window they share one round of requests instead of each paying for it.
     private let memoLifetime: TimeInterval
     private let memo = BoardsMemo()
+    private let mornings = MorningMemo()
 
     public init(favorites: @escaping @Sendable () -> [JourneyConfiguration] = { SharedSettings.favorites },
                 location: @escaping @Sendable () async -> CLLocation? = { await LocationFix.shared.current() },
@@ -83,6 +84,21 @@ public struct LiveJourneyBoards: JourneyBoardsProviding {
     }
 
     public func invalidate() async { await memo.clear() }
+
+    /// The first trains of the next service day on one leg, for a screen that shows the morning before
+    /// tonight is nearly done (Lanes' TOMORROW AM). One request per leg and morning: the timetable for a
+    /// morning does not change through the evening, and its delays are not known yet anyway.
+    public func morning(for leg: Leg, at now: Date) async -> [TrainDeparture] {
+        let opens = BoardState.nextServiceDayStart(after: now, calendar: calendar)
+        let fetchTomorrow = self.fetchTomorrow
+        let calendar = self.calendar
+        return await mornings.value("\(leg.from.id)>\(leg.to.id)@\(Int(opens.timeIntervalSince1970))") {
+            guard let trains = try? await fetchTomorrow(leg, opens) else { return nil }
+            let day = BoardState.serviceDay(of: opens, calendar: calendar)
+            return trains.filter { BoardState.serviceDay(of: $0.scheduledDeparture, calendar: calendar) == day }
+                .sorted { $0.scheduledDeparture < $1.scheduledDeparture }
+        }
+    }
 
     public func board(for leg: Leg, at now: Date) async -> JourneyBoard {
         await Self.board(JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, at: now,
@@ -160,7 +176,7 @@ extension BoardState {
     }
 
     /// The 03:00 that closes `now`'s service day and opens the next one.
-    static func nextServiceDayStart(after now: Date, calendar: Calendar) -> Date {
+    public static func nextServiceDayStart(after now: Date, calendar: Calendar = SNCFTime.calendar) -> Date {
         let dayStart = serviceDay(of: now, calendar: calendar)
         return calendar.date(byAdding: .day, value: 1, to: dayStart)
             .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(24 * 3600)
@@ -203,4 +219,21 @@ actor BoardsMemo {
     }
 
     func clear() { entry = nil }
+}
+
+/// Each leg's next morning, held as its task so a second ask while the first is in flight shares it. A
+/// failed fetch (nil) is dropped once it lands, so the next ask tries again. Keyed by leg and morning, so
+/// yesterday's entries are simply never asked for again (a handful of small arrays for the session).
+actor MorningMemo {
+    private var tasks: [String: Task<[TrainDeparture]?, Never>] = [:]
+
+    func value(_ key: String, compute: @escaping @Sendable () async -> [TrainDeparture]?) async -> [TrainDeparture] {
+        let task = tasks[key] ?? Task { await compute() }
+        tasks[key] = task
+        guard let trains = await task.value else {
+            tasks[key] = nil
+            return []
+        }
+        return trains
+    }
 }

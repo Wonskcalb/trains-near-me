@@ -75,15 +75,36 @@ private struct LaneWindow: Equatable {
 }
 
 struct LanesView: View {
+    /// A frozen anchor for previews and the screenshot build (`BigScreenFixtures.now`, so the fixed 17:40
+    /// world lines up with the 4 h window); nil follows the clock.
+    private let frozenNow: Date?
+
+    init(now: Date? = nil) { frozenNow = now }
+
+    // NOW, the past shading and the "next" bar move with the minute; the boards survive the tick (same
+    // view identity) and are fetched on appear and ⌘R only.
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            LanesBoard(now: frozenNow ?? context.date, isFrozen: frozenNow != nil)
+        }
+    }
+}
+
+private struct LanesBoard: View {
     @Environment(\.bigScreenData) private var data
     // Optional so previews need not inject the shell model; the running app always provides it.
     @Environment(BigScreenModel.self) private var model: BigScreenModel?
 
-    /// Default `Date()`; previews and the screenshot build pass `BigScreenFixtures.now` so the fixed
-    /// 17:40 world lines up with the 4 h window.
+    /// The minute being drawn.
     let now: Date
+    /// A preview: the requests read `now` too, instead of the real clock.
+    let isFrozen: Bool
 
     @State private var boards: [JourneyBoard] = []
+    /// The first round has landed: an empty list then means nothing is saved, not "still loading".
+    @State private var loaded = false
+    /// Each leg's next morning, fetched only once TOMORROW AM is picked while the boards hold none yet.
+    @State private var mornings: [String: [TrainDeparture]] = [:]
     @State private var selectedJourney = 0
     @State private var summary: ServiceDaySummary?
     @State private var range: LanesRange = .next4h
@@ -97,29 +118,34 @@ struct LanesView: View {
     // The service day the chart and the minimap are anchored on; Paris, because the trains run on it.
     private let calendar = SNCFTime.calendar
 
-    init(now: Date = Date()) {
+    init(now: Date, isFrozen: Bool) {
         self.now = now
-        _window = State(initialValue: LanesView.window(for: .next4h, now: now, calendar: SNCFTime.calendar))
+        self.isFrozen = isFrozen
+        _window = State(initialValue: LanesBoard.window(for: .next4h, now: now, calendar: SNCFTime.calendar))
     }
 
+    /// The clock a request is asked at: read when it starts, not when the view was built.
+    private var requestTime: Date { isFrozen ? now : Date() }
+
+    private static func key(_ leg: Leg) -> String { "\(leg.from.id)>\(leg.to.id)" }
+
+    // Everything scrolls, the axis pinned over the lanes: kept outside the scroll, the chrome left the
+    // folded Duo about 200 pt of lanes and cut the card mid-track.
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
-            titleRow
-            axisHeader
-            ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(Array(boards.enumerated()), id: \.offset) { index, board in
-                        LaneRow(board: board, index: index, now: now, window: window,
-                                calendar: calendar, isSelected: index == selectedJourney, narrow: narrow,
-                                selectedBar: $selectedBar) { selectedJourney = index }
-                    }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16, pinnedViews: [.sectionHeaders]) {
+                titleRow
+                header
+                Section {
+                    lanes
+                } header: {
+                    axisHeader.padding(.vertical, 4).background(Color.ground)
                 }
+                minimap
             }
-            minimap
+            .padding(.horizontal, 28)
+            .padding(.vertical, 20)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onGeometryChange(for: Bool.self) { $0.size.width < 700 } action: { narrow = $0 }
         .background(Color.ground.ignoresSafeArea())
@@ -129,26 +155,62 @@ struct LanesView: View {
         .task { await load() }
         .onChange(of: model?.refreshTick) { Task { await load() } }
         .onChange(of: selectedJourney) { Task { await loadSummary() } }
+        .task(id: range) { await loadMornings() }
+    }
+
+    @ViewBuilder private var lanes: some View {
+        if !loaded {
+            ProgressView().tint(.amberText).frame(maxWidth: .infinity, minHeight: 120)
+        } else if boards.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("No saved journey").font(.headline).foregroundStyle(Color.ink)
+                Text("Save a journey and its trains run here, one lane each.")
+                    .font(.subheadline).foregroundStyle(Color.inkSecondary)
+            }
+            .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.surface, in: RoundedRectangle(cornerRadius: 18))
+        } else {
+            VStack(spacing: 12) {
+                ForEach(Array(boards.enumerated()), id: \.offset) { index, board in
+                    LaneRow(board: board, morning: range == .tomorrowAM ? mornings[Self.key(board.leg)] ?? [] : [],
+                            index: index, now: now, window: window,
+                            calendar: calendar, isSelected: index == selectedJourney, narrow: narrow,
+                            selectedBar: $selectedBar) { selectedJourney = index }
+                }
+            }
+        }
     }
 
     // MARK: Loading
 
     private func load() async {
-        boards = await data.journeyBoards.boards(at: now)
+        boards = await data.journeyBoards.boards(at: requestTime)
+        loaded = true
         if selectedJourney >= boards.count { selectedJourney = 0 }
         // The break depends on the boards, so the 4 h window is laid out again once they land.
-        if range == .next4h { window = LanesView.window(for: range, now: now, calendar: calendar, boards: boards) }
+        if range == .next4h { window = LanesBoard.window(for: range, now: now, calendar: calendar, boards: boards) }
         await loadSummary()
+        await loadMornings()
+    }
+
+    /// TOMORROW AM before about 23:00, when the boards carry no morning of their own yet: one memoised
+    /// request per journey, paid only when that range is picked.
+    private func loadMornings() async {
+        guard range == .tomorrowAM else { return }
+        for board in boards where board.tomorrow.isEmpty && mornings[Self.key(board.leg)] == nil {
+            mornings[Self.key(board.leg)] = await data.journeyBoards.morning(for: board.leg, at: requestTime)
+        }
     }
 
     private func loadSummary() async {
         guard boards.indices.contains(selectedJourney) else { summary = nil; return }
-        summary = await data.serviceDay.summary(for: boards[selectedJourney].leg, at: now)
+        summary = await data.serviceDay.summary(for: boards[selectedJourney].leg, at: requestTime)
     }
 
     // MARK: Top chrome
 
-    // The picker's words never wrap: past its width the freshness drops under it.
+    // The picker's words never wrap: past its width the freshness drops under it, and at the largest
+    // type sizes the words shrink rather than push the page past the screen's edge.
     private var header: some View {
         ViewThatFits(in: .horizontal) {
             HStack {
@@ -158,6 +220,10 @@ struct LanesView: View {
             }
             VStack(alignment: .leading, spacing: 10) {
                 rangePicker.fixedSize()
+                freshness
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                rangePicker
                 freshness
             }
         }
@@ -183,11 +249,12 @@ struct LanesView: View {
             ForEach(LanesRange.allCases) { option in
                 Button {
                     range = option
-                    window = LanesView.window(for: option, now: now, calendar: calendar, boards: boards)
+                    window = LanesBoard.window(for: option, now: now, calendar: calendar, boards: boards)
                 } label: {
                     Text(option.rawValue)
                         .font(.mono(12, weight: .semibold))
                         .tracking(0.6)
+                        .lineLimit(1).minimumScaleFactor(0.5)
                         .foregroundStyle(range == option ? Color.ground : Color.inkSecondary)
                         .padding(.horizontal, 12).frame(height: 34)
                         .background(range == option ? Color.ink : Color.clear, in: RoundedRectangle(cornerRadius: 9))
@@ -218,16 +285,28 @@ struct LanesView: View {
         }
     }
 
+    /// One row where it fits, two at large type sizes, so the swatches never push the page wider.
     private var legend: some View {
-        HStack(spacing: 14) {
-            legendSwatch(Color.amber, ring: .ink, "next")
-            legendSwatch(Color.ink, ring: nil, "on time")
-            legendSwatch(Color.cautionBg, ring: .caution, "+11–19")
-            legendSwatch(Color.stopBg, ring: .stop, "+20")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) { swatches(0..<4) }.fixedSize()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 14) { swatches(0..<2) }
+                HStack(spacing: 14) { swatches(2..<4) }
+            }
         }
         .font(.mono(11.5, weight: .medium))
         .foregroundStyle(Color.inkSecondary)
-        .fixedSize()
+    }
+
+    @ViewBuilder private func swatches(_ items: Range<Int>) -> some View {
+        ForEach(items, id: \.self) { item in
+            switch item {
+            case 0: legendSwatch(Color.amber, ring: .ink, "next")
+            case 1: legendSwatch(Color.ink, ring: nil, "on time")
+            case 2: legendSwatch(Color.cautionBg, ring: .caution, "+11–19")
+            default: legendSwatch(Color.stopBg, ring: .stop, "+20")
+            }
+        }
     }
 
     private func legendSwatch(_ fill: Color, ring: Color?, _ label: String) -> some View {
@@ -250,27 +329,38 @@ struct LanesView: View {
             }
             GeometryReader { geo in
                 let w = geo.size.width
+                let nowShown = now >= window.start && now <= window.end
+                let nowX = window.x(now, in: w)
+                let fold = window.breakRange(in: w)
+                let foldX = fold.map { ($0.lowerBound + $0.upperBound) / 2 }
+                // The NOW flag wins its stretch of the axis, then the TOMORROW pill, then the hours: each
+                // label keeps clear of the ones before it (about half of each width apart) instead of
+                // printing over them, which on a narrow track hid NOW's time and the first morning hour.
+                let showsFold = foldX.map { !nowShown || abs($0 - nowX) > 110 } ?? false
+                let hours = hourMarks.filter { hour in
+                    let x = window.x(hour, in: w)
+                    return (!nowShown || abs(x - nowX) > 76) && (!showsFold || abs(x - (foldX ?? 0)) > 80)
+                }
                 ZStack(alignment: .topLeading) {
-                    // The NOW flag owns its stretch of the axis: on a narrow track an hour beside it overprinted.
-                    ForEach(hourMarks.filter { now < window.start || now > window.end || abs(window.x($0, in: w) - window.x(now, in: w)) > 56 }, id: \.self) { hour in
+                    ForEach(hours, id: \.self) { hour in
                         Text(LanesFormat.hm.string(from: hour))
                             .font(.mono(12, weight: .semibold)).foregroundStyle(Color.inkSecondary)
-                            .fixedSize().position(x: window.x(hour, in: w), y: 20)
+                            .fixedSize().position(x: window.x(hour, in: w), y: 14)
                     }
-                    if now >= window.start && now <= window.end {
+                    if nowShown {
                         Text("NOW \(LanesFormat.hm.string(from: now))")
                             .font(.mono(11, weight: .bold)).tracking(0.8).foregroundStyle(Color.onAmber)
                             .padding(.horizontal, 7).padding(.vertical, 4)
                             .background(Color.amber, in: RoundedRectangle(cornerRadius: 6))
-                            .fixedSize().position(x: window.x(now, in: w), y: 10)
+                            .fixedSize().position(x: nowX, y: 14)
                     }
-                    if let fold = window.breakRange(in: w) {
+                    if showsFold, let foldX {
                         // The night's navy, as on the split row of the boards, so the break reads as the same cut.
                         Label("TOMORROW", systemImage: "moon.fill")
                             .font(.mono(10, weight: .bold)).tracking(1).foregroundStyle(Color.white.opacity(0.9))
                             .padding(.horizontal, 7).padding(.vertical, 4)
                             .background(TomorrowSplit.navy, in: RoundedRectangle(cornerRadius: 6))
-                            .fixedSize().position(x: (fold.lowerBound + fold.upperBound) / 2, y: 18)
+                            .fixedSize().position(x: foldX, y: 14)
                     }
                 }
             }
@@ -297,15 +387,10 @@ struct LanesView: View {
     @ViewBuilder private var minimap: some View {
         let legName = boards.indices.contains(selectedJourney) ? boards[selectedJourney].leg : nil
         ServiceMinimap(summary: summary, legName: legName, window: $window,
-                       dayStart: LanesView.serviceDayStart(now, calendar), calendar: calendar)
+                       dayStart: BoardState.serviceDayStart(of: now, calendar: calendar), calendar: calendar)
     }
 
     // MARK: Window maths
-
-    fileprivate static func serviceDayStart(_ now: Date, _ calendar: Calendar) -> Date {
-        // The service day starts at 03:00; a 00:15 train still belongs to the previous evening.
-        calendar.startOfDay(for: now.addingTimeInterval(-3 * 3600)).addingTimeInterval(3 * 3600)
-    }
 
     fileprivate static func window(for range: LanesRange, now: Date, calendar: Calendar,
                                    boards: [JourneyBoard] = []) -> LaneWindow {
@@ -318,10 +403,12 @@ struct LanesView: View {
             return LaneWindow(start: plain.start,
                               span: gap.start.timeIntervalSince(plain.start) + LaneWindow.breakSpan + 2 * 3600, gap: gap)
         case .tonight:
-            let end = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600)   // next 03:00
+            let end = BoardState.nextServiceDayStart(after: now, calendar: calendar)
             return LaneWindow(start: now, span: max(60 * 60, end.timeIntervalSince(now)))
         case .tomorrowAM:
-            let amStart = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600 + 2 * 3600)   // 05:00
+            // 05:00 on the clock, set by hour so a DST morning still opens there.
+            let opens = BoardState.nextServiceDayStart(after: now, calendar: calendar)
+            let amStart = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: opens) ?? opens.addingTimeInterval(2 * 3600)
             return LaneWindow(start: amStart, span: 6 * 3600)
         }
     }
@@ -346,6 +433,8 @@ struct LanesView: View {
 private struct LaneRow: View {
     @Environment(\.bigScreenData) private var data
     let board: JourneyBoard
+    /// The morning fetched for TOMORROW AM while the board carries none of its own; empty otherwise.
+    let morning: [TrainDeparture]
     let index: Int
     let now: Date
     let window: LaneWindow
@@ -401,7 +490,7 @@ private struct LaneRow: View {
     }
 
     /// What the lane draws: tonight's bars, then the morning's past the axis break.
-    private var laneTrains: [TrainDeparture] { trains + board.tomorrow }
+    private var laneTrains: [TrainDeparture] { trains + (board.tomorrow.isEmpty ? morning : board.tomorrow) }
 
     private var summaryText: String {
         if case .noService = board.state { return "EVERY TRAIN CANCELLED" }
@@ -758,7 +847,11 @@ struct LaneTrainPopover: View {
         .environment(\.colorScheme, .dark)
         .task {
             if let identity { watched = await data.watching.isWatched(identity) }
-            guard let id = train.vehicleJourneyID, !id.isEmpty else { return }
+        }
+        // The stopping pattern is a request of its own: asked only once Stops is opened, not for every
+        // popover a tap on a bar brings up.
+        .task(id: showStops) {
+            guard showStops, stops.isEmpty, let id = train.vehicleJourneyID, !id.isEmpty else { return }
             stops = (try? await data.trainStops.stops(forVehicleJourneyID: id)) ?? []
         }
     }
@@ -949,20 +1042,12 @@ private struct ServiceMinimap: View {
 
 // MARK: - Shared formatting
 
-/// MainActor-isolated so the cached `DateFormatter` is safe under Swift 6 strict concurrency, the way
-/// `FlapTime` keeps its own. Times are pinned to Europe/Paris: the trains run on it, whatever the device.
-@MainActor private enum LanesFormat {
-    static let hm: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+/// Times are Paris, as everywhere: the trains run on it, whatever the device.
+private enum LanesFormat {
+    static let hm = SNCFTime.hhmmFormatter
 
     static func duration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds / 60)
-        return minutes >= 60 ? String(format: "%d H %02d", minutes / 60, minutes % 60) : "\(minutes) MIN"
+        SNCFTime.duration(minutes: Int(seconds / 60)).uppercased()
     }
 }
 

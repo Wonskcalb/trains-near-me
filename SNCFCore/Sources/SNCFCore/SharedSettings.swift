@@ -50,6 +50,10 @@ public enum SharedSettings {
         defaults?.set(data, forKey: "board.\(kind)#\(signature)")
     }
 
+    /// Posted (on the writer's thread) whenever `favorites` is written, so a window that did not make the
+    /// edit — the Mac's main window when the ⌘, Settings window changed the list — refreshes too.
+    public static let favoritesDidChange = Notification.Name("SharedSettings.favoritesDidChange")
+
     /// The journeys saved in the app. Kept in the App Group so the widget's station picker can
     /// suggest their stations, and in the app's own defaults when there is no group — a free Apple
     /// account on iOS — where the only thing lost is those suggestions.
@@ -61,6 +65,7 @@ public enum SharedSettings {
         set {
             guard let data = try? JSONEncoder().encode(newValue) else { return }
             (defaults ?? .standard).set(data, forKey: "favorites")
+            NotificationCenter.default.post(name: favoritesDidChange, object: nil)
         }
     }
 

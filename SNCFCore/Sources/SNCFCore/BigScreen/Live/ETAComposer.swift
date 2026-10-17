@@ -38,11 +38,5 @@ public struct ETAComposer: ETAComposing {
         return text.isEmpty ? nil : text
     }
 
-    private static let time: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Europe/Paris")
-        f.dateFormat = "HH:mm"
-        return f
-    }()
+    private static let time = SNCFTime.hhmmFormatter
 }

@@ -26,9 +26,9 @@
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
 	<key>NSLocationUsageDescription</key>
-	<string>Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.</string>
+	<string>Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.</string>
+	<string>Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.</string>
 	<key>NSWidgetWantsLocation</key>
 	<true/>
 	<key>SNCFAppGroup</key>

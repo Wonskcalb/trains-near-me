@@ -90,7 +90,7 @@ struct ExtraTallView: View {
                 if let service = service(train) {
                     Text(service).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
-                if let arrival = expectedArrival(train) {
+                if let arrival = train.expectedArrival {
                     Text("arr. \(hhmm(arrival))").font(.mono(11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
@@ -145,7 +145,7 @@ struct ExtraTallView: View {
                         .strikethrough(train.isCancelled)
                     if train.isCancelled, let service = service(train) {
                         Text(service).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
-                    } else if let arrival = expectedArrival(train) {
+                    } else if let arrival = train.expectedArrival {
                         Text("→ \(hhmm(arrival))").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                     } else if let direction = train.direction {
                         Text(direction).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary).lineLimit(1)
@@ -193,13 +193,13 @@ struct ExtraTallView: View {
         }
     }
 
-    // MARK: Footer — last train and freshness
+    // MARK: Footer — attribution and freshness
 
     private var footer: some View {
         HStack {
-            // "LAST" is the last train we were handed, not the service day's final one: a service-day
-            // summary (BoardState's 03:00 day) is not on the entry yet. ponytail: last known ≈ good enough.
-            Text("LAST \(trains.last.map { hhmm($0.expectedDeparture) } ?? "--:--") · Data © SNCF")
+            // No "LAST hh:mm": the entry holds only the trains fetched, about the next dozen, so its final
+            // row is not the service day's last train, and the widget has no summary that would be.
+            Text("Data © SNCF")
             Spacer(minLength: 6)
             HStack(spacing: 6) {
                 Circle().fill(entry.isStale ? Color.caution : Color.soon).frame(width: 6, height: 6)
@@ -232,10 +232,6 @@ struct ExtraTallView: View {
         }
     }
 
-    private func expectedArrival(_ train: TrainDeparture) -> Date? {
-        train.scheduledArrival.map { $0.addingTimeInterval(TimeInterval((train.delayMinutes ?? 0) * 60)) }
-    }
-
     private func service(_ train: TrainDeparture) -> String? {
         switch (train.mode, train.trainNumber) {
         case let (mode?, number?): "\(mode) \(number)"
@@ -247,18 +243,10 @@ struct ExtraTallView: View {
 
     /// "2 min", "1 h 32" — minutes until a departure, as the mockup writes the right-hand countdown.
     private func countdown(to date: Date) -> String {
-        let minutes = max(0, Int((date.timeIntervalSince(entry.date) / 60).rounded(.up)))
-        return minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+        SNCFTime.duration(minutes: max(0, Int((date.timeIntervalSince(entry.date) / 60).rounded(.up))))
     }
 
-    private func hhmm(_ date: Date) -> String { Self.hhmmFormatter.string(from: date) }
-
-    private static let hhmmFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "HH:mm"
-        return f
-    }()
+    private func hhmm(_ date: Date) -> String { SNCFTime.hhmm(date) }
 }
 
 #Preview {

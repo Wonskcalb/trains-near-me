@@ -39,10 +39,11 @@ import Testing
          train((22, 42), (23, 7), "17669")]
     }
 
+    /// `complete` is whether the way back runs to the 03:00 close, as the live provider's window does.
     private func plan(_ outbound: [TrainDeparture], _ returns: [TrainDeparture],
-                      pick: TrainIdentity? = nil, stay: TimeInterval = 150 * 60) -> RoundTripPlan {
+                      pick: TrainIdentity? = nil, stay: TimeInterval = 150 * 60, complete: Bool = true) -> RoundTripPlan {
         RoundTripPlanner.plan(outbound: outboundLeg, outboundOptions: outbound, returnOptions: returns,
-                              pick: pick, stay: stay, at: now, calendar: calendar)
+                              pick: pick, stay: stay, at: now, returnsCoverServiceDay: complete, calendar: calendar)
     }
 
     private func ranks(_ plan: RoundTripPlan) -> [Int] {
@@ -84,10 +85,58 @@ import Testing
         }
     }
 
-    @Test func lastTrainIsOnTheFinalRow() {
+    @Test func lastTrainIsTonightsLastWhenTheBoardRunsToTheClose() {
         let options = plan(outbound, returns).returnOptions
         #expect(options.last?.fit == .lastTrain)
         #expect(options.dropLast().allSatisfy { $0.fit != .lastTrain })
+    }
+
+    @Test func aCappedBoardNamesNoLastTrain() {
+        // The same five rows as a count-capped answer: its final row is only the last one fetched, so it
+        // reads as one more later return, never LAST TRAIN.
+        let options = plan(outbound, returns, complete: false).returnOptions
+        #expect(options.allSatisfy { $0.fit != .lastTrain })
+        #expect(options.last?.fit == .laterBy(minutes: 120))
+    }
+
+    @Test func aMorningRowIsNeverTheLastTrain() {
+        // Past the 03:00 close the board can carry tomorrow's first: LAST TRAIN stays on tonight's 22:42.
+        let morning = TrainDeparture(scheduledDeparture: BigScreenFixtures.at(5, 42, day: 16),
+                                     scheduledArrival: BigScreenFixtures.at(6, 7, day: 16), mode: "TER",
+                                     delayMinutes: 0, isCancelled: false, trainNumber: "17601",
+                                     vehicleJourneyID: "vehicle_journey:fake:17601")
+        let options = plan(outbound, returns + [morning]).returnOptions
+        #expect(options.first { $0.train.trainNumber == "17669" }?.fit == .lastTrain)
+        #expect(options.last?.train.trainNumber == "17601")
+        #expect(options.last?.fit != .lastTrain)
+    }
+
+    @Test func aCancelledFinalTrainLeavesLastTrainOnTheOneBeforeIt() {
+        let lastCancelled = returns.dropLast() + [train((22, 42), (23, 7), "17669", cancelled: true)]
+        let options = plan(outbound, Array(lastCancelled)).returnOptions
+        #expect(options.first { $0.train.trainNumber == "17667" }?.fit == .lastTrain)
+    }
+
+    // MARK: - Re-planning from the held boards
+
+    @Test func replanningForAnotherPickDropsTheReturnsBeforeItsArrival() {
+        // The board was fetched from the 17:46's arrival; picking the 19:46 (arriving 20:11) re-plans from
+        // the same rows, listing only what leaves from 20:11 on, against 20:11 + 2 h 30.
+        let first = plan(outbound, returns)
+        let replanned = first.replanned(pick: TrainIdentity(outbound[4], calendar: calendar), stay: 150 * 60,
+                                        at: now, calendar: calendar)
+        #expect(replanned.selectedOutbound?.trainNumber == "17660")
+        #expect(replanned.returnOptions.map(\.train.trainNumber) == ["17663", "17665", "17667", "17669"])
+        #expect(replanned.returnOptions.map(\.fit) == [.tooEarly, .tooEarly, .tooEarly, .lastTrain])
+    }
+
+    @Test func replanningForAnotherStayReTagsTheSameRows() {
+        let shorter = plan(outbound, returns).replanned(pick: nil, stay: 120 * 60, at: now, calendar: calendar)
+        // Threshold 18:11 + 2 h = 20:11: the 20:06 is still too early, the 20:42 still the first that fits.
+        #expect(shorter.minimumStay == 120 * 60)
+        #expect(shorter.returnOptions.map(\.fit) == [.tooEarly, .firstThatFits, .laterBy(minutes: 30), .laterBy(minutes: 60), .lastTrain])
+        let longer = plan(outbound, returns).replanned(pick: nil, stay: 180 * 60, at: now, calendar: calendar)
+        #expect(longer.pairedReturn?.trainNumber == "17665")        // 21:12, first at or after 21:11
     }
 
     @Test func pairedArrivalAndReturn() {
@@ -204,14 +253,14 @@ import Testing
                        vehicleJourneyID: "vehicle_journey:fake:\(number)")
     }
 
-    /// Records every (leg, datetime) the provider fetches, so the test can assert the reverse leg and the
-    /// arrival-anchored return window.
+    /// Records every (leg, datetime, window) the provider fetches, so the test can assert the reverse leg
+    /// and the arrival-anchored return window.
     actor FetchLog {
-        private(set) var calls: [(leg: Leg, at: Date)] = []
-        func record(_ leg: Leg, _ date: Date) { calls.append((leg, date)) }
+        private(set) var calls: [(leg: Leg, at: Date, within: TimeInterval?)] = []
+        func record(_ leg: Leg, _ date: Date, _ within: TimeInterval?) { calls.append((leg, date, within)) }
     }
 
-    @Test func fetchesOutboundThenTheReverseLegFromTheArrival() async {
+    @Test func fetchesOutboundThenTheReverseLegFromTheArrivalToTheClose() async {
         let outboundLeg = Leg(from: voiron, to: grenoble)
         let returnLeg = Leg(from: grenoble, to: voiron)
         let outbound = [train((17, 46), (18, 11), "17652"), train((18, 16), (18, 41), "17654")]
@@ -219,8 +268,8 @@ import Testing
                        train((20, 42), (21, 7), "17665"),       // first that fits (threshold 20:41)
                        train((22, 42), (23, 7), "17669")]       // last train
         let log = FetchLog()
-        let live = RoundTripLive(calendar: BigScreenFixtures.calendar) { leg, date in
-            await log.record(leg, date)
+        let live = RoundTripLive(calendar: BigScreenFixtures.calendar) { leg, date, within in
+            await log.record(leg, date, within)
             return leg == outboundLeg ? outbound : returns
         }
 
@@ -229,16 +278,24 @@ import Testing
         #expect(p.returnLeg == returnLeg)
         #expect(p.selectedOutbound?.trainNumber == "17652")
         #expect(p.pairedReturn?.trainNumber == "17665")
+        #expect(p.returnOptions.last?.fit == .lastTrain)
 
         let calls = await log.calls
         #expect(calls.count == 2)
-        #expect(calls[0].leg == outboundLeg && calls[0].at == now)
+        #expect(calls[0].leg == outboundLeg && calls[0].at == now && calls[0].within == nil)
         #expect(calls[1].leg == returnLeg && calls[1].at == BigScreenFixtures.at(18, 11))   // the 17:46 arrival
+        // To the next 03:00, not the default dozen: 18:11 → 03:00 is 8 h 49.
+        #expect(calls[1].within == BigScreenFixtures.at(3, 0, day: 16).timeIntervalSince(BigScreenFixtures.at(18, 11)))
+
+        // A re-pick and a new stay come from the held boards: still two requests.
+        let later = p.replanned(pick: TrainIdentity(outbound[1], calendar: BigScreenFixtures.calendar), stay: 120 * 60, at: now)
+        #expect(later.selectedOutbound?.trainNumber == "17654")
+        #expect(await log.calls.count == 2)
     }
 
     @Test func emptyBoardsReadAsNothingRuns() async {
         let outboundLeg = Leg(from: voiron, to: grenoble)
-        let live = RoundTripLive(calendar: BigScreenFixtures.calendar) { _, _ in [] }
+        let live = RoundTripLive(calendar: BigScreenFixtures.calendar) { _, _, _ in [] }
         let p = await live.roundTrip(outbound: outboundLeg, pick: nil, stay: 150 * 60, at: now)
         #expect(p.selectedOutbound == nil)
         #expect(p.returnOptions.isEmpty)

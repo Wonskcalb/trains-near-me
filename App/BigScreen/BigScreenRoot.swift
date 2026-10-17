@@ -71,7 +71,14 @@ enum BigScreenRoute: Hashable, CaseIterable {
     /// Picking a journey always returns to the board it feeds.
     func select(journey index: Int) { temporaryLeg = nil; selectedJourney = index; route = .stationHall }
     func show(station: Station) { temporaryLeg = nil; self.station = station; route = .station }
-    func open(temporary leg: Leg) { temporaryLeg = leg; route = .station }
+    /// Opened from the station map or from the hall's Swap; Back returns to whichever it was.
+    func open(temporary leg: Leg) {
+        if temporaryLeg == nil { temporaryOrigin = route }
+        temporaryLeg = leg
+        route = .station
+    }
+    func closeTemporary() { temporaryLeg = nil; route = temporaryOrigin }
+    private var temporaryOrigin: BigScreenRoute = .station
     func requestSearch() { searchRequested = true }
     func refresh() { refreshTick += 1 }
 }
@@ -105,9 +112,16 @@ struct BigScreenRoot: View {
             .focusedSceneValue(\.bigScreenModel, model)
             // The Settings pane's picker; the big screen follows it like the iPhone tabs do.
             .followsAppearance()
+            // A journey edit from any window, the Mac's ⌘, Settings included, refreshes this one's screens.
+            .onReceive(NotificationCenter.default.publisher(for: SharedSettings.favoritesDidChange).receive(on: RunLoop.main)) { _ in
+                model.refresh()
+            }
         #if os(macOS)
             .onAppear { consumePendingRoute() }
             .onChange(of: pendingRoute) { _, _ in consumePendingRoute() }
+        #endif
+        #if DEBUG && os(iOS)
+            .task { ScreenshotSupport.apply(to: model) }
         #endif
     }
 
@@ -144,6 +158,9 @@ struct BigScreenRoot: View {
         } detail: {
             detail
         }
+        // Balanced, not the automatic overlay: in iPad portrait the sidebar laid over the board and hid its
+        // left edge; side by side, the board narrows and moves its inspector into a sheet instead.
+        .navigationSplitViewStyle(.balanced)
     }
 
     @ViewBuilder private var detail: some View {
@@ -224,13 +241,23 @@ private struct BigScreenSidebar: View {
     @State private var adding = false
     @State private var editTarget: JourneyConfiguration?
 
-    /// The clock the sidebar reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
-    /// from the `#Preview` so the mockup lines up. Every relative time follows from it.
-    let now: Date
+    /// A frozen `BigScreenFixtures.now` from the `#Preview`, so the mockup lines up; nil follows the clock.
+    private let frozenNow: Date?
 
-    init(now: Date = Date()) { self.now = now }
+    init(now: Date? = nil) { frozenNow = now }
 
+    // The rows' next times and NEXT tags move with the minute; the fetch is keyed on ⌘R, not on the time.
     var body: some View {
+        TimelineView(.everyMinute) { context in
+            content(now: frozenNow ?? context.date)
+        }
+    }
+
+    /// The clock a request is asked at: read when it starts, so ⌘R asks at the real time and lands in the
+    /// same boards-memo round as the screen beside it, rather than a minute or an hour behind.
+    private var requestTime: Date { frozenNow ?? Date() }
+
+    private func content(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             appMark
             searchField
@@ -238,11 +265,11 @@ private struct BigScreenSidebar: View {
                 searchResults
             } else {
                 nearMe
-                journeys
+                journeys(now: now)
                 views
             }
             Spacer(minLength: 0)
-            footer
+            footer(now: now)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 22)
@@ -268,7 +295,7 @@ private struct BigScreenSidebar: View {
     }
 
     private func load() async {
-        boards = await data.journeyBoards.boards(at: now)
+        boards = await data.journeyBoards.boards(at: requestTime)
         pinned = await data.leaveBy.pinnedStation()
         await loadNear()
     }
@@ -277,7 +304,8 @@ private struct BigScreenSidebar: View {
         do throws(TrainServiceError) { near = .success(try await data.stationSearch.nearest()) }
         catch { near = .failure(error) }
         if let station = nearStation {
-            nextNearMe = BoardReading.nextUpcoming(await data.stationBoard.board(for: station, at: now), after: now)?.expectedDeparture
+            let at = requestTime
+            nextNearMe = BoardReading.nextUpcoming(await data.stationBoard.board(for: station, at: at), after: at)?.expectedDeparture
         } else {
             nextNearMe = nil
         }
@@ -290,7 +318,7 @@ private struct BigScreenSidebar: View {
     }
 
     private func save(_ journeys: [JourneyConfiguration]) {
-        SavedJourneys.save(journeys, data: data, model: model)
+        SavedJourneys.save(journeys)
     }
 
     // MARK: Search
@@ -435,7 +463,7 @@ private struct BigScreenSidebar: View {
         metres < 1000 ? "\(Int((metres / 10).rounded()) * 10) m" : String(format: "%.1f km", metres / 1000)
     }
 
-    private var journeys: some View {
+    private func journeys(now: Date) -> some View {
         SidebarSection("JOURNEYS", accessory: {
             Button { adding = true } label: {
                 Image(systemName: "plus").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.inkSecondary)
@@ -489,7 +517,7 @@ private struct BigScreenSidebar: View {
         .buttonStyle(.plain)
     }
 
-    private var footer: some View {
+    private func footer(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Settings opens as a pane of this window rather than the small separate panel, so the token,
             // the journeys and the appearance sit at the size the rest of the big screen is drawn at.

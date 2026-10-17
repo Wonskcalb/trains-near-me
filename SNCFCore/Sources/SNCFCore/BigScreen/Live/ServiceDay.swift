@@ -41,9 +41,7 @@ public struct LiveServiceDay: ServiceDayProviding {
     public func summary(for leg: Leg, at now: Date) async -> ServiceDaySummary? {
         let dayStart = BoardState.serviceDay(of: now, calendar: calendar)
         if let cached = cachedSummary(leg: leg, dayStart: dayStart) { return cached }
-        // `dayStart` is local midnight; the service day itself opens at 03:00. Set by wall-clock hour, not
-        // +3 h, so a DST night still starts at 03:00.
-        let opens = calendar.date(bySettingHour: 3, minute: 0, second: 0, of: dayStart) ?? dayStart.addingTimeInterval(3 * 3600)
+        let opens = BoardState.serviceDayStart(of: now, calendar: calendar)
         let trains = await fetch(leg, opens)
         guard let summary = Self.summarise(trains, dayStart: dayStart, calendar: calendar) else { return nil }
         store(summary, leg: leg, dayStart: dayStart)

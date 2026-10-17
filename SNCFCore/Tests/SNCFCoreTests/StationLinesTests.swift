@@ -33,6 +33,15 @@ import Testing
         #expect(board[3].terminus == nil)
     }
 
+    @Test func aTerminusMustBeTheHeadsignNotJustItsStart() {
+        let lyon = StopArea(id: "stop_area:SNCF:lyon", name: "Lyon", coord: Coord(lat: "45.7", lon: "4.8"))
+        // "Lyon Perrache (Lyon)" starts with "Lyon" but runs to another station than the stop_area "Lyon".
+        #expect(NavitiaParser.terminus(lyon, headsign: "Lyon Perrache (Lyon)") == nil)
+        #expect(NavitiaParser.terminus(lyon, headsign: "Lyon (Lyon)")?.id == "stop_area:SNCF:lyon")
+        let partDieu = StopArea(id: "pd", name: "Lyon Part-Dieu", coord: Coord(lat: "45.7", lon: "4.8"))
+        #expect(NavitiaParser.terminus(partDieu, headsign: "Lyon Part Dieu (Lyon)")?.id == "pd")   // folded alike
+    }
+
     @Test func theTrimmedBoardHasNoTerminus() throws {
         #expect(try NavitiaParser.stopDepartures(from: fixture("stop_departures")).allSatisfy { $0.terminus == nil })
     }

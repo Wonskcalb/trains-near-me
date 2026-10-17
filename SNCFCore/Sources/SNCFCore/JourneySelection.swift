@@ -26,7 +26,8 @@ public struct JourneyConfiguration: Codable, Hashable, Sendable {
     }
 }
 
-public struct Leg: Equatable, Sendable {
+/// Codable so a watched train keeps the leg it was watched on, which names its notifications.
+public struct Leg: Equatable, Codable, Sendable {
     public let from: Station
     public let to: Station
 
