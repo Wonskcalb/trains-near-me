@@ -38,7 +38,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The menu-bar label follows the first saved journey only, and stops asking after the last train until shortly before the morning's first.
 
 ### Fixed
-- On an iPhone, tapping a train on Lanes or a station's line map opens its card in a bottom drawer instead of a blank full-screen sheet; on iPad, the unfolded Duo and the Mac it stays a popover.
+- On an iPhone, tapping a train on Lanes or a station's line map opens its card in a bottom drawer instead of a blank full-screen sheet; the drawer lists the train's stops straight away. On iPad, the unfolded Duo and the Mac it stays a popover, with Stops on a button.
 - Every train time and clock reads in Paris time, whatever zone the device is set to (the split-flaps, the time-track hours, the widgets and the menu bar used the device's).
 - The 03:00 service day holds on the two DST mornings.
 - ⌘R and every refresh ask about the current time: a screen no longer reloads with the time it was opened at, which showed trains that had left as next.
