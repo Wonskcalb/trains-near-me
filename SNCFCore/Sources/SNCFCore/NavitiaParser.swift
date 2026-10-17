@@ -117,12 +117,17 @@ public enum NavitiaParser {
     }
 
     /// `route.direction` is the route's end, which a short working of the same route never reaches: it
-    /// only names the train's terminus when the train's own headsign agrees ("Lyon Part Dieu (Lyon)"
-    /// against stop_area "Lyon Part Dieu"). Otherwise nil, and the headsign is resolved on demand.
+    /// only names the train's terminus when the train's own headsign is that station ("Lyon Part Dieu
+    /// (Lyon)" against stop_area "Lyon Part Dieu"). The town in brackets is dropped and the rest must be
+    /// equal: a prefix let stop_area "Lyon" claim a train to "Lyon Perrache (Lyon)". Otherwise nil, and
+    /// the headsign is resolved on demand.
     static func terminus(_ area: StopArea?, headsign: String?) -> Station? {
         guard let area, let name = area.name, let coord = area.coord,
               let lat = Double(coord.lat), let lon = Double(coord.lon) else { return nil }
-        if let headsign, !folded(headsign).hasPrefix(folded(name)) { return nil }
+        if let headsign {
+            let station = headsign.components(separatedBy: " (").first ?? headsign
+            guard folded(station) == folded(name) else { return nil }
+        }
         return Station(id: area.id, name: name, latitude: lat, longitude: lon)
     }
 

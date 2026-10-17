@@ -58,7 +58,7 @@ public struct SNCFClient {
     }
 
     /// Every train leaving one station in `duration` seconds, each with its terminus stop_area — the
-    /// big-screen star. `count` alone cuts a busy station's evening at a fixed number of rows, so the
+    /// station line map. `count` alone cuts a busy station's evening at a fixed number of rows, so the
     /// window is asked for instead, in the same single request; `depth=2` is what puts the stop_area
     /// (id, coordinates) under `route.direction`.
     public func departures(from station: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {

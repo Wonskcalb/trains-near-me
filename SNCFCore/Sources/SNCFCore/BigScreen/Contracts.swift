@@ -204,9 +204,9 @@ public struct StationDayBoard: Equatable, Sendable {
 /// `vehicleJourneyID`, since the station board itself does not carry the stopping pattern.
 public protocol StationBoardProviding: Sendable {
     func board(for station: Station, at now: Date) async -> BoardState
-    /// The rest of the service day (at least 2 h) with each train's terminus — the big-screen star — and
-    /// late in the evening the next morning. The plain `board(for:at:)` stays a fixed count, which is what
-    /// the radar and the sidebar want.
+    /// The rest of the service day (at least 2 h) with each train's terminus, which the station line map
+    /// draws, and late in the evening the next morning. The plain `board(for:at:)` stays a fixed count,
+    /// which is what the radar and the sidebar want.
     func serviceDayBoard(for station: Station, at now: Date) async -> StationDayBoard
     func via(forVehicleJourneyID id: String) async -> [String]
 }
@@ -216,8 +216,8 @@ public protocol TrainStopsProviding: Sendable {
     func stops(forVehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop]
 }
 
-/// The 03:00 service-day summary for one direction (the Lanes minimap, the station-hall footer, the
-/// extra-tall widget's "LAST 22:42"). nil when the day could not be summarised.
+/// The 03:00 service-day summary for one direction (the Lanes minimap, the station-hall footer and its
+/// end-of-service split). nil when the day could not be summarised.
 public protocol ServiceDayProviding: Sendable {
     func summary(for leg: Leg, at now: Date) async -> ServiceDaySummary?
 }

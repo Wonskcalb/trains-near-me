@@ -293,8 +293,14 @@ private struct StationLinesBoard: View {
     private func open(_ terminus: Station?, _ name: String) {
         openFailure = nil
         Task {
-            guard let target = await resolve(terminus, name), target.id != station.id else {
+            guard let target = await resolve(terminus, name) else {
                 openFailure = "Couldn’t find a station called \(name)."
+                return
+            }
+            // A headsign that resolves back to this station (a loop, or a search's best match) has no
+            // journey to open; say that rather than claim the station does not exist.
+            guard target.id != station.id else {
+                openFailure = "\(name) is this station: there is no journey to open."
                 return
             }
             model.open(temporary: Leg(from: station, to: target))
