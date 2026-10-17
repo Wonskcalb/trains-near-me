@@ -8,6 +8,7 @@ import SwiftUI
 /// button is there for when you do not want to wait for that. An Edit mode collapses the cards into a
 /// plain list for deleting, reordering by hand, and editing a journey in place.
 struct JourneysView: View {
+    @Environment(\.bigScreenData) private var data
     @State private var journeys = SharedSettings.favorites
     @State private var boards = JourneyBoards()
     @State private var now = Date.now
@@ -42,7 +43,7 @@ struct JourneysView: View {
             Button("Add a journey", systemImage: "plus") { adding = true }
         }
         .tint(.amber)
-        .refreshable { await boards.load(journeys) }
+        .refreshable { await boards.load(journeys, from: data, fresh: true) }
         .sheet(isPresented: $adding) {
             EditJourneyView { journey in
                 journeys.append(journey)
@@ -62,9 +63,13 @@ struct JourneysView: View {
         .task {
             while !Task.isCancelled {
                 now = .now
-                if boards.needsLoad(for: journeys, at: now) { await boards.load(journeys) }
+                if boards.needsLoad(for: journeys, at: now) { await boards.load(journeys, from: data) }
                 try? await Task.sleep(for: .seconds(60))
             }
+        }
+        // An edit made elsewhere (the Settings tab, the iPad sidebar) shows here at once.
+        .onReceive(NotificationCenter.default.publisher(for: SharedSettings.favoritesDidChange).receive(on: RunLoop.main)) { _ in
+            journeys = SharedSettings.favorites
         }
     }
 
@@ -377,6 +382,8 @@ struct LoadedBoard {
 }
 
 /// The boards of every saved journey, fetched together so the screen has one age, not one per card.
+/// They come from `data.journeyBoards`, so on the Duo, where Lanes and the board sit beside this list,
+/// all three share one memoised round of requests instead of each paying for it.
 @MainActor
 @Observable
 final class JourneyBoards {
@@ -393,39 +400,26 @@ final class JourneyBoards {
     /// SwiftUI cancels the task behind `refreshable` the moment its control goes away, and a
     /// cancelled request comes back out of the client as "the SNCF API is not responding" — a
     /// pull-to-refresh looked broken while the same work from a button succeeded. An unstructured
-    /// task does not inherit that cancellation, so every caller gets the same fetch.
-    func load(_ journeys: [JourneyConfiguration]) async {
-        await Task { await fetch(journeys) }.value
+    /// task does not inherit that cancellation, so every caller gets the same fetch. `fresh` (a pull)
+    /// drops the memoised round first.
+    func load(_ journeys: [JourneyConfiguration], from data: BigScreenData, fresh: Bool = false) async {
+        await Task { await fetch(journeys, from: data, fresh: fresh) }.value
     }
 
-    private func fetch(_ journeys: [JourneyConfiguration]) async {
+    private func fetch(_ journeys: [JourneyConfiguration], from data: BigScreenData, fresh: Bool) async {
         guard !loading, !journeys.isEmpty else { return }
         loading = true
         defer { loading = false }
 
+        // The tab that needs a position is the one that asks for it; the settings are elsewhere now.
+        if journeys.contains(where: { $0.nearestStationAsDeparture }), LocationFix.shared.status == .notDetermined {
+            LocationFix.shared.requestAuthorization()
+        }
+        if fresh { await data.journeyBoards.invalidate() }
         let now = Date.now
-        var location: CLLocation?
-        if journeys.contains(where: { $0.nearestStationAsDeparture }) {
-            // The tab that needs a position is the one that asks for it; the settings are elsewhere now.
-            if LocationFix.shared.status == .notDetermined { LocationFix.shared.requestAuthorization() }
-            // One fix for the whole screen: every journey that follows you compares the same position.
-            location = await LocationFix.shared.current()
-        }
-
-        // One journey at a time, each card filling in as its answer lands. A handful of rows is a
-        // handful of requests and the free tier is 5 000 a day, so there is nothing to win by
-        // firing them all at once.
-        let client = SNCFClient(token: SharedSettings.token)
-        for journey in journeys {
-            let leg = JourneySelector.leg(for: journey, at: now, location: journey.nearestStationAsDeparture ? location : nil)
-            do {
-                let trains = try await client.departures(from: leg.from, to: leg.to, at: now)
-                boards[journey] = LoadedBoard(leg: leg, state: .from(trains, now: now))
-            } catch {
-                boards[journey] = LoadedBoard(leg: leg, state: .unavailable(error))
-            }
-        }
-        boards = boards.filter { journeys.contains($0.key) }
+        let fetched = await data.journeyBoards.boards(at: now)
+        boards = Dictionary(fetched.map { ($0.journey, LoadedBoard(leg: $0.leg, state: $0.state)) },
+                            uniquingKeysWith: { first, _ in first })
         fetchedAt = now
     }
 }

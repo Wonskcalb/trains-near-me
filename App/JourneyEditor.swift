@@ -19,17 +19,14 @@ extension TrainServiceError {
     }
 }
 
-/// The one write path for the saved journeys outside the iPhone tab: persist, forget the memoised
-/// boards so every screen refetches, and reload the widgets — whose station picker suggests these
-/// journeys. A reload is fine here: it is a user's edit, not a refresh loop on the WidgetKit budget.
+/// The one write path for the saved journeys outside the iPhone tab: persist and reload the widgets, whose
+/// station picker suggests these journeys. A reload is fine here: it is a user's edit, not a refresh loop
+/// on the WidgetKit budget. The screens refresh from `SharedSettings.favoritesDidChange`, which reaches
+/// every window, and the boards memo is keyed on the list, so an edit is never answered with the old one.
 @MainActor enum SavedJourneys {
-    static func save(_ journeys: [JourneyConfiguration], data: BigScreenData, model: BigScreenModel?) {
+    static func save(_ journeys: [JourneyConfiguration]) {
         SharedSettings.favorites = journeys
         WidgetCenter.shared.reloadAllTimelines()
-        Task {
-            await data.journeyBoards.invalidate()
-            model?.refresh()
-        }
     }
 }
 
@@ -184,15 +181,14 @@ struct StationSearch: View {
 /// The saved journeys as an editable list, in the Tableau card style: one row each with Edit / Delete /
 /// reorder, and an "Add a journey" row. Lives in the Settings pane on the big screen and on the Mac.
 struct SavedJourneysCard: View {
-    @Environment(\.bigScreenData) private var data
-    @Environment(BigScreenModel.self) private var model: BigScreenModel?
     @State private var journeys = SharedSettings.favorites
     @State private var adding = false
     @State private var editTarget: JourneyConfiguration?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(journeys.enumerated()), id: \.element) { index, journey in
+            // By position: the same journey can be saved twice, and two rows with one id collide.
+            ForEach(Array(journeys.enumerated()), id: \.offset) { index, journey in
                 HStack(spacing: 10) {
                     RoutePins(destination: .ring(core: .ink, ring: .amber), originDiameter: 8, destinationDiameter: 10)
                         .frame(width: 12, height: 32)
@@ -228,9 +224,11 @@ struct SavedJourneysCard: View {
                 commit(journeys.map { $0 == target ? updated : $0 })
             }
         }
-        // Another screen (the sidebar) may have changed them meanwhile.
+        // Another screen or window (the sidebar, the iPhone tab) may have changed them meanwhile.
         .onAppear { journeys = SharedSettings.favorites }
-        .onChange(of: model?.refreshTick) { journeys = SharedSettings.favorites }
+        .onReceive(NotificationCenter.default.publisher(for: SharedSettings.favoritesDidChange).receive(on: RunLoop.main)) { _ in
+            journeys = SharedSettings.favorites
+        }
     }
 
     @ViewBuilder private func journeyActions(_ journey: JourneyConfiguration, index: Int) -> some View {
@@ -240,7 +238,7 @@ struct SavedJourneysCard: View {
 
     private func commit(_ updated: [JourneyConfiguration]) {
         journeys = updated
-        SavedJourneys.save(updated, data: data, model: model)
+        SavedJourneys.save(updated)
     }
 }
 

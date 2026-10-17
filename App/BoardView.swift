@@ -19,7 +19,6 @@ struct BoardView: View {
     }
 
     @Environment(\.spansFold) private var spansFold
-    @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
     @State private var origin: Station?
     /// nil on the radar, which has no destination.
@@ -76,7 +75,7 @@ struct BoardView: View {
             if isUnsaved, let journey {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Add to my journeys", systemImage: "star") {
-                        SavedJourneys.save(SharedSettings.favorites + [journey], data: data, model: model)
+                        SavedJourneys.save(SharedSettings.favorites + [journey])
                         added = true
                     }
                 }

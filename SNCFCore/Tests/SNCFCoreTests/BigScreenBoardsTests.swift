@@ -236,6 +236,68 @@ import Testing
             try await bad.stops(forVehicleJourneyID: "x")
         }
     }
+
+    @Test func trainStopsAreFetchedOncePerVehicleJourney() async throws {
+        // ↑↓ back over a row, ⌘R and a reopened popover all ask again: one trip() per run for the session.
+        let calls = Counter()
+        let stops = [TripStop(name: "A", time: "10:00", isSkipped: false)]
+        let fetch: LiveTrainStops.Fetch = { _ in await calls.bump(); return stops }
+        let provider = LiveTrainStops(fetch: fetch)
+        #expect(try await provider.stops(forVehicleJourneyID: "vj:1") == stops)
+        #expect(try await provider.stops(forVehicleJourneyID: "vj:1") == stops)
+        #expect(await calls.count == 1)
+        _ = try await provider.stops(forVehicleJourneyID: "vj:2")
+        #expect(await calls.count == 2)
+    }
+
+    @Test func aFailedStopsLookupIsAskedAgain() async {
+        let calls = Counter()
+        let fetch: LiveTrainStops.Fetch = { _ in await calls.bump(); throw TrainServiceError.offline }
+        let provider = LiveTrainStops(fetch: fetch)
+        _ = try? await provider.stops(forVehicleJourneyID: "vj:1")
+        _ = try? await provider.stops(forVehicleJourneyID: "vj:1")
+        #expect(await calls.count == 2)
+    }
+
+    // MARK: Lanes' morning
+
+    @Test func theMorningIsFetchedOncePerLegAndKeepsTheNextServiceDay() async {
+        let asked = Asked()
+        let morning = [train(5, 42, day: 9), train(6, 12, day: 9), train(3, 10, day: 10)]
+        let tomorrow: LiveJourneyBoards.Fetch = { _, opens in await asked.add(opens); return morning }
+        let provider = LiveJourneyBoards(favorites: { [] }, location: { nil }, calendar: paris,
+                                         tomorrow: tomorrow, fetch: { _, _ in [] })
+        let leg = Leg(from: grenoble, to: voiron)
+
+        // 17:50 on the 8th: the 9th's morning, in one request, whatever the evening asks after.
+        #expect(await provider.morning(for: leg, at: at(17, 50)) == Array(morning.prefix(2)))
+        #expect(await provider.morning(for: leg, at: at(21, 0)) == Array(morning.prefix(2)))
+        let opens = paris.date(from: DateComponents(year: 2026, month: 10, day: 9, hour: 3, minute: 0))!
+        #expect(await asked.dates == [opens])
+        // The other way is its own leg.
+        _ = await provider.morning(for: Leg(from: voiron, to: grenoble), at: at(17, 50))
+        #expect(await asked.dates.count == 2)
+    }
+
+    // MARK: Polling on its own
+
+    @Test func aPollerStopsAfterTheLastTrainUntilTheMorning() {
+        let refresh = RefreshPlanner.refreshInterval
+        // A train still to run tonight: the regular quarter-hour.
+        #expect(RefreshPlanner.nextPoll(after: at(22, 0), state: .departures([train(22, 42)]), tomorrow: [])
+                == at(22, 0).addingTimeInterval(refresh))
+        // The last one gone, the morning known: nothing until half an hour before its first train.
+        let morning = [train(5, 42, day: 9)]
+        #expect(RefreshPlanner.nextPoll(after: at(22, 50), state: .departures([train(22, 42)]), tomorrow: morning)
+                == train(5, 12, day: 9).scheduledDeparture)
+        #expect(RefreshPlanner.nextPoll(after: at(23, 30), state: .endOfService(firstTrain: train(5, 42, day: 9).scheduledDeparture), tomorrow: [])
+                == train(5, 12, day: 9).scheduledDeparture)
+        // Nothing to name: an idle hour. An error: the regular retry.
+        #expect(RefreshPlanner.nextPoll(after: at(23, 30), state: .noTrains, tomorrow: [])
+                == at(23, 30).addingTimeInterval(RefreshPlanner.idleRefreshInterval))
+        #expect(RefreshPlanner.nextPoll(after: at(23, 30), state: .unavailable(.offline), tomorrow: [])
+                == at(23, 30).addingTimeInterval(refresh))
+    }
 }
 
 /// Counts fetch-seam calls across concurrency boundaries in a test.

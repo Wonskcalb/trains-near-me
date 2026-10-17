@@ -1,11 +1,14 @@
 import Foundation
 
-/// Live `TrainStopsProviding`: a thin wrapper over `SNCFClient.trip(vehicleJourneyID:)` for the full
-/// stopping pattern the inspector draws. The seam keeps that rendering testable from a fixture.
+/// Live `TrainStopsProviding`: `SNCFClient.trip(vehicleJourneyID:)` for the full stopping pattern the
+/// inspector and the Lanes popover draw, cached by vehicle-journey id for the session like `ViaCache`:
+/// ↑↓ back over a row, ⌘R or reopening a popover would otherwise ask SNCF for the same run again. The
+/// stops are timetable facts (the delays live on the board), so a cached run never goes stale.
 public struct LiveTrainStops: TrainStopsProviding {
     public typealias Fetch = @Sendable (String) async throws(TrainServiceError) -> [TripStop]
 
     private let fetch: Fetch
+    private let cache = StopsCache()
 
     public init(fetch: @escaping Fetch) { self.fetch = fetch }
 
@@ -16,6 +19,24 @@ public struct LiveTrainStops: TrainStopsProviding {
     }
 
     public func stops(forVehicleJourneyID id: String) async throws(TrainServiceError) -> [TripStop] {
-        try await fetch(id)
+        let fetch = self.fetch
+        return try await cache.stops(id) { () async throws(TrainServiceError) in try await fetch(id) }.get()
+    }
+}
+
+/// The in-flight lookup per vehicle journey, so two views asking for one train at once share a request.
+/// A failure is dropped once it lands, so the next ask tries again instead of keeping the error.
+actor StopsCache {
+    private var tasks: [String: Task<Result<[TripStop], TrainServiceError>, Never>] = [:]
+
+    func stops(_ id: String,
+               compute: @escaping @Sendable () async throws(TrainServiceError) -> [TripStop]) async -> Result<[TripStop], TrainServiceError> {
+        let task = tasks[id] ?? Task {
+            do throws(TrainServiceError) { return .success(try await compute()) } catch { return .failure(error) }
+        }
+        tasks[id] = task
+        let result = await task.value
+        if case .failure = result { tasks[id] = nil }
+        return result
     }
 }

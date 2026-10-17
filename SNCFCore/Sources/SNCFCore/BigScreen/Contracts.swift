@@ -172,9 +172,12 @@ public struct NearbyStation: Equatable, Sendable {
 /// Every saved journey's board, fetched together (the sidebar, Lanes and Wall all need the whole set).
 public protocol JourneyBoardsProviding: Sendable {
     func boards(at now: Date) async -> [JourneyBoard]
-    /// One leg's board on demand, unsaved and not memoised: a journey the station star opens from a
-    /// branch. The same full-service-day window as the saved boards, in one request.
+    /// One leg's board on demand, unsaved and not memoised: a journey a station-map lane opens, or the
+    /// menu-bar label's one journey. The same full-service-day window as the saved boards, in one request.
     func board(for leg: Leg, at now: Date) async -> JourneyBoard
+    /// The next service day's first trains on one leg, memoised per morning: Lanes' TOMORROW AM before
+    /// the boards carry them on their own (`JourneyBoard.tomorrow`, filled only late in the evening).
+    func morning(for leg: Leg, at now: Date) async -> [TrainDeparture]
     /// Forget any memoised boards, so the next `boards(at:)` fetches. ⌘R and a journey edit call it.
     func invalidate() async
 }

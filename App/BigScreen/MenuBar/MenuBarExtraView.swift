@@ -16,6 +16,8 @@ struct MenuBarLabel: View {
     var now: Date?
     @State private var trains: [TrainDeparture] = []
     @State private var clock = Date()
+    /// When the label fetches again: `RefreshPlanner.nextPoll`, or at once after a journey edit.
+    @State private var nextFetch = Date.distantPast
 
     var body: some View {
         // No TimelineView here: macOS turns the label into the status item's image on every render, and
@@ -32,17 +34,28 @@ struct MenuBarLabel: View {
             Text(text(at: now ?? clock)).font(.mono(12.5, weight: .semibold))
         }
         // The minute tick recounts "2′" and moves on to the next train once one leaves, from the trains
-        // already held; only the delays need a fetch.
-        // ponytail: a fixed 15 min refetch for the delays, every saved journey per round (the boards memo
-        // fetches them together) — about a hundred requests per journey a day while the app runs.
+        // already held; only the delays need a fetch. One journey's board, not every saved one, every 15
+        // min while trains run, then nothing until shortly before the morning's first: about 70 requests
+        // a day instead of a hundred per journey, night included.
         .task {
-            var minutes = 0
             while !Task.isCancelled {
-                if minutes % 15 == 0 { trains = await Self.primaryTrains(from: data, at: now ?? .now) }
+                if (now ?? .now) >= nextFetch {
+                    let at = now ?? .now
+                    if let board = await Self.primaryBoard(from: data, at: at) {
+                        trains = BoardReading.departures(board.state) + board.tomorrow
+                        nextFetch = RefreshPlanner.nextPoll(after: at, state: board.state, tomorrow: board.tomorrow)
+                    } else {
+                        trains = []
+                        nextFetch = at.addingTimeInterval(RefreshPlanner.refreshInterval)
+                    }
+                }
                 try? await Task.sleep(for: .seconds(60))
                 clock = .now
-                minutes += 1
             }
+        }
+        // A journey edit or ⌘R names a new primary journey or asks for fresh delays: fetch on the next tick.
+        .onReceive(NotificationCenter.default.publisher(for: SharedSettings.favoritesDidChange).receive(on: RunLoop.main)) { _ in
+            nextFetch = .distantPast
         }
     }
 
@@ -53,11 +66,15 @@ struct MenuBarLabel: View {
         return "\(time) · \(MenuBarFormat.minutesUntil(next.expectedDeparture, from: clock))′"
     }
 
-    /// The primary (first saved) journey's trains — the ones the bar always watches — carried on into the
-    /// morning's first when the board holds them, so the label never goes blank after the last train.
-    static func primaryTrains(from data: BigScreenData, at now: Date) async -> [TrainDeparture] {
-        let board = await data.journeyBoards.boards(at: now).first
-        return BoardReading.departures(board?.state) + (board?.tomorrow ?? [])
+    /// The primary (first saved) journey's board, carried on into the morning's first when it holds them,
+    /// so the label never goes blank after the last train. Asked on its own leg, not through the every-
+    /// journey round: the label only ever shows this one. With nothing saved (the mockup data in the
+    /// previews) the boards stand in, which costs no request live.
+    static func primaryBoard(from data: BigScreenData, at now: Date) async -> JourneyBoard? {
+        guard let primary = SharedSettings.favorites.first else { return await data.journeyBoards.boards(at: now).first }
+        let location = primary.nearestStationAsDeparture ? await LocationFix.shared.current() : nil
+        let leg = JourneySelector.leg(for: primary, at: now, location: location, calendar: SNCFTime.calendar)
+        return await data.journeyBoards.board(for: leg, at: now)
     }
 }
 
@@ -108,6 +125,7 @@ struct MenuBarExtraView: View {
         .frame(width: 372, alignment: .leading)
         .background(Color.surface)
         .task {
+            clock = Date()
             boards = await data.journeyBoards.boards(at: now)
             // The open popover keeps its countdowns and its hero current from what it holds.
             while !Task.isCancelled {

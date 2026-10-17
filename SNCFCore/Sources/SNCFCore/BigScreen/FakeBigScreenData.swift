@@ -255,6 +255,10 @@ struct FakeJourneyBoards: JourneyBoardsProviding {
         all.first { $0.leg.from.id == leg.from.id && $0.leg.to.id == leg.to.id }
             ?? JourneyBoard(journey: JourneyConfiguration(stationA: leg.from, stationB: leg.to), leg: leg, state: .noTrains, fetchedAt: now)
     }
+    /// The late-evening fixture's mornings, the only ones the mockup draws.
+    func morning(for leg: Leg, at now: Date) async -> [TrainDeparture] {
+        BigScreenFixtures.lateJourneyBoards.first { $0.leg.from.id == leg.from.id && $0.leg.to.id == leg.to.id }?.tomorrow ?? []
+    }
 }
 
 /// One canned board (the pinned station); the `station` argument is ignored, there is only one in the fake.
