@@ -11,10 +11,10 @@ import AppKit
 /// (the nearest one when nothing is pinned). It is an ordinary page of the app: the sidebar stays and any
 /// route leaves it.
 ///
-/// Always drawn on the Board (dark) palette whatever the app's appearance setting: a wall is a dark
-/// board, so the subtree forces `\.colorScheme = .dark` and the Tableau tokens resolve to their dark
-/// variants. The only hard-coded colours are the three wall shades that have no token (`#0A0B0C` ground,
-/// `#121316` panel, `#1C1E22` clock tile).
+/// Follows the app's appearance like every other page: on dark it is the Board, a touch darker than the
+/// app (`#0A0B0C` ground, `#121316` panel, `#1C1E22` clock tile); on light it is the Timetable, paper and
+/// ink with amber only as a fill, the flaps ink tiles with amber digits. The journey cards, the INFO
+/// ticker, the NO SERVICE plate and the LEAVE HOME IN tiles stay dark in both: they are dark by design.
 struct WallModeView: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
@@ -42,7 +42,16 @@ struct WallModeView: View {
     #endif
     /// The desk clock's sun button; on until turned off, as the wall always was.
     @State private var keepAwake = true
+    /// The wall's type and clock against the iPad's 1376×1032 the mockup is drawn at: 1 there and on a big
+    /// Mac window, down to 0.62 (a 64 pt title at 40) on the Duo's inner display, a phone or half a fold.
+    @State private var typeScale: CGFloat = 1
     @Environment(\.previewFold) private var previewFold
+    @Environment(\.colorScheme) private var scheme
+
+    /// The wall's shades: its own darker ones on the Board, the Timetable tokens on paper.
+    private var ground: Color { scheme == .dark ? .wallGround : .ground }
+    private var panel: Color { scheme == .dark ? .wallPanel : .surface }
+    private var clockTile: Color { scheme == .dark ? .wallClockTile : .flapTile }
 
     init(now: Date? = nil) {
         frozenNow = now
@@ -86,7 +95,6 @@ struct WallModeView: View {
         }
         .keepScreenAwake(enter: enterKeepAwake, leave: leaveKeepAwake)
         .onChange(of: keepAwake) { _, on in on ? enterKeepAwake() : leaveKeepAwake() }
-        .environment(\.colorScheme, .dark)
     }
 
     // MARK: Loading
@@ -188,8 +196,11 @@ struct WallModeView: View {
             }
             .toolbar { controls(inBottomBar: arrangement.hasBottomBar) }
         }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            min(1, max(0.62, min(proxy.size.width / 1376, proxy.size.height / 1032)))
+        } action: { typeScale = $0 }
         .foregroundStyle(Color.ink)
-        .background(Color.wallGround.ignoresSafeArea())
+        .background(ground.ignoresSafeArea())
     }
 
     /// The iPhone's wall, top to bottom in one scroll: the header, LEAVE HOME IN at full width, the
@@ -200,8 +211,7 @@ struct WallModeView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header(liveNow: liveNow, sideBySide: width >= 560)
                 leaveCard(to: leaveLeg?.to.name, liveNow: liveNow)
-                boardPanel(liveNow: liveNow, density: width < 480 ? .small : width < 668 ? .folded : .full,
-                           scrolls: false)
+                boardPanel(liveNow: liveNow, density: BoardDensity(width: width), scrolls: false)
                 journeysCaption
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) { journeyCards(liveNow: liveNow, width: 260) }
@@ -230,7 +240,7 @@ struct WallModeView: View {
                     clock(liveNow: liveNow).frame(width: max(0, side), alignment: .trailing)
                 }
                 HStack(alignment: .top, spacing: spacing) {
-                    boardPanel(liveNow: liveNow, density: board < 620 ? .folded : .full)
+                    boardPanel(liveNow: liveNow, density: BoardDensity(width: board))
                         .frame(width: max(0, board)).frame(maxHeight: .infinity)
                     rightColumn(liveNow: liveNow)
                         .frame(width: max(0, side))
@@ -397,7 +407,7 @@ struct WallModeView: View {
             .foregroundStyle(Color.inkSecondary)
             .lineLimit(1).minimumScaleFactor(0.6)
             Text(headerTitle)
-                .font(.system(size: 64, weight: .heavy)).foregroundStyle(Color.ink)
+                .font(.system(size: 64 * typeScale, weight: .heavy)).foregroundStyle(Color.ink)
                 .lineLimit(1).minimumScaleFactor(0.4)
         }
     }
@@ -405,10 +415,12 @@ struct WallModeView: View {
     /// The day beside the clock where it fits, under it where the column is narrower.
     private func clock(liveNow: Date) -> some View {
         let day = Text(WallFormat.day.string(from: liveNow).uppercased())
-            .font(.mono(14, weight: .semibold)).tracking(2)
+            .font(.mono(max(11, 14 * typeScale), weight: .semibold)).tracking(2)
             .foregroundStyle(Color.inkSecondary)
-        let flaps = FlapTime(date: liveNow, digitColor: .ink, tileWidth: 52, tileHeight: 74,
-                             tileColor: .wallClockTile, seamColor: .wallGround, cornerRadius: 9, colonColor: .inkSecondary)
+        // Ink digits on the Board's own tiles; on paper the tiles are ink, so the digits go amber.
+        let flaps = FlapTime(date: liveNow, digitColor: scheme == .dark ? .ink : .amber,
+                             tileWidth: 52 * typeScale, tileHeight: 74 * typeScale,
+                             tileColor: clockTile, seamColor: ground, cornerRadius: 9 * typeScale, colonColor: .inkSecondary)
         return ViewThatFits(in: .horizontal) {
             HStack(alignment: .bottom, spacing: 18) { day.padding(.bottom, 6); flaps }
             VStack(alignment: .trailing, spacing: 8) { flaps; day }
@@ -435,7 +447,7 @@ struct WallModeView: View {
             Text("NEXT TRAIN").font(.mono(12, weight: .bold)).tracking(2).foregroundStyle(Color.inkSecondary)
             if let next {
                 FlapTime(date: next.expectedDeparture, digitColor: .amber, tileWidth: 44, tileHeight: 64,
-                         tileColor: .wallClockTile, seamColor: .wallPanel, cornerRadius: 8, colonColor: .amberText)
+                         tileColor: clockTile, seamColor: panel, cornerRadius: 8, colonColor: .amberText)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         if let mode = next.mode { ModeChip(mode) }
@@ -454,8 +466,8 @@ struct WallModeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, 24).padding(.vertical, 22)
-        .background(Color.wallPanel, in: RoundedRectangle(cornerRadius: 26))
-        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.white.opacity(0.05), lineWidth: 1))
+        .background(panel, in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.ink.opacity(0.06), lineWidth: 1))
     }
 
     /// The evening on the rail, or once tonight is over the night up to the morning's first train.
@@ -476,10 +488,24 @@ struct WallModeView: View {
     enum BoardDensity {
         case full, folded, small
 
+        /// By the board's own width: half the Duo's inner display is `.small`, so DESTINATION gets the
+        /// room the bigger tiles and gutters took and "Corbeil-Essonnes" reads whole.
+        init(width: CGFloat) {
+            self = width < 480 ? .small : width < 668 ? .folded : .full
+        }
+
         var tile: CGFloat { self == .small ? 20 : 25 }
         /// Four tiles, their gaps and the colon.
         var timeColumn: CGFloat { self == .small ? 102 : 126 }
         var inset: CGFloat { self == .small ? 14 : 22 }
+        var spacing: CGFloat { self == .small ? 12 : 18 }
+        var destination: CGFloat {
+            switch self {
+            case .full: 27
+            case .folded: 22
+            case .small: 20
+            }
+        }
     }
 
     /// `scrolls` false inside the iPhone's single scrolling column, which a nested scroll view would
@@ -506,8 +532,8 @@ struct WallModeView: View {
                 boardNote("exclamationmark.triangle", error.appDescription)
             }
         }
-        .background(Color.wallPanel, in: RoundedRectangle(cornerRadius: 26))
-        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.white.opacity(0.05), lineWidth: 1))
+        .background(panel, in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Color.ink.opacity(0.06), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 
@@ -528,6 +554,8 @@ struct WallModeView: View {
             .background(Color.wallGround, in: RoundedRectangle(cornerRadius: 18))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The hazard and its black plate are dark by design, as on the widget, whatever the theme.
+        .environment(\.colorScheme, .dark)
     }
 
     private func boardNote(_ symbol: String, _ text: String) -> some View {
@@ -541,7 +569,7 @@ struct WallModeView: View {
     }
 
     private func boardHeaderRow(density: BoardDensity) -> some View {
-        HStack(spacing: 18) {
+        HStack(spacing: density.spacing) {
             Text("TIME").wallColumn(density.timeColumn, .leading)
             Text("DESTINATION").frame(maxWidth: .infinity, alignment: .leading)
             if density == .full {
@@ -554,7 +582,7 @@ struct WallModeView: View {
         .lineLimit(1)
         .font(.mono(11, weight: .semibold)).tracking(1.6).foregroundStyle(Color.inkSecondary)
         .padding(.horizontal, density.inset).padding(.vertical, 14)
-        .overlay(alignment: .bottom) { Color.white.opacity(0.07).frame(height: 1) }
+        .overlay(alignment: .bottom) { Color.ink.opacity(0.08).frame(height: 1) }
     }
 
     private func boardRows(_ trains: [TrainDeparture], liveNow: Date, density: BoardDensity) -> some View {
@@ -585,7 +613,7 @@ struct WallModeView: View {
             WallBoardRow(train: train, isNext: isNext,
                          fallbackDestination: current?.leg.to.name ?? station?.name,
                          showsArrival: current != nil, isTomorrow: isTomorrow, liveNow: liveNow, density: density)
-            Color.white.opacity(0.06).frame(height: 1)
+            Color.ink.opacity(0.07).frame(height: 1)
         }
     }
 
@@ -662,14 +690,16 @@ struct WallModeView: View {
         let minutes = leave.map { max(0, Int($0.leaveAt.timeIntervalSince(liveNow) / 60)) }
         let inHours = (minutes ?? 0) >= 100
         let digits = minutes.map { String(format: "%02d", inHours ? min(99, $0 / 60) : $0) } ?? "--"
+        // Scaled less than the title: the hero of a glance from across the room.
+        let tile = max(0.75, typeScale)
         let trainTime = leave.map { WallFormat.time.string(from: $0.train.expectedDeparture) } ?? "--:--"
         let detail = leaveDetail(leave, tomorrow: shown?.tomorrow ?? false, to: destination)
         let tiles = VStack(spacing: 6) {
             HStack(spacing: 5) {
                 ForEach(Array(digits.enumerated()), id: \.offset) { column, digit in
-                    // A dark tile on the amber card, with the amber seam the mockup draws.
-                    FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62, tileHeight: 88,
-                             tileColor: .ground, seamColor: Color.amber.opacity(0.35), cornerRadius: 11)
+                    // A dark tile on the amber card in both schemes, with the amber seam the mockup draws.
+                    FlapTile(digit: digit, delay: .milliseconds(50 * column), tileWidth: 62 * tile, tileHeight: 88 * tile,
+                             tileColor: .wallGround, seamColor: Color.amber.opacity(0.35), cornerRadius: 11 * tile)
                 }
             }
             Text(inHours ? "H" : "MIN").font(.mono(15, weight: .bold)).tracking(2)
@@ -754,6 +784,8 @@ struct WallModeView: View {
         .frame(height: 64)
         .background(Color.ground)
         .overlay(alignment: .top) { Color.white.opacity(0.06).frame(height: 1) }
+        // A station hall's ticker: a dark strip with its hazard block in both schemes.
+        .environment(\.colorScheme, .dark)
     }
 
     /// The disruptions, one line. A journey lists its own board; the station board leads with the dead
@@ -800,7 +832,7 @@ private struct WallBoardRow: View {
     @State private var via: [String] = []
 
     var body: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: density.spacing) {
             flap.wallColumn(density.timeColumn, .leading)
             destination.frame(maxWidth: .infinity, alignment: .leading)
             if density == .full {
@@ -826,8 +858,10 @@ private struct WallBoardRow: View {
     private var flap: some View {
         FlapTime(date: train.scheduledDeparture,
                  digitColor: train.isCancelled ? .inkSecondary : .amber,
-                 tileWidth: density.tile, tileHeight: density.tile * 38 / 25, tileColor: .raised,
-                 seamColor: train.isCancelled ? .raised : .wallGround, cornerRadius: density.tile / 5)
+                 tileWidth: density.tile, tileHeight: density.tile * 38 / 25,
+                 tileColor: train.isCancelled ? .raised : .flapTile,
+                 seamColor: train.isCancelled ? .raised : .ground, cornerRadius: density.tile / 5,
+                 colonColor: train.isCancelled ? .inkSecondary : .amberText)
             .opacity(train.isCancelled ? 0.45 : 1)
     }
 
@@ -851,11 +885,13 @@ private struct WallBoardRow: View {
     private var destination: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(train.direction ?? fallbackDestination ?? "—")
-                .font(.system(size: 27, weight: .bold)).foregroundStyle(Color.ink)
+                .font(.system(size: density.destination, weight: .bold)).foregroundStyle(Color.ink)
                 .strikethrough(train.isCancelled, color: Color.ink)
-                .lineLimit(1)
+                .lineLimit(1).minimumScaleFactor(0.85)
+            // The via line gives way first: it shrinks, then truncates, and never widens the row.
             Text(secondLine)
-                .font(.mono(12.5, weight: .medium)).foregroundStyle(Color.inkSecondary).lineLimit(1).minimumScaleFactor(0.75)
+                .font(.mono(density == .full ? 12.5 : 11.5, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                .lineLimit(1).minimumScaleFactor(0.7)
         }
         .opacity(train.isCancelled ? 0.55 : 1)
     }
@@ -912,6 +948,8 @@ private struct WallJourneyCard: View {
             trailing
         }
         .wallCard(selected: selected) { background }
+        // Dark cards in both schemes, the departure board's own tiles.
+        .environment(\.colorScheme, .dark)
     }
 
     // Only a dead journey carries the hazard; a single cancelled train never does (Tableau rule).
@@ -990,6 +1028,7 @@ private struct WallStationCard: View {
             Text("every departure").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
         }
         .wallCard(selected: selected) { Color.wallPanel }
+        .environment(\.colorScheme, .dark)
     }
 }
 

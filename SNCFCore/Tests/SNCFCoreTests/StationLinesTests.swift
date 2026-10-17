@@ -310,6 +310,17 @@ import Testing
         #expect(StationLines.mapHeight(above: 2, below: 2, pitch: 110, capsuleHeight: 96) == 120 + 4 * 110)
     }
 
+    /// The Duo's inner display on its side: 84 pt a lane shows six of Châtelet's lanes where 96 showed
+    /// three, and a next chip under one lane still clears the upper label row of the lane below by 7 pt.
+    @Test func aShortScreenPacksLanesAsTightAsTheirLabelsAllow() {
+        #expect(StationLines.densePitch == 84)
+        #expect(StationLines.pitch(rows: 9, height: 500, floor: StationLines.densePitch) == 84)
+        let chipBottom = StationLines.labelOffset + StationLines.nextChipHalfHeight
+        let nextLaneLabelTop = StationLines.densePitch - StationLines.labelOffset - StationLines.labelHalfHeight
+        #expect(nextLaneLabelTop - chipBottom == 7)
+        #expect(StationLines.densePitch < StationLines.minimumPitch)
+    }
+
     @Test func aNarrowAxisKeepsItsMinimumScale() {
         let axis = StationLines.Axis(start: at(23, 54), end: at(23, 54).addingTimeInterval(150 * 60))
         #expect(axis.span == 150 * 60)

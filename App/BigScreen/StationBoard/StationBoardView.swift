@@ -66,18 +66,26 @@ private struct StationLinesBoard: View {
     @State private var range = LinesRange.nextTwoHours
     @State private var openFailure: String?
     @State private var narrow = false
+    /// Under 760 pt of height (the Duo's inner display on its side, an iPhone on its side): one header row,
+    /// the legend in a popover, a one-line footer and tighter lanes, so the map gets the height.
+    @State private var short = false
+    @State private var showsLegend = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: short ? 8 : 12) {
             header
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
             footer
         }
         // Padding inside the safe area, never instead of it: the Duo stands its bars up in a strip on the
         // trailing edge, and the safe area is what keeps the page out from under it.
-        .padding(.horizontal, narrow ? 16 : 44).padding(.top, narrow ? 12 : 28).padding(.bottom, narrow ? 10 : 18)
+        .padding(.horizontal, narrow ? 16 : short ? 28 : 44)
+        .padding(.top, narrow || short ? 12 : 28).padding(.bottom, narrow || short ? 8 : 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onGeometryChange(for: Bool.self) { $0.size.width < 700 } action: { narrow = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            narrow = size.width < 700
+            short = size.height < 760
+        }
         .background(Color.ground.ignoresSafeArea())
         // One request on open, on ⌘R and every five minutes: the whole evening comes in that one answer,
         // and the stops and countdowns are recomputed from `now` in between.
@@ -97,7 +105,65 @@ private struct StationLinesBoard: View {
     // On a narrow column (iPad portrait, split view) the controls drop under the title instead of
     // wrapping the picker's words; narrower still (the folded Duo, a phone) they and the legend take two
     // rows each. A fixed-size row wider than the screen pushed the whole page past both edges.
-    private var header: some View {
+    @ViewBuilder private var header: some View {
+        if short { shortHeader } else { tallHeader }
+    }
+
+    /// A short screen's header: the name, Updated, the range and the pin on one row, the legend behind a
+    /// button. Where even that row does not fit (the folded Duo), the controls go under the name.
+    private var shortHeader: some View {
+        let name = Text(station.name).font(.system(size: 24, weight: .bold)).foregroundStyle(Color.ink)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .accessibilityAddTraits(.isHeader)
+        return VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    name
+                    Spacer(minLength: 0)
+                    HStack(spacing: 10) { freshness; rangePicker; pinButton(compact: true); legendButton }.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    name
+                    HStack(spacing: 10) { freshness; rangePicker; pinButton(compact: true); legendButton }.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    name
+                    HStack(spacing: 10) { rangePicker; pinButton(compact: true); legendButton }.fixedSize()
+                    freshness
+                }
+            }
+            if let openFailure {
+                Text(openFailure).font(.system(size: 13)).foregroundStyle(Color.caution)
+            }
+        }
+    }
+
+    /// The legend and the tap hint, folded behind one button on a short screen.
+    private var legendButton: some View {
+        Button { showsLegend.toggle() } label: {
+            Image(systemName: "info").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
+                .frame(width: 38, height: 38)
+                .background(Color.raised, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Legend")
+        .popover(isPresented: $showsLegend) {
+            VStack(alignment: .leading, spacing: 10) {
+                legendRow(0..<2)
+                legendRow(2..<4)
+                Text(Self.tapHint + Self.refreshHint)
+                    .font(.mono(11, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(width: 300, alignment: .leading)
+            .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private static let tapHint = "Tap a time for its train, a terminus for its journey"
+
+    private var tallHeader: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 16) {
                 title
@@ -221,12 +287,22 @@ private struct StationLinesBoard: View {
     private static let refreshHint = ""
     #endif
 
-    private var footer: some View {
+    @ViewBuilder private var footer: some View {
+        if short {
+            // The tap hint lives in the legend's popover here; the credit stays on screen.
+            Text("Data © SNCF · Not affiliated with SNCF")
+                .font(.mono(10, weight: .medium)).tracking(0.3).foregroundStyle(Color.inkSecondary).lineLimit(1)
+        } else {
+            tallFooter
+        }
+    }
+
+    private var tallFooter: some View {
         ViewThatFits(in: .horizontal) {
             HStack {
                 Text("Data © SNCF · Not affiliated with SNCF")
                 Spacer()
-                Text("Tap a time for its train, a terminus for its journey" + Self.refreshHint)
+                Text(Self.tapHint + Self.refreshHint)
             }
             .fixedSize(horizontal: false, vertical: true)
             .lineLimit(1)
@@ -251,7 +327,8 @@ private struct StationLinesBoard: View {
                         Text("No service tonight · every remaining train is cancelled")
                             .font(.mono(12, weight: .semibold)).tracking(0.6).foregroundStyle(Color.stop)
                     }
-                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight),
+                    LineMap(input: MapInput(station: station, lanes: lanes, now: now, tonight: range == .tonight,
+                                            dense: short && !narrow),
                             highlighted: highlighted, open: open)
                 }
             } else {
@@ -327,6 +404,8 @@ private struct MapInput: Equatable {
     let lanes: [StationLane]
     let now: Date
     let tonight: Bool
+    /// A short screen that is not a narrow one: the slim station band and the dense pitch.
+    var dense = false
 }
 
 /// Everything the map draws, in one coordinate space: the Canvas strokes the lanes and the axis from it,
@@ -382,7 +461,9 @@ private struct MapGeometry {
     let groupLabels: (above: String?, below: String?)
     /// Under 700 pt: a slim station band, the names above the lanes, one label row, a minimum scale.
     let narrow: Bool
-
+    /// A short screen (`MapInput.dense`): a slim station band with no name under the capsule (the header
+    /// carries it), the side labels over the lanes they name, and the dense pitch.
+    let dense: Bool
     /// How far the trailing terminus column sits past the viewport's edge, which pinning takes back.
     var overhang: CGFloat { max(0, size.width - viewport.width) }
 
@@ -394,10 +475,11 @@ private struct MapGeometry {
     var bottom: CGFloat { max(lanes.last?.y ?? stationY, stationY) + 56 }
 
     init(_ input: MapInput, viewport: CGSize) {
-        self.init(station: input.station, lanes: input.lanes, now: input.now, tonight: input.tonight, viewport: viewport)
+        self.init(station: input.station, lanes: input.lanes, now: input.now, tonight: input.tonight, dense: input.dense,
+                  viewport: viewport)
     }
 
-    init(station: Station, lanes input: [StationLane], now: Date, tonight: Bool, viewport: CGSize) {
+    init(station: Station, lanes input: [StationLane], now: Date, tonight: Bool, dense wanted: Bool, viewport: CGSize) {
         self.viewport = viewport
         self.station = station
         // Tomorrow's trains ride the same lanes; the axis folds the night between them and tonight's.
@@ -419,10 +501,14 @@ private struct MapGeometry {
         // scrolls rather than pile a lane's stops into a few points.
         let narrow = viewport.width < 700
         self.narrow = narrow
-        stationX = narrow ? 18 : 34
-        capsuleWidth = narrow ? 28 : 40
+        // On a short screen the band only holds the capsule and its curves: the side labels move over the
+        // lanes and the station's name is the header's.
+        let dense = wanted && !narrow
+        self.dense = dense
+        stationX = narrow ? 18 : dense ? 22 : 34
+        capsuleWidth = narrow ? 28 : dense ? 30 : 40
         terminusWidth = narrow ? 0 : min(216, max(140, viewport.width * 0.17))
-        x0 = narrow ? 118 : min(386, max(150, viewport.width * 0.3))
+        x0 = narrow ? 118 : dense ? 132 : min(386, max(150, viewport.width * 0.3))
         curveEnd = x0 - 30
         let tail = narrow ? 16 : 14 + terminusWidth
         let available = Double(viewport.width - tail - 30 - x0)
@@ -445,7 +531,7 @@ private struct MapGeometry {
             let room = StationLines.margins(above: sides.above.count, below: sides.below.count,
                                             pitch: StationLines.minimumPitch, capsuleHeight: capsule)
             let pitch = StationLines.pitch(rows: rows, height: Double(viewport.height - band) - room.top - room.bottom,
-                                           floor: narrow ? StationLines.compactPitch : StationLines.minimumPitch)
+                                           floor: narrow ? StationLines.compactPitch : dense ? StationLines.densePitch : StationLines.minimumPitch)
             let height = StationLines.mapHeight(above: sides.above.count, below: sides.below.count, pitch: pitch, capsuleHeight: capsule)
             return (CGFloat(pitch), CGFloat(height) + band)
         }
@@ -590,7 +676,7 @@ private struct LineMap: View {
         // Only a train leaving is animated: a different station, a range change or a lane coming or going
         // redraws at once. ponytail: one departure at a time, a second landing mid-flight just jumps; the
         // two only meet when a reload lands within a second of a minute tick.
-        guard departedFrom == nil, old.station == new.station, old.tonight == new.tonight else { return }
+        guard departedFrom == nil, old.station == new.station, old.tonight == new.tonight, old.dense == new.dense else { return }
         let before = MapGeometry(old, viewport: size), after = MapGeometry(new, viewport: size)
         let kept = Set(after.lanes.flatMap { $0.stops.map(\.id) })
         guard before.lanes.map(\.lane.id) == after.lanes.map(\.lane.id),
@@ -685,6 +771,9 @@ private struct MapFrame: View, Animatable {
             }
             // Opaque, so whatever scrolls left goes under the capsule rather than through it.
             WithScroll(scroll: scroll) { offset in stationBand.offset(x: offset.x) }
+            if map.dense {
+                WithScroll(scroll: scroll) { offset in denseGroupLabels.offset(x: offset.x) }
+            }
             if map.axisBand == 0 { axisLabels(blend, y: map.stationY) }
             if let clock, let from {
                 WithScroll(scroll: scroll) { offset in
@@ -802,16 +891,41 @@ private struct MapFrame: View, Animatable {
                 context.stroke(capsule, with: .color(ring), lineWidth: scheme == .dark ? 5 : 3)
             }
             .accessibilityHidden(true)
-            if let above = map.groupLabels.above, let first = map.lanes.first {
-                groupLabel(above).position(x: 4 + (map.curveEnd - 8) / 2, y: first.y - 40)
+            if !map.dense {
+                if let above = map.groupLabels.above, let first = map.lanes.first {
+                    groupLabel(above).position(x: 4 + (map.curveEnd - 8) / 2, y: first.y - 40)
+                }
+                if let below = map.groupLabels.below, let last = map.lanes.last {
+                    groupLabel(below).position(x: 4 + (map.curveEnd - 8) / 2, y: last.y + 40)
+                }
+                stationMark
             }
-            if let below = map.groupLabels.below, let last = map.lanes.last {
-                groupLabel(below).position(x: 4 + (map.curveEnd - 8) / 2, y: last.y + 40)
-            }
-            stationMark
         }
         // A few points past the band, so the curves' round ends meet the rows they hand over to.
         .frame(width: map.curveEnd + 6, height: map.size.height, alignment: .topLeading)
+    }
+
+    /// The side labels on a short screen: each over the first lane of its side (the one under the axis row
+    /// for the lower side), in the room the pitch keeps between label rows, one line, held at the leading
+    /// edge while the axis scrolls.
+    @ViewBuilder private var denseGroupLabels: some View {
+        let x = map.curveEnd + 6
+        let width = map.viewport.width - x - map.terminusWidth - 24
+        if let above = map.groupLabels.above, let first = map.lanes.first(where: \.above) {
+            denseGroupLabel(above, width: width).position(x: x + width / 2, y: first.y - 48)
+        }
+        if let below = map.groupLabels.below, let first = map.lanes.first(where: { !$0.above }) {
+            denseGroupLabel(below, width: width).position(x: x + width / 2, y: first.y - 48)
+        }
+    }
+
+    private func denseGroupLabel(_ text: String, width: CGFloat) -> some View {
+        Text(text).font(.mono(10.5, weight: .semibold)).tracking(1.2).foregroundStyle(Color.inkSecondary)
+            .lineLimit(1).truncationMode(.tail)
+            .padding(.horizontal, 4).background(Color.ground)
+            .frame(width: max(0, width), alignment: .leading)
+            .allowsHitTesting(false)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// Kept left of where the lanes straighten, so on a narrow column it wraps and truncates rather than
