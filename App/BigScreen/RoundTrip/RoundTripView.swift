@@ -7,16 +7,43 @@ import SwiftUI
 /// for two compact columns (iPad, iPad split view, Mac), with the pairing pill between them; otherwise
 /// (the folded Duo, a narrow iPad window) the way back is a pushed second screen.
 struct RoundTripView: View {
+    /// A frozen anchor for the `#Preview` (the fake world, Thu 15 Oct 2026 17:40); nil follows the clock.
+    private let frozenNow: Date?
+    /// The board the round trip was opened from; nil takes the first saved journey.
+    private let outbound: Leg?
+
+    init(now: Date? = nil, outbound: Leg? = nil) {
+        frozenNow = now
+        self.outbound = outbound
+    }
+
+    // The countdowns and the TOMORROW split move with the minute; the plan survives the tick (same view
+    // identity) and is only fetched on appear and ⌘R, so a tick never costs a request.
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            RoundTripBoard(now: frozenNow ?? context.date, isFrozen: frozenNow != nil, outbound: outbound)
+        }
+    }
+
+    // Nonisolated: the row measuring reads them from `onGeometryChange`'s Sendable closure.
+    nonisolated static let outboundSpace = "roundTrip.outbound"
+    nonisolated static let returnSpace = "roundTrip.return"
+    nonisolated static let screenSpace = "roundTrip.screen"
+}
+
+private struct RoundTripBoard: View {
     @Environment(\.bigScreenData) private var data
     @Environment(BigScreenModel.self) private var model
 
-    /// "now" is fixed so the fake world (Thu 15 Oct 2026 17:40) reads the same in previews and the
-    /// screenshot build; the running app passes the live clock.
-    private let now: Date
+    /// The minute being drawn.
+    let now: Date
+    /// A preview: the requests read `now` too, instead of the real clock.
+    let isFrozen: Bool
+    let outbound: Leg?
+
     @State private var plan: RoundTripPlan?
     /// The outbound the user ringed, by stable identity so the pick survives a reload; nil means "the
-    /// next one", which the planner resolves. The fake planner ignores it (one canned scenario), so the
-    /// ring stays on the first outbound until the live provider honours the pick.
+    /// next one", which the planner resolves.
     @State private var pick: TrainIdentity?
     /// Minimum stay at the destination; the stepper nudges it ±15 min and the planner re-tags the returns.
     /// Starts at 2 h 30, the mockup's value and the fake plan's `minimumStay`.
@@ -26,13 +53,6 @@ struct RoundTripView: View {
     /// The picked rows' positions, which line the Duo's two panes up and place the tie between them.
     @State private var outboundY: RowY?
     @State private var returnY: RowY?
-    /// The board the round trip was opened from; nil takes the first saved journey.
-    private let outbound: Leg?
-
-    init(now: Date = Date(), outbound: Leg? = nil) {
-        self.now = now
-        self.outbound = outbound
-    }
 
     /// Below this the two columns would be too cramped, so the way back becomes a pushed screen.
     private let minTwoPaneWidth: CGFloat = 680
@@ -52,28 +72,39 @@ struct RoundTripView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Color.ground.ignoresSafeArea())
         }
-        // One reload covers the first appearance, ⌘R, a new minimum stay and a re-picked outbound.
-        .task(id: ReloadKey(tick: model.refreshTick, stayMinutes: Int(stay / 60), pick: pick)) {
-            await load()
-        }
+        // Fetched on appear and ⌘R; a new stay or a re-picked outbound re-plans the boards already held.
+        .task(id: model.refreshTick) { await load() }
+        .onChange(of: stay) { replan() }
+        .onChange(of: pick) { replan() }
     }
 
-    private struct ReloadKey: Hashable { let tick: Int; let stayMinutes: Int; let pick: TrainIdentity? }
+    /// The clock a request is asked at: the real one, read when the request starts, not when the view was built.
+    private var requestTime: Date { isFrozen ? now : Date() }
 
     private func load() async {
         watchedBoth = false
-        if let outbound {
-            plan = await data.roundTrip.roundTrip(outbound: outbound, pick: pick, stay: stay, at: now)
-            return
+        guard let outbound = await outboundLeg() else { plan = nil; return }
+        plan = await data.roundTrip.roundTrip(outbound: outbound, pick: pick, stay: stay, at: requestTime)
+    }
+
+    private func replan() {
+        watchedBoth = false
+        plan = plan?.replanned(pick: pick, stay: stay, at: requestTime, calendar: cal)
+    }
+
+    /// The board's leg, or the primary journey's B → A: you leave home (the saved destination) and come back
+    /// to it. Read from the saved stations, not a board resolved at `now` — an automatic journey flips at
+    /// its switch time, and the round trip must not flip with it, nor fetch every board to learn the first.
+    /// The boards only stand in when nothing is saved (the mockup data), which costs no request live.
+    private func outboundLeg() async -> Leg? {
+        if let outbound { return outbound }
+        let primary: JourneyConfiguration?
+        if let saved = SharedSettings.favorites.first {
+            primary = saved
+        } else {
+            primary = await data.journeyBoards.boards(at: requestTime).first?.journey
         }
-        let boards = await data.journeyBoards.boards(at: now)
-        guard let primary = boards.first?.journey else { plan = nil; return }
-        // The outbound is the primary journey's B → A: you leave home (the saved destination) and come
-        // back to it. Read from the saved stations, not the leg the board resolved at `now` — an automatic
-        // journey flips at its switch time, and the round trip must not flip with it. The planner returns
-        // the authoritative legs, so the panes read `plan.outbound` / `plan.returnLeg`.
-        let outbound = Leg(from: primary.stationB, to: primary.stationA)
-        plan = await data.roundTrip.roundTrip(outbound: outbound, pick: pick, stay: stay, at: now)
+        return primary.map { Leg(from: $0.stationB, to: $0.stationA) }
     }
 
     // MARK: Layouts
@@ -116,10 +147,9 @@ struct RoundTripView: View {
 
     // MARK: Duo
 
-    // Nonisolated: the row measuring reads them from `onGeometryChange`'s Sendable closure.
-    nonisolated static let outboundSpace = "roundTrip.outbound"
-    nonisolated static let returnSpace = "roundTrip.return"
-    nonisolated static let screenSpace = "roundTrip.screen"
+    private static let outboundSpace = RoundTripView.outboundSpace
+    private static let returnSpace = RoundTripView.returnSpace
+    private static let screenSpace = RoundTripView.screenSpace
     /// Each pane's inset on the fold side: the gap the tie spans on either side of the division.
     private static let foldGutter: CGFloat = 20
 
@@ -428,15 +458,15 @@ struct RoundTripView: View {
     }
 
     @ViewBuilder private func returnList(_ plan: RoundTripPlan, duo: Bool) -> some View {
-                // The way back is asked by count from the arrival, so late in the evening it runs on into the
+                // The way back runs to the 03:00 close, and past 02:00 or so its window reaches into the
                 // morning. Those rows go under the split, tagged TOMORROW: "first that fits" on a train the
-                // next day would read as a return tonight.
+                // next day would read as a return tonight. LAST TRAIN is tonight's own, set by the planner.
                 let tonight = plan.returnOptions.filter { !BoardReading.isTomorrow($0.train, after: now) }
                 let morning = plan.returnOptions.filter { BoardReading.isTomorrow($0.train, after: now) }
                 card {
                     ForEach(Array(tonight.enumerated()), id: \.offset) { index, option in
                         if index > 0 { rowDivider }
-                        returnRow(option, lastTonight: !morning.isEmpty && index == tonight.count - 1, duo: duo)
+                        returnRow(option, duo: duo)
                     }
                     if !morning.isEmpty {
                         TomorrowSplit(lastTonight: tonight.last { !$0.train.isCancelled }?.train.scheduledDeparture, inset: 16)
@@ -448,13 +478,10 @@ struct RoundTripView: View {
                 }
     }
 
-    /// `lastTonight` marks tonight's final row when the morning follows: the planner gave LAST TRAIN to the
-    /// list's final row, which is then tomorrow's, so tonight's last would otherwise read "+1 h there".
-    private func returnRow(_ option: ReturnOption, lastTonight: Bool = false, tomorrow: Bool = false, duo: Bool = false) -> some View {
+    private func returnRow(_ option: ReturnOption, tomorrow: Bool = false, duo: Bool = false) -> some View {
         let dimmed = option.fit == .tooEarly && !tomorrow
         let paired = option.fit == .firstThatFits && !tomorrow
-        var fit = option.fit
-        if lastTonight, case .laterBy = fit { fit = .lastTrain }
+        let fit = option.fit
         return HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 timeLine(option.train, tab: duo && paired)

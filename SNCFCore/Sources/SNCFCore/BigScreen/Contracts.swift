@@ -83,16 +83,24 @@ public struct RoundTripPlan: Equatable, Sendable {
     /// The chosen outbound; nil when nothing runs out. Its arrival is the left side of the hinge pill.
     public let selectedOutbound: TrainDeparture?
     public let returnOptions: [ReturnOption]
+    /// The way back as fetched, from the earliest possible arrival on: what `replanned` re-tags when the
+    /// pick or the stay changes, so neither needs a request.
+    public let returnBoard: [TrainDeparture]
+    /// Whether `returnBoard` runs to the 03:00 close, which is what makes its last train tonight LAST TRAIN.
+    public let returnsCoverServiceDay: Bool
 
     public init(outbound: Leg, returnLeg: Leg, minimumStay: TimeInterval,
                 outboundOptions: [TrainDeparture], selectedOutbound: TrainDeparture?,
-                returnOptions: [ReturnOption]) {
+                returnOptions: [ReturnOption], returnBoard: [TrainDeparture]? = nil,
+                returnsCoverServiceDay: Bool = false) {
         self.outbound = outbound
         self.returnLeg = returnLeg
         self.minimumStay = minimumStay
         self.outboundOptions = outboundOptions
         self.selectedOutbound = selectedOutbound
         self.returnOptions = returnOptions
+        self.returnBoard = returnBoard ?? returnOptions.map(\.train)
+        self.returnsCoverServiceDay = returnsCoverServiceDay
     }
 
     /// The arrival shown on the left of the hinge pill (18:11 ··· 20:42 in the mockup).

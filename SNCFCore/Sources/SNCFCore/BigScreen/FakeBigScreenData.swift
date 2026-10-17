@@ -223,20 +223,21 @@ public enum BigScreenFixtures {
         journeyTrain(19, 46, arr: (20, 11), number: "17660"),
     ]
 
-    public static let roundTripReturns: [ReturnOption] = [
-        ReturnOption(train: TrainDeparture(scheduledDeparture: at(20, 6), scheduledArrival: at(20, 31), mode: "TER",
-                                           delayMinutes: 0, isCancelled: false, trainNumber: nil, vehicleJourneyID: nil),
-                     fit: .tooEarly),
-        ReturnOption(train: journeyTrain(20, 42, arr: (21, 7), number: "17663"), fit: .firstThatFits),
-        ReturnOption(train: journeyTrain(21, 12, arr: (21, 37), number: "17665"), fit: .laterBy(minutes: 30)),
-        ReturnOption(train: journeyTrain(21, 42, arr: (22, 7), number: "17667"), fit: .laterBy(minutes: 60)),
-        ReturnOption(train: journeyTrain(22, 42, arr: (23, 7), number: "17669"), fit: .lastTrain),
+    /// The Duo mockup's way back, which the planner tags: one too early, the first that fits, two later,
+    /// and the last train of the day (the board runs to the 03:00 close).
+    public static let roundTripReturns = [
+        TrainDeparture(scheduledDeparture: at(20, 6), scheduledArrival: at(20, 31), mode: "TER",
+                       delayMinutes: 0, isCancelled: false, trainNumber: nil, vehicleJourneyID: nil),
+        journeyTrain(20, 42, arr: (21, 7), number: "17663"),
+        journeyTrain(21, 12, arr: (21, 37), number: "17665"),
+        journeyTrain(21, 42, arr: (22, 7), number: "17667"),
+        journeyTrain(22, 42, arr: (23, 7), number: "17669"),
     ]
 
-    public static let roundTripPlan = RoundTripPlan(
-        outbound: Leg(from: voiron, to: grenoble), returnLeg: Leg(from: grenoble, to: voiron),
-        minimumStay: 150 * 60, outboundOptions: roundTripOutbound,
-        selectedOutbound: roundTripOutbound.first, returnOptions: roundTripReturns)
+    public static let roundTripPlan = RoundTripPlanner.plan(
+        outbound: Leg(from: voiron, to: grenoble), outboundOptions: roundTripOutbound,
+        returnOptions: roundTripReturns, pick: nil, stay: 150 * 60, at: now,
+        returnsCoverServiceDay: true, calendar: calendar)
 
     public static func isGrenobleVoiron(_ leg: Leg) -> Bool {
         let ids = Set([leg.from.id, leg.to.id])
@@ -280,10 +281,12 @@ struct FakeServiceDay: ServiceDayProviding {
     }
 }
 
-/// Returns the one Duo scenario whatever is asked; the stepper / re-pick are Phase 1's to wire.
+/// The one Duo scenario, re-planned for the pick and the stay asked, as the live plan is.
 struct FakeRoundTrip: RoundTripPlanning {
     let plan: RoundTripPlan
-    func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan { plan }
+    func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan {
+        plan.replanned(pick: pick, stay: minimumStay, at: now)
+    }
 }
 
 /// An actor so the pinned station survives across calls, like the real App-Group-backed setting will.
