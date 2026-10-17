@@ -23,7 +23,7 @@ struct StationHallView: View {
     // fetch is keyed on the journey and ⌘R, not on the time, so a tick never costs a request.
     var body: some View {
         TimelineView(.everyMinute) { context in
-            StationHallBoard(journey: journey, now: frozenNow ?? context.date)
+            StationHallBoard(journey: journey, now: frozenNow ?? context.date, isFrozen: frozenNow != nil)
         }
     }
 }
@@ -41,17 +41,30 @@ private struct StationHallBoard: View {
     /// The train the inspector shows and the board rings; nil closes the inspector.
     @State private var selected: TrainDeparture?
     @State private var stops: [TripStop] = []
-    /// Space-pinned trains: local to the screen for Phase 1, not persisted anywhere.
+    /// Space-pinned trains: local to the screen, not persisted anywhere.
     @State private var pins: Set<TrainDeparture> = []
     @FocusState private var boardFocused: Bool
+    /// Too narrow for the inspector beside the board: a picked train opens it as a sheet.
+    @State private var narrow = false
+    @State private var inspectorSheet = false
+    /// The "Add a journey" sheet, offered when nothing is saved.
+    @State private var adding = false
+    /// The first round has landed, so an empty list means nothing is saved, not "still loading".
+    @State private var loaded = false
 
     /// The saved journey this board shows as a split column; nil is the full station hall.
     let journey: JourneyConfiguration?
     private var isColumn: Bool { journey != nil }
 
-    /// The clock the board reads: the live `Date()` in the running app, a frozen `BigScreenFixtures.now`
-    /// from the `#Preview` and the screenshot build so the mockup lines up.
+    /// The minute being drawn: the timeline's, or a frozen `BigScreenFixtures.now` from the `#Preview` and
+    /// the screenshot build so the mockup lines up.
     let now: Date
+    /// A preview: the requests read `now` too, instead of the real clock.
+    let isFrozen: Bool
+
+    /// The clock a request is asked at: read when it starts, the same way the sidebar reads it, so the two
+    /// land in one boards-memo round instead of a minute boundary apart.
+    private var requestTime: Date { isFrozen ? now : Date() }
 
     private var board: JourneyBoard? {
         if model.temporaryLeg != nil, !isColumn { return temporary }
@@ -75,16 +88,27 @@ private struct StationHallBoard: View {
                 HStack(spacing: 0) {
                     center
                         .frame(maxWidth: .infinity)
-                    Divider().overlay(Color.ink.opacity(0.06))
-                    inspector
-                        .frame(width: 360)
+                    // Under 820 pt (an iPad in portrait) a 360 pt inspector beside the board left it too
+                    // narrow for its own header; the picked train opens as a sheet there instead.
+                    if !narrow {
+                        Divider().overlay(Color.ink.opacity(0.06))
+                        inspector
+                            .frame(width: 360)
+                    }
                 }
+                .onGeometryChange(for: Bool.self) { $0.size.width < 820 } action: { narrow = $0 }
                 // Keyed on the train so a quick ↑↓ run cancels the lookups it has already left behind.
                 .task(id: selected) { await loadStops() }
+                .sheet(isPresented: $inspectorSheet) {
+                    inspector.presentationDetents([.medium, .large])
+                }
             }
         }
         .background(Color.ground.ignoresSafeArea())
         .task(id: reloadKey) { await load() }
+        .sheet(isPresented: $adding) {
+            EditJourneyView { SavedJourneys.save(SharedSettings.favorites + [$0]) }
+        }
     }
 
     /// The board alone, its pick handed to the split's detail column through the shell model, which is
@@ -117,23 +141,30 @@ private struct StationHallBoard: View {
     }
 
     private func load() async {
+        let at = requestTime
         if let leg = model.temporaryLeg, !isColumn {
             temporarySaved = Self.isSaved(leg)
-            temporary = await data.journeyBoards.board(for: leg, at: now)
+            temporary = await data.journeyBoards.board(for: leg, at: at)
             // The service-day footer costs two more requests, too many for a journey opened for a glance.
             summary = nil
-            resetSelection()
+            keepOrResetSelection()
             return
         }
-        boards = await data.journeyBoards.boards(at: now)
-        if let leg = board?.leg { summary = await data.serviceDay.summary(for: leg, at: now) } else { summary = nil }
-        resetSelection()
+        boards = await data.journeyBoards.boards(at: at)
+        loaded = true
+        if let leg = board?.leg { summary = await data.serviceDay.summary(for: leg, at: at) } else { summary = nil }
+        keepOrResetSelection()
     }
 
-    /// Default to the next upcoming train; the inspector's full stopping pattern only exists for trains
-    /// the fake carries stops for (17655 today), so others fall back to their via list.
-    private func resetSelection() {
-        selected = heroTrain ?? rows.first
+    /// A reload keeps the train the user picked while it is still listed (matched by identity, since its
+    /// delay may have changed the row); otherwise, or on another journey, the next upcoming train.
+    private func keepOrResetSelection() {
+        if let picked = selected.flatMap({ TrainIdentity($0) }),
+           let still = rows.first(where: { TrainIdentity($0) == picked }) {
+            selected = still
+        } else {
+            selected = heroTrain ?? rows.first
+        }
     }
 
     private func loadStops() async {
@@ -171,7 +202,11 @@ private struct StationHallBoard: View {
                 case .unavailable(let error):
                     stateCard("Board unavailable", error.appDescription)
                 case .noTrains, nil:
-                    stateCard("No board", "Nothing to show for this journey right now.")
+                    if loaded, boards.isEmpty, model.temporaryLeg == nil, !isColumn {
+                        noJourney
+                    } else {
+                        stateCard("No board", "Nothing to show for this journey right now.")
+                    }
                 }
             }
             .padding(.horizontal, isColumn ? 16 : 32).padding(.top, isColumn ? 8 : 28).padding(.bottom, 24)
@@ -187,7 +222,40 @@ private struct StationHallBoard: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
+        // The controls drop under the title where the board is too narrow for both on one line.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 16) {
+                headerTitle
+                Spacer(minLength: 0)
+                headerControls
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                headerTitle
+                headerControls
+            }
+        }
+    }
+
+    /// Nothing saved yet: say so, and offer the + the sidebar has, rather than an empty "No board".
+    private var noJourney: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("No saved journey").font(.headline).foregroundStyle(Color.ink)
+                Text("Save one to see its next direct trains here.").font(.subheadline).foregroundStyle(Color.inkSecondary)
+            }
+            Button { adding = true } label: {
+                Label("Add a journey", systemImage: "plus")
+                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.onAmber)
+                    .padding(.horizontal, 16).frame(minHeight: 44)
+                    .background(Color.amber, in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    private var headerTitle: some View {
             HStack(alignment: .center, spacing: 14) {
                 RoutePins(destination: .solid(.amber), originDiameter: 10, destinationDiameter: 14, lineWidth: 2.5)
                     .frame(width: 14, height: 46)
@@ -199,7 +267,9 @@ private struct StationHallBoard: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
+    }
+
+    @ViewBuilder private var headerControls: some View {
             if isColumn {
                 // A column has no room for a chips row and its controls are in the toolbar, so the chips
                 // stack where the controls were.
@@ -210,20 +280,19 @@ private struct StationHallBoard: View {
             } else {
                 controls
             }
-        }
     }
 
     private static func isSaved(_ leg: Leg) -> Bool {
         SharedSettings.favorites.contains { $0.stationA.id == leg.from.id && $0.stationB.id == leg.to.id }
     }
 
-    /// A journey opened from the station star: back to the star, and the one way to keep it.
+    /// A journey opened unsaved (a station-map lane, or Swap with no saved way back): back to where it was
+    /// opened from, and the one way to keep it.
     private func temporaryControls(_ leg: Leg) -> some View {
         HStack(spacing: 8) {
             Button {
                 guard !temporarySaved else { return }
-                SavedJourneys.save(SharedSettings.favorites + [JourneyConfiguration(stationA: leg.from, stationB: leg.to)],
-                                   data: data, model: model)
+                SavedJourneys.save(SharedSettings.favorites + [JourneyConfiguration(stationA: leg.from, stationB: leg.to)])
                 temporarySaved = true
             } label: {
                 Label(temporarySaved ? "In my journeys" : "Add to my journeys", systemImage: temporarySaved ? "star.fill" : "star")
@@ -234,7 +303,7 @@ private struct StationHallBoard: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(temporarySaved ? "Saved" : "Not saved")
-            roundButton("chevron.backward", label: "Back to \(leg.from.name)") { model.temporaryLeg = nil }
+            roundButton("chevron.backward", label: "Back") { model.closeTemporary() }
         }
         .padding(.top, 4)
     }
@@ -258,6 +327,7 @@ private struct StationHallBoard: View {
     private func segment(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).font(.system(size: 13, weight: .semibold))
+                .lineLimit(1).fixedSize()
                 .foregroundStyle(selected ? Color.ink : Color.ink.opacity(0.7))
                 .padding(.horizontal, 14).frame(height: 34)
                 .background(selected ? Color.ground.opacity(0.9) : .clear, in: RoundedRectangle(cornerRadius: 9))
@@ -276,13 +346,15 @@ private struct StationHallBoard: View {
         .accessibilityLabel(label)
     }
 
-    /// Only works when the reverse journey is also saved; an arbitrary swap needs a reverse-leg fetch,
-    /// which a view cannot do without a provider.
+    /// The saved reverse journey when there is one; otherwise the way back opens unsaved, as a station-map
+    /// lane does, with the one button that keeps it.
     private func swapDirection() {
-        guard let leg = board?.leg,
-              let reverse = boards.firstIndex(where: { $0.leg.from.id == leg.to.id && $0.leg.to.id == leg.from.id })
-        else { return }
-        model.select(journey: reverse)
+        guard let leg = board?.leg else { return }
+        if let reverse = boards.firstIndex(where: { $0.leg.from.id == leg.to.id && $0.leg.to.id == leg.from.id }) {
+            model.select(journey: reverse)
+        } else {
+            model.open(temporary: Leg(from: leg.to, to: leg.from))
+        }
     }
 
     private var chips: some View {
@@ -435,7 +507,7 @@ private struct StationHallBoard: View {
 
     @ViewBuilder private var inspector: some View {
         if let train = selected, let leg = board?.leg {
-            TrainInspector(train: train, leg: leg, stops: stops, now: now) { selected = nil }
+            TrainInspector(train: train, leg: leg, stops: stops, now: now) { selected = nil; inspectorSheet = false }
         } else {
             VStack(spacing: 10) {
                 Image(systemName: "tram").font(.system(size: 36)).foregroundStyle(Color.inkSecondary)
@@ -450,6 +522,7 @@ private struct StationHallBoard: View {
 
     private func select(_ train: TrainDeparture) {
         selected = train
+        if narrow { inspectorSheet = true }
     }
 
     private func move(_ delta: Int) {
