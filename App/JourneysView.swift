@@ -110,7 +110,7 @@ struct JourneysView: View {
             } else if let fetchedAt = boards.fetchedAt {
                 let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
                 Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
-                Text("\(stale ? "Delays last checked at" : "Updated at") \(fetchedAt.formatted(date: .omitted, time: .shortened))")
+                Text("\(stale ? "Delays last checked at" : "Updated at") \(fetchedAt.formatted(SNCFTime.shortTime))")
                     .font(.mono(12)).foregroundStyle(stale ? Color.caution : Color.inkSecondary)
             }
             Spacer()
@@ -229,7 +229,7 @@ struct JourneyCard: View {
             HStack {
                 Text("End of service").font(.system(size: 14)).foregroundStyle(Color.ink.opacity(0.8))
                 Spacer()
-                Text("First train \(firstTrain.formatted(date: .omitted, time: .shortened))")
+                Text("First train \(firstTrain.formatted(SNCFTime.shortTime))")
                     .font(.mono(13, weight: .semibold)).foregroundStyle(Color.ink)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
@@ -291,7 +291,7 @@ struct DepartureTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                     .font(.mono(20, weight: .bold))
                     .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.ink)
                     .strikethrough(train.isCancelled)

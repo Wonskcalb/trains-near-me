@@ -297,15 +297,10 @@ struct LanesView: View {
     @ViewBuilder private var minimap: some View {
         let legName = boards.indices.contains(selectedJourney) ? boards[selectedJourney].leg : nil
         ServiceMinimap(summary: summary, legName: legName, window: $window,
-                       dayStart: LanesView.serviceDayStart(now, calendar), calendar: calendar)
+                       dayStart: BoardState.serviceDayStart(of: now, calendar: calendar), calendar: calendar)
     }
 
     // MARK: Window maths
-
-    fileprivate static func serviceDayStart(_ now: Date, _ calendar: Calendar) -> Date {
-        // The service day starts at 03:00; a 00:15 train still belongs to the previous evening.
-        calendar.startOfDay(for: now.addingTimeInterval(-3 * 3600)).addingTimeInterval(3 * 3600)
-    }
 
     fileprivate static func window(for range: LanesRange, now: Date, calendar: Calendar,
                                    boards: [JourneyBoard] = []) -> LaneWindow {
@@ -318,10 +313,12 @@ struct LanesView: View {
             return LaneWindow(start: plain.start,
                               span: gap.start.timeIntervalSince(plain.start) + LaneWindow.breakSpan + 2 * 3600, gap: gap)
         case .tonight:
-            let end = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600)   // next 03:00
+            let end = BoardState.nextServiceDayStart(after: now, calendar: calendar)
             return LaneWindow(start: now, span: max(60 * 60, end.timeIntervalSince(now)))
         case .tomorrowAM:
-            let amStart = serviceDayStart(now, calendar).addingTimeInterval(24 * 3600 + 2 * 3600)   // 05:00
+            // 05:00 on the clock, set by hour so a DST morning still opens there.
+            let opens = BoardState.nextServiceDayStart(after: now, calendar: calendar)
+            let amStart = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: opens) ?? opens.addingTimeInterval(2 * 3600)
             return LaneWindow(start: amStart, span: 6 * 3600)
         }
     }
@@ -949,20 +946,12 @@ private struct ServiceMinimap: View {
 
 // MARK: - Shared formatting
 
-/// MainActor-isolated so the cached `DateFormatter` is safe under Swift 6 strict concurrency, the way
-/// `FlapTime` keeps its own. Times are pinned to Europe/Paris: the trains run on it, whatever the device.
-@MainActor private enum LanesFormat {
-    static let hm: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+/// Times are Paris, as everywhere: the trains run on it, whatever the device.
+private enum LanesFormat {
+    static let hm = SNCFTime.hhmmFormatter
 
     static func duration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds / 60)
-        return minutes >= 60 ? String(format: "%d H %02d", minutes / 60, minutes % 60) : "\(minutes) MIN"
+        SNCFTime.duration(minutes: Int(seconds / 60)).uppercased()
     }
 }
 

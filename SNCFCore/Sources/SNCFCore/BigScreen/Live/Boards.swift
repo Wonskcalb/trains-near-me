@@ -160,7 +160,7 @@ extension BoardState {
     }
 
     /// The 03:00 that closes `now`'s service day and opens the next one.
-    static func nextServiceDayStart(after now: Date, calendar: Calendar) -> Date {
+    public static func nextServiceDayStart(after now: Date, calendar: Calendar = SNCFTime.calendar) -> Date {
         let dayStart = serviceDay(of: now, calendar: calendar)
         return calendar.date(byAdding: .day, value: 1, to: dayStart)
             .flatMap { calendar.date(bySettingHour: 3, minute: 0, second: 0, of: $0) } ?? now.addingTimeInterval(24 * 3600)

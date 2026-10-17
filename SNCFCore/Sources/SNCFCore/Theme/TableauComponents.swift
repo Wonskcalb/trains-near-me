@@ -53,7 +53,7 @@ public struct FlapTime: View {
             tile(digits, 3)
         }
         .accessibilityElement()
-        .accessibilityLabel(date.formatted(date: .omitted, time: .shortened))
+        .accessibilityLabel(date.formatted(SNCFTime.shortTime))
     }
 
     // ponytail: the stagger is per column (50 ms each), not per changed tile, so a lone minute flip
@@ -64,12 +64,8 @@ public struct FlapTime: View {
                  cornerRadius: cornerRadius)
     }
 
-    private static let formatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "HHmm"
-        return f
-    }()
+    /// Paris, like every train time beside it.
+    private static let formatter = SNCFTime.formatter("HHmm")
 }
 
 /// The route glyph: a hollow origin dot, a line, a solid destination dot. The destination carries the
@@ -174,8 +170,8 @@ public struct TimeTrackLayout {
     public let hours: [Date]
 
     /// The footer window: from the first train to the hour after the last, so the final dot has room and
-    /// the closing hour gets a label.
-    public init(times: [Date], calendar: Calendar = .current) {
+    /// the closing hour gets a label. Paris hours, like the labels drawn on them.
+    public init(times: [Date], calendar: Calendar = SNCFTime.calendar) {
         let sorted = times.sorted()
         let first = sorted.first ?? Date()
         let last = sorted.last ?? first
@@ -186,12 +182,12 @@ public struct TimeTrackLayout {
 
     /// A now-anchored window: `start` now, `end` `minutesSpan` later. Used by the big-screen rails, which
     /// always read from "now" (17:40 → 21:00 in the mockups) rather than from the first listed train.
-    public init(start: Date, minutesSpan: Int, calendar: Calendar = .current) {
+    public init(start: Date, minutesSpan: Int, calendar: Calendar = SNCFTime.calendar) {
         let end = calendar.date(byAdding: .minute, value: minutesSpan, to: start) ?? start.addingTimeInterval(Double(minutesSpan) * 60)
         self.init(start: start, end: max(end, start.addingTimeInterval(600)), calendar: calendar)
     }
 
-    public init(start: Date, end: Date, calendar: Calendar = .current) {
+    public init(start: Date, end: Date, calendar: Calendar = SNCFTime.calendar) {
         self.start = start
         self.end = end
 
@@ -323,20 +319,11 @@ public struct TimeTrack: View {
         self.metrics = metrics
     }
 
-    private static let hourLabel: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "HH:mm"
-        return f
-    }()
+    // Paris hours and labels, so a rail's 18h stands where the 18:00 train does whatever the device zone.
+    private static let hourLabel = SNCFTime.hhmmFormatter
 
     /// Big-screen rails label the hour as "18h", not "18:00".
-    private static let hourShort: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "H'h'"
-        return f
-    }()
+    private static let hourShort = SNCFTime.formatter("H'h'")
 
     @ViewBuilder public var body: some View {
         // nil anchor is the legacy widget footer (frozen geometry); a now-anchored call draws the
@@ -349,7 +336,7 @@ public struct TimeTrack: View {
     private var footer: some View {
         let layout = TimeTrackLayout(times: trains.map(\.expectedDeparture))
         let nextIndex = trains.firstIndex { !$0.isCancelled }
-        let calendar = Calendar.current
+        let calendar = SNCFTime.calendar
         return Canvas { context, size in
             let inset: CGFloat = 6                    // keep the edge dots off the panel border
             func x(_ date: Date) -> CGFloat { inset + CGFloat(layout.fraction(of: date)) * (size.width - 2 * inset) }
@@ -423,11 +410,11 @@ public struct TimeTrack: View {
     // The big-screen rail: a now-anchored window drawn along either axis. Positions come from `size`, so
     // the caller only fixes the across extent and (optionally) the along length.
     private func anchoredRail(now: Date) -> some View {
-        let layout = TimeTrackLayout(start: now, minutesSpan: minutesSpan, calendar: .current)
+        let layout = TimeTrackLayout(start: now, minutesSpan: minutesSpan)
         let nextIndex = trains.firstIndex { !$0.isCancelled }
         let m = metrics
         let horizontal = axis == .horizontal
-        let calendar = Calendar.current
+        let calendar = SNCFTime.calendar
         return Canvas { context, size in
             let alongLength = horizontal ? size.width : size.height
             func along(_ date: Date) -> CGFloat {

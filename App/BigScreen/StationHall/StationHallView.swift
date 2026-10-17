@@ -816,23 +816,12 @@ enum BoardReading {
 /// The big-screen time/words helpers. A namespace rather than free functions so they never clash with
 /// the iOS-only `relativeTime`/`clock` in `BoardView`, and so they work on macOS too.
 enum HallFormat {
-    /// SNCF runs on Europe/Paris; format there so 17:42 reads as 17:42 whatever the device clock is.
-    private static let paris: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Europe/Paris")
-        f.dateFormat = "HH:mm"
-        return f
-    }()
-
-    static func hm(_ date: Date) -> String { paris.string(from: date) }
+    static func hm(_ date: Date) -> String { SNCFTime.hhmm(date) }
 
     /// "now" / "2 min" / "1 h 32".
     static func relative(_ date: Date, from now: Date) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-        if minutes < 1 { return "now" }
-        if minutes < 60 { return "\(minutes) min" }
-        return "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+        return minutes < 1 ? "now" : SNCFTime.duration(minutes: minutes)
     }
 
     /// The hero's "in 2 min · run" / "leaving now".

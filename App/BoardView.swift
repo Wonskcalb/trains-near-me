@@ -276,7 +276,7 @@ struct BoardView: View {
                 Spacer(minLength: 8)
                 HStack(spacing: 6) {
                     Circle().fill(Color.soon).frame(width: 7, height: 7)
-                    Text(next.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(next.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
                 }
             }
@@ -353,7 +353,7 @@ struct BoardView: View {
                 Text("End of service").font(.headline).foregroundStyle(.white)
                 (Text("First train at ")
                     .foregroundColor(.white.opacity(0.75))
-                 + Text(firstTrain, format: .dateTime.hour().minute())
+                 + Text(firstTrain.formatted(SNCFTime.hourMinute))
                     .font(.mono(15, weight: .semibold)).foregroundColor(.amber))
                     .font(.subheadline)
             }
@@ -410,7 +410,7 @@ struct BoardView: View {
 
     private func updatedLine(now: Date) -> some View {
         let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
-        let time = fetchedAt.formatted(date: .omitted, time: .shortened)
+        let time = fetchedAt.formatted(SNCFTime.shortTime)
         return HStack(spacing: 7) {
             Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
             Text(stale ? "Delays last checked at \(time) — out of date" : "Updated at \(time) · pull to refresh")
@@ -535,12 +535,12 @@ struct RadarRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                     .font(.mono(19, weight: .semibold))
                     .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                     .strikethrough(train.isCancelled)
                 if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text(train.expectedDeparture, format: .dateTime.hour().minute())
+                    Text(train.expectedDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(12, weight: .semibold))
                         .foregroundStyle(train.status.tableauInk)
                 }
@@ -598,13 +598,13 @@ struct JourneyRow: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 10) {
-                    Text(train.scheduledDeparture, format: .dateTime.hour().minute())
+                    Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
                         .font(.mono(24, weight: .bold))
                         .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
                         .strikethrough(train.isCancelled)
                     if train.scheduledArrival != nil {
                         DashConnector()
-                        Text(train.scheduledArrival!, format: .dateTime.hour().minute())
+                        Text(train.scheduledArrival!.formatted(SNCFTime.hourMinute))
                             .font(.mono(16, weight: .medium))
                             .foregroundStyle(Color.ink.opacity(0.85))
                             .strikethrough(train.isCancelled)
@@ -648,7 +648,7 @@ struct JourneyRow: View {
                 .fixedSize()
         case .delayed, .severelyDelayed:
             StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
-            Text("leaves \(train.expectedDeparture.formatted(date: .omitted, time: .shortened))")
+            Text("leaves \(train.expectedDeparture.formatted(SNCFTime.shortTime))")
                 .font(.mono(12)).foregroundStyle(train.status.tableauInk)
         case .cancelled:
             StatusPill("CANCELLED", status: .cancelled)

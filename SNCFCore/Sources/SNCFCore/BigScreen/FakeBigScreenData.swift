@@ -363,13 +363,7 @@ struct FakeETA: ETAComposing {
         return lines.joined(separator: "\n")
     }
 
-    private static let time: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+    private static let time = SNCFTime.hhmmFormatter
 }
 
 extension BigScreenData {

@@ -147,3 +147,52 @@ private actor Box {
     private(set) var value: Date?
     func set(_ date: Date) { value = date }
 }
+
+/// The 03:00 boundary on the two DST mornings of 2026, Europe/Paris: 29 March skips 02:00–03:00, 25 October
+/// runs 02:00–03:00 twice. Three hours of absolute time is then two or four on the clock, so the boundary
+/// is read off the wall clock, and every helper must land on the same 03:00.
+@Suite struct ServiceDayAcrossDST {
+    let cal = SNCFTime.calendar
+
+    private func paris(_ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
+    }
+
+    private func midnight(_ month: Int, _ day: Int) -> Date { cal.startOfDay(for: paris(month, day, 12)) }
+
+    @Test func springForward() {
+        #expect(BoardState.serviceDay(of: paris(3, 29, 1, 30), calendar: cal) == midnight(3, 28))
+        #expect(BoardState.serviceDay(of: paris(3, 29, 3, 0), calendar: cal) == midnight(3, 29))
+        #expect(BoardState.serviceDay(of: paris(3, 29, 3, 30), calendar: cal) == midnight(3, 29))
+        #expect(BoardState.serviceDayStart(of: paris(3, 29, 10), calendar: cal) == paris(3, 29, 3))
+        #expect(BoardState.nextServiceDayStart(after: paris(3, 28, 22), calendar: cal) == paris(3, 29, 3))
+        // 22:00 to 03:00 that night is four hours, not five.
+        #expect(BoardState.restOfServiceDay(after: paris(3, 28, 22), atLeast: 0, calendar: cal) == 4 * 3600)
+    }
+
+    @Test func fallBack() {
+        // The second 02:30 (CET, an hour after the first) is still the 24th's night.
+        let firstHalfPast2 = paris(10, 25, 2, 30)
+        let secondHalfPast2 = firstHalfPast2.addingTimeInterval(3600)
+        #expect(cal.component(.hour, from: secondHalfPast2) == 2)
+        #expect(BoardState.serviceDay(of: firstHalfPast2, calendar: cal) == midnight(10, 24))
+        #expect(BoardState.serviceDay(of: secondHalfPast2, calendar: cal) == midnight(10, 24))
+        #expect(BoardState.serviceDay(of: paris(10, 25, 3, 15), calendar: cal) == midnight(10, 25))
+        #expect(BoardState.serviceDayStart(of: paris(10, 25, 10), calendar: cal) == paris(10, 25, 3))
+        #expect(BoardState.nextServiceDayStart(after: paris(10, 24, 22), calendar: cal) == paris(10, 25, 3))
+        // 22:00 to 03:00 that night is six hours.
+        #expect(BoardState.restOfServiceDay(after: paris(10, 24, 22), atLeast: 0, calendar: cal) == 6 * 3600)
+    }
+
+    @Test func theSummaryAgreesWithTheBoundary() {
+        // A train at the second 02:30 is tonight's last; the 03:15 one is tomorrow's first.
+        let late = paris(10, 25, 2, 30).addingTimeInterval(3600)
+        let trains = [late, paris(10, 25, 3, 15)].map {
+            TrainDeparture(scheduledDeparture: $0, delayMinutes: 0, isCancelled: false, trainNumber: nil)
+        }
+        let summary = LiveServiceDay.summarise(trains, dayStart: midnight(10, 24), calendar: cal)
+        #expect(summary?.lastTonight == late)
+        #expect(summary?.firstTomorrow == paris(10, 25, 3, 15))
+        #expect(summary?.trainsPerHour[23] == 1)
+    }
+}

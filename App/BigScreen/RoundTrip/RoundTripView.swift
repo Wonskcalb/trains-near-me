@@ -116,9 +116,10 @@ struct RoundTripView: View {
 
     // MARK: Duo
 
-    static let outboundSpace = "roundTrip.outbound"
-    static let returnSpace = "roundTrip.return"
-    static let screenSpace = "roundTrip.screen"
+    // Nonisolated: the row measuring reads them from `onGeometryChange`'s Sendable closure.
+    nonisolated static let outboundSpace = "roundTrip.outbound"
+    nonisolated static let returnSpace = "roundTrip.return"
+    nonisolated static let screenSpace = "roundTrip.screen"
     /// Each pane's inset on the fold side: the gap the tie spans on either side of the division.
     private static let foldGutter: CGFloat = 20
 
@@ -715,17 +716,7 @@ struct RoundTripView: View {
         return text
     }
 
-    private func hhmm(_ date: Date) -> String { Self.hhmm.string(from: date) }
-
-    /// 24-hour Paris wall-clock, like the mockup ("17:46"), independent of the device locale and zone —
-    /// SNCF times are Europe/Paris.
-    private static let hhmm: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Paris")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+    private func hhmm(_ date: Date) -> String { SNCFTime.hhmm(date) }
 }
 
 /// The row padding, and the selected-row tint that marks the picked outbound and the first return that fits.

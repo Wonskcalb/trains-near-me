@@ -774,13 +774,9 @@ struct WallModeView: View {
 
 // MARK: - Board row
 
-/// Minutes until a departure as "6 min" / "1 h 36" / "now". `BoardView`'s own `relativeTime` is walled
-/// behind `#if os(iOS)`, so Wall (which also runs on the Mac) carries its own copy.
+/// Minutes until a departure as "6 min" / "1 h 36" / "now", the station hall's wording.
 private func wallCountdown(to date: Date, from now: Date) -> String {
-    let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-    if minutes < 1 { return "now" }
-    if minutes < 60 { return "\(minutes) min" }
-    return "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
+    HallFormat.relative(date, from: now)
 }
 
 private struct WallBoardRow: View {
@@ -1049,17 +1045,9 @@ private extension Color {
 
 private enum WallFormat {
     /// 24-hour "HH:mm", matching the split-flap tiles whatever the device clock.
-    static let time = formatter("HH:mm")
+    static let time = SNCFTime.hhmmFormatter
     /// "Thu 15 Oct", upper-cased by the caller.
-    static let day = formatter("EEE d MMM")
-
-    private static func formatter(_ format: String) -> DateFormatter {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Europe/Paris")
-        f.dateFormat = format
-        return f
-    }
+    static let day = SNCFTime.formatter("EEE d MMM")
 }
 
 #Preview("Wall mode") {

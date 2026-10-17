@@ -380,15 +380,10 @@ private struct FlapMark: View {
     }
 }
 
-/// Times and durations for the popover, matched to `FlapTime`'s device-local clock so the flap and the
-/// text beside it never disagree.
+/// Times and durations for the popover: Paris, like `FlapTime`, so the flap and the text beside it
+/// never disagree.
 enum MenuBarFormat {
-    static let hm: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+    static let hm = SNCFTime.hhmmFormatter
 
     static func minutesUntil(_ date: Date, from now: Date) -> Int {
         max(0, Int((date.timeIntervalSince(now) / 60).rounded()))
@@ -400,9 +395,7 @@ enum MenuBarFormat {
     }
 
     static func duration(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds / 60)
-        let (hours, minutes) = (total / 60, total % 60)
-        return hours > 0 ? "\(hours) h \(String(format: "%02d", minutes))" : "\(minutes) min"
+        SNCFTime.duration(minutes: Int(seconds / 60))
     }
 }
 
