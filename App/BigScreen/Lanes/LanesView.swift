@@ -831,6 +831,8 @@ struct LaneTrainPopover: View {
     @State private var stops: [TripStop] = []
     @State private var watched = false
     @State private var showStops = false
+    /// Until the first answer, the list shows a spinner rather than "no stop list".
+    @State private var stopsLoaded = false
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -854,7 +856,9 @@ struct LaneTrainPopover: View {
             times
             Text(detailLine).font(.mono(11.5, weight: .medium)).foregroundStyle(Color.ink.opacity(0.6))
             buttons
-            if showStops { stopList }
+            if showsStops {
+                if isDrawer { ScrollView { stopList } } else { stopList }
+            }
         }
         .padding(isDrawer ? 20 : 16)
         .frame(width: isDrawer ? nil : 280)
@@ -869,13 +873,20 @@ struct LaneTrainPopover: View {
         .task {
             if let identity { watched = await data.watching.isWatched(identity) }
         }
-        // The stopping pattern is a request of its own: asked only once Stops is opened, not for every
-        // popover a tap on a bar brings up.
-        .task(id: showStops) {
-            guard showStops, stops.isEmpty, let id = train.vehicleJourneyID, !id.isEmpty else { return }
+        // The stopping pattern is a request of its own (cached per train): in the popover it waits for Stops,
+        // so a tap on a bar costs nothing; the drawer has the room, so it shows the stops straight away.
+        .task(id: showsStops) {
+            guard showsStops, stops.isEmpty, let id = train.vehicleJourneyID, !id.isEmpty else {
+                stopsLoaded = true
+                return
+            }
+            stopsLoaded = false
             stops = (try? await data.trainStops.stops(forVehicleJourneyID: id)) ?? []
+            stopsLoaded = true
         }
     }
+
+    private var showsStops: Bool { showStops || isDrawer }
 
     private var header: some View {
         HStack {
@@ -928,7 +939,9 @@ struct LaneTrainPopover: View {
                 }
             }
             .accessibilityValue(watched ? "On" : "Off")
-            popoverButton(showStops ? "Hide stops" : "Stops") { showStops.toggle() }
+            if !isDrawer {
+                popoverButton(showStops ? "Hide stops" : "Stops") { showStops.toggle() }
+            }
         }
     }
 
@@ -942,7 +955,9 @@ struct LaneTrainPopover: View {
     }
 
     @ViewBuilder private var stopList: some View {
-        if stops.isEmpty {
+        if !stopsLoaded {
+            ProgressView().tint(Color.ink.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+        } else if stops.isEmpty {
             Text("No stop list available.").font(.mono(11.5)).foregroundStyle(Color.ink.opacity(0.5))
         } else {
             VStack(alignment: .leading, spacing: 4) {
