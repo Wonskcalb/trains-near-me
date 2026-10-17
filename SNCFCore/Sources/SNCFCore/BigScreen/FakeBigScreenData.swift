@@ -238,14 +238,6 @@ public enum BigScreenFixtures {
         minimumStay: 150 * 60, outboundOptions: roundTripOutbound,
         selectedOutbound: roundTripOutbound.first, returnOptions: roundTripReturns)
 
-    // MARK: Leave by (Wall right column)
-
-    /// "LEAVE HOME IN … for the 17:46 to Grenoble. 6 min walk to the platform." The leave time is the
-    /// train's departure minus the walk; the mockup's hero "04" flap is illustrative (at 17:40 with a
-    /// 6-minute walk it is 0), so the fake derives `leaveAt` consistently instead.
-    public static let leaveBy = LeaveBy(
-        train: journeyTrain(17, 46, arr: (18, 11), number: "17652"), walkMinutes: 6, leaveAt: at(17, 40))
-
     public static func isGrenobleVoiron(_ leg: Leg) -> Bool {
         let ids = Set([leg.from.id, leg.to.id])
         return ids == Set([grenoble.id, voiron.id])
@@ -297,16 +289,15 @@ struct FakeRoundTrip: RoundTripPlanning {
 /// An actor so the pinned station survives across calls, like the real App-Group-backed setting will.
 actor FakeLeaveBy: LeaveByProviding {
     private var pinned: Station?
-    private let canned: LeaveBy
 
-    init(pinned: Station?, leaveBy: LeaveBy) {
+    init(pinned: Station?) {
         self.pinned = pinned
-        self.canned = leaveBy
     }
 
     func pinnedStation() -> Station? { pinned }
     func pin(_ station: Station?) { pinned = station }
-    func leaveBy(toCatch leg: Leg, at now: Date) -> LeaveBy? { canned }
+    /// The mockup's "6 min walk to the platform".
+    func walkMinutes(to station: Station) -> Int { 6 }
 }
 
 /// Watch state is per-instance and in-memory; the real one writes through the App Group and schedules a
@@ -369,15 +360,11 @@ struct FakeETA: ETAComposing {
 extension BigScreenData {
     /// The fake at 22:30 (`BigScreenFixtures.lateNow`): every journey board past or near its end of
     /// service and carrying tomorrow's first trains, and Voiron's station board the same. The other
-    /// providers are the 17:40 ones, except that LEAVE HOME IN points at the last train still to catch.
+    /// providers are the 17:40 ones.
     public static let fakeLateEvening: BigScreenData = makeFake(late: true)
 
     static func makeFake(late: Bool = false) -> BigScreenData {
-        let lastTrain = BigScreenFixtures.grenobleVoironLast
-        let leaveBy = late
-            ? LeaveBy(train: lastTrain, walkMinutes: 6, leaveAt: lastTrain.expectedDeparture.addingTimeInterval(-6 * 60))
-            : BigScreenFixtures.leaveBy
-        return BigScreenData(
+        BigScreenData(
             journeyBoards: FakeJourneyBoards(all: late ? BigScreenFixtures.lateJourneyBoards : BigScreenFixtures.journeyBoards),
             stationBoard: late
                 ? FakeStationBoard(state: BoardState.from(BigScreenFixtures.voironLateTrains, now: BigScreenFixtures.lateNow,
@@ -387,7 +374,7 @@ extension BigScreenData {
             trainStops: FakeTrainStops(stopsByVehicle: BigScreenFixtures.stopsByVehicle),
             serviceDay: FakeServiceDay(main: BigScreenFixtures.serviceDaySummary),
             roundTrip: FakeRoundTrip(plan: BigScreenFixtures.roundTripPlan),
-            leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron, leaveBy: leaveBy),
+            leaveBy: FakeLeaveBy(pinned: BigScreenFixtures.voiron),
             watching: FakeTrainWatching(),
             eta: FakeETA(),
             stationSearch: FakeStationSearch(stations: BigScreenFixtures.searchableStations,

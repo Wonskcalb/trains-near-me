@@ -217,11 +217,13 @@ public protocol RoundTripPlanning: Sendable {
     func roundTrip(outbound: Leg, pick: TrainIdentity?, stay minimumStay: TimeInterval, at now: Date) async -> RoundTripPlan
 }
 
-/// The leave-by countdown, and the single "pinned" station the Wall's Station board shows.
+/// The single "pinned" station the Wall's Station board shows, and the walk behind LEAVE HOME IN. The
+/// countdown itself is `LiveLeaveBy.firstCatchable(in:walk:now:)` over a board the screen already holds.
 public protocol LeaveByProviding: Sendable {
     func pinnedStation() async -> Station?
     func pin(_ station: Station?) async
-    func leaveBy(toCatch leg: Leg, at now: Date) async -> LeaveBy?
+    /// Minutes on foot to the station: the user's own figure when set, otherwise an estimate.
+    func walkMinutes(to station: Station) async -> Int
 }
 
 /// Watching a train (a reminder before it leaves, an alert if the delay or cancellation changes).

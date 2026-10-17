@@ -56,8 +56,8 @@ targets:
         # iPhone stays portrait-only; iPad must offer all four (App Store Connect requires them for
         # multitasking), and the big-screen split view is happy in every orientation there.
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
-        NSLocationUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
-        NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
+        NSLocationUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
+        NSLocationWhenInUseUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
         SNCFAppGroup: $(SNCF_APP_GROUP)
         SNCFToken: $(SNCF_TOKEN)
         # iOS background app refresh re-evaluates watched trains off-screen (BackgroundRefresh). Both keys
@@ -95,8 +95,8 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSWidgetWantsLocation: true
-        NSLocationUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
-        NSLocationWhenInUseUsageDescription: Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station.
+        NSLocationUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
+        NSLocationWhenInUseUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
         SNCFAppGroup: $(SNCF_APP_GROUP)
         SNCFToken: $(SNCF_TOKEN)
     entitlements:

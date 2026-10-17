@@ -1,16 +1,13 @@
+import CoreLocation
 import Foundation
 import Testing
 @testable import SNCFCore
 
-/// The live leave-by provider's catch-the-train logic and the two App-Group settings behind it, all from
-/// fixtures at the mockups' anchor (Thu 15 Oct 2026, 17:40 Europe/Paris). The board is injected, so no
-/// SNCF API; the walk time defaults to the stored setting, so no MapKit.
-// Serialized: the walk-minutes and pinned-station settings live under one App-Group/`.standard`
-// UserDefaults key each, read-modify-written. swift-testing runs a suite's tests in parallel by
-// default, so concurrent writers to the same key lose updates; serializing keeps them hermetic.
-@Suite(.serialized) struct BigScreenLeaveBy {
+/// LEAVE HOME IN: the pure catch-the-train rule, which walk wins, and the two settings behind them, all
+/// from fixtures at the mockups' anchor (Thu 15 Oct 2026, 17:40 Europe/Paris). No SNCF API, no MapKit,
+/// and the settings run on a suite of their own rather than the real `.standard` defaults.
+@Suite struct BigScreenLeaveBy {
     let now = BigScreenFixtures.now
-    let calendar = BigScreenFixtures.calendar
     let voiron = BigScreenFixtures.voiron
 
     private func train(_ h: Int, _ m: Int, delay: Int = 0, cancelled: Bool = false, number: String) -> TrainDeparture {
@@ -18,72 +15,90 @@ import Testing
                        mode: "TER", delayMinutes: delay, isCancelled: cancelled, trainNumber: number)
     }
 
-    /// A provider whose board is the given trains, and a leg from a fresh origin whose walk time is `walk`.
-    /// The origin is unique per call so tests that run in parallel never fight over one station's setting.
-    private func provider(_ trains: [TrainDeparture], walk: Int) -> (LiveLeaveBy, Leg) {
-        let origin = Station(id: UUID().uuidString, name: "Origin", latitude: 0, longitude: 0)
-        SharedSettings[walkMinutesFor: origin.id] = walk
-        let calendar = calendar
-        let provider = LiveLeaveBy(board: { _, now in BoardState.from(trains, now: now, calendar: calendar) })
-        return (provider, Leg(from: origin, to: voiron))
+    private func catchable(_ trains: [TrainDeparture], walk: Int, at date: Date? = nil) -> LeaveBy? {
+        LiveLeaveBy.firstCatchable(in: trains, walk: walk, now: date ?? now)
     }
 
-    @Test func picksTheFirstTrainYouCanStillMake() async {
+    @Test func picksTheFirstTrainYouCanStillMake() {
         // 17:44 leaves in 4 min — a 6-minute walk means you already had to go; 17:46 is the first you make.
-        let (provider, leg) = provider([train(17, 44, number: "A"), train(17, 46, number: "B"),
-                                        train(18, 12, number: "C")], walk: 6)
-        let result = await provider.leaveBy(toCatch: leg, at: now)
+        let result = catchable([train(17, 44, number: "A"), train(17, 46, number: "B"), train(18, 12, number: "C")], walk: 6)
         #expect(result?.train.trainNumber == "B")
         #expect(result?.walkMinutes == 6)
         #expect(result?.leaveAt == BigScreenFixtures.at(17, 40))   // 17:46 − 6, exactly now: just catchable
     }
 
-    @Test func nilWhenEveryTrainIsAlreadyGone() async {
-        // The only train leaves in 4 min, the walk is 6: leaveAt is before now, it is missed.
-        let (provider, leg) = provider([train(17, 44, number: "A")], walk: 6)
-        #expect(await provider.leaveBy(toCatch: leg, at: now) == nil)
+    @Test func aMinuteLaterTheMissedTrainGivesWayToTheNext() {
+        // The Wall re-runs the rule at each tick from the trains it holds: at 17:41 the 17:46 is gone.
+        let trains = [train(17, 46, number: "B"), train(18, 12, number: "C")]
+        #expect(catchable(trains, walk: 6, at: BigScreenFixtures.at(17, 41))?.train.trainNumber == "C")
     }
 
-    @Test func skipsCancelledTrainsEvenWhenTheyAreCatchable() async {
-        // 17:46 is catchable but cancelled; the next running one, 17:50, is taken instead.
-        let (provider, leg) = provider([train(17, 46, cancelled: true, number: "X"),
-                                        train(17, 50, number: "Y")], walk: 6)
-        let result = await provider.leaveBy(toCatch: leg, at: now)
+    @Test func nilWhenEveryTrainIsAlreadyGone() {
+        #expect(catchable([train(17, 44, number: "A")], walk: 6) == nil)
+    }
+
+    @Test func skipsCancelledTrainsEvenWhenTheyAreCatchable() {
+        let result = catchable([train(17, 46, cancelled: true, number: "X"), train(17, 50, number: "Y")], walk: 6)
         #expect(result?.train.trainNumber == "Y")
         #expect(result?.leaveAt == BigScreenFixtures.at(17, 44))
     }
 
-    @Test func nilWhenEveryTrainIsCancelled() async {
-        let (provider, leg) = provider([train(18, 12, cancelled: true, number: "X"),
-                                        train(18, 42, cancelled: true, number: "Y")], walk: 6)
-        #expect(await provider.leaveBy(toCatch: leg, at: now) == nil)
+    @Test func nilWhenEveryTrainIsCancelled() {
+        #expect(catchable([train(18, 12, cancelled: true, number: "X"), train(18, 42, cancelled: true, number: "Y")], walk: 6) == nil)
     }
 
-    @Test func leaveAtIsTheExpectedDepartureMinusTheWalk() async throws {
+    @Test func leaveAtIsTheExpectedDepartureMinusTheWalk() throws {
         // A delayed train: leaveAt is measured from the amended time, not the timetable.
-        let (provider, leg) = provider([train(18, 12, delay: 12, number: "D")], walk: 10)
-        let result = try #require(await provider.leaveBy(toCatch: leg, at: now))
+        let result = try #require(catchable([train(18, 12, delay: 12, number: "D")], walk: 10))
         #expect(result.train.expectedDeparture == BigScreenFixtures.at(18, 24))
-        #expect(result.walkMinutes == 10)
-        #expect(result.leaveAt == result.train.expectedDeparture.addingTimeInterval(-10 * 60))
         #expect(result.leaveAt == BigScreenFixtures.at(18, 14))
     }
 
+    // MARK: Which walk
+
+    @Test func aWalkTheUserSetBeatsMapKit() async {
+        let provider = LiveLeaveBy(walkETA: { _ in 3 }, storedWalk: { _ in 12 })
+        #expect(await provider.walkMinutes(to: voiron) == 12)
+    }
+
+    @Test func mapKitOnlyStandsInForAWalkNeverSet() async {
+        let provider = LiveLeaveBy(walkETA: { _ in 3 }, storedWalk: { _ in nil })
+        #expect(await provider.walkMinutes(to: voiron) == 3)
+    }
+
+    @Test func theDefaultWhenNeitherAnswers() async {
+        let provider = LiveLeaveBy(walkETA: { _ in nil }, storedWalk: { _ in nil })
+        #expect(await provider.walkMinutes(to: voiron) == SharedSettings.defaultWalkMinutes)
+    }
+
+    #if canImport(MapKit)
+    @Test func theMapKitOriginIsRoundedToAbout100Metres() {
+        let rounded = LiveLeaveBy.rounded(.init(latitude: 45.191463, longitude: 5.714466))
+        #expect(rounded.latitude == 45.191)
+        #expect(rounded.longitude == 5.714)
+    }
+    #endif
+
     // MARK: Settings
 
-    @Test func walkMinutesRoundTripsAndDefaults() {
-        let unset = Station(id: UUID().uuidString, name: "Unset", latitude: 0, longitude: 0)
-        #expect(SharedSettings[walkMinutesFor: unset.id] == SharedSettings.defaultWalkMinutes)
+    @Test func walkMinutesRoundTripsAndTellsSetFromDefault() throws {
+        let name = "test.bigscreen.walk.\(UUID().uuidString)"
+        let store = try #require(UserDefaults(suiteName: name))
+        defer { store.removePersistentDomain(forName: name) }
 
-        let set = Station(id: UUID().uuidString, name: "Set", latitude: 0, longitude: 0)
-        SharedSettings[walkMinutesFor: set.id] = 17
-        #expect(SharedSettings[walkMinutesFor: set.id] == 17)
-        // Other stations keep their own value.
-        #expect(SharedSettings[walkMinutesFor: unset.id] == SharedSettings.defaultWalkMinutes)
+        #expect(SharedSettings.walkMinutesIfSet(for: "unset", in: store) == nil)
+        SharedSettings.setWalkMinutes(17, for: "set", in: store)
+        #expect(SharedSettings.walkMinutesIfSet(for: "set", in: store) == 17)
+        // Other stations keep their own value, and setting one back to six still counts as set.
+        #expect(SharedSettings.walkMinutesIfSet(for: "unset", in: store) == nil)
+        SharedSettings.setWalkMinutes(SharedSettings.defaultWalkMinutes, for: "unset", in: store)
+        #expect(SharedSettings.walkMinutesIfSet(for: "unset", in: store) == SharedSettings.defaultWalkMinutes)
     }
 
     @Test func pinnedStationRoundTripsIncludingNil() async {
-        let provider = LiveLeaveBy(board: { _, _ in .noTrains })
+        let provider = LiveLeaveBy()
+        let before = await provider.pinnedStation()
+        defer { SharedSettings.pinnedStation = before }
         await provider.pin(voiron)
         #expect(await provider.pinnedStation() == voiron)
         await provider.pin(nil)

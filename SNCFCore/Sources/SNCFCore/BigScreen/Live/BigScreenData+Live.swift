@@ -14,7 +14,7 @@ public extension BigScreenData {
             trainStops: LiveTrainStops(session: session),
             serviceDay: LiveServiceDay(session: session, calendar: calendar),
             roundTrip: RoundTripLive(session: session, calendar: calendar),
-            leaveBy: LiveLeaveBy(session: session, calendar: calendar),
+            leaveBy: LiveLeaveBy(),
             watching: TrainWatcher.shared,
             eta: ETAComposer(),
             stationSearch: LiveStationSearch(session: session))

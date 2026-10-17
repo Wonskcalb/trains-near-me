@@ -117,11 +117,11 @@ import Testing
     }
 
     @Test func leaveByIsTheDepartureMinusTheWalk() async throws {
-        let leg = Leg(from: BigScreenFixtures.voiron, to: BigScreenFixtures.grenoble)
-        let leaveBy = try #require(await data.leaveBy.leaveBy(toCatch: leg, at: now))
-        #expect(leaveBy.walkMinutes == 6)
+        let walk = await data.leaveBy.walkMinutes(to: BigScreenFixtures.voiron)
+        #expect(walk == 6)
+        let leaveBy = try #require(LiveLeaveBy.firstCatchable(in: BigScreenFixtures.roundTripOutbound, walk: walk, now: now))
         #expect(leaveBy.train.scheduledDeparture == BigScreenFixtures.at(17, 46))
-        #expect(leaveBy.leaveAt == leaveBy.train.expectedDeparture.addingTimeInterval(-Double(leaveBy.walkMinutes) * 60))
+        #expect(leaveBy.leaveAt == leaveBy.train.expectedDeparture.addingTimeInterval(-Double(walk) * 60))
         #expect(await data.leaveBy.pinnedStation() == BigScreenFixtures.voiron)
     }
 

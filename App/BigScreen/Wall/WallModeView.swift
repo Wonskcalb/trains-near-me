@@ -33,7 +33,8 @@ struct WallModeView: View {
     @State private var stationIsPinned = false
     @State private var stationBoard = StationDayBoard(state: .noTrains)
     @State private var journeys: [JourneyBoard] = []
-    @State private var leave: LeaveBy?
+    /// The walk to `leaveLeg`'s station; LEAVE HOME IN is worked out from it and the held board at each tick.
+    @State private var walk: Int?
     @State private var leaveLeg: Leg?
 
     #if os(macOS)
@@ -113,12 +114,13 @@ struct WallModeView: View {
                 }
             }
         }
-        // LEAVE HOME IN follows the journey on the board; the station board keeps the first saved one.
+        // LEAVE HOME IN follows the journey on the board; the station board keeps the first saved one. Only
+        // the walk is looked up: the trains are the board already held, so it costs no request.
         leaveLeg = current?.leg ?? journeys.first?.leg
         if let leaveLeg {
-            leave = await data.leaveBy.leaveBy(toCatch: leaveLeg, at: now)
+            walk = await data.leaveBy.walkMinutes(to: leaveLeg.from)
         } else {
-            leave = nil
+            walk = nil
         }
     }
 
@@ -346,13 +348,14 @@ struct WallModeView: View {
                systemImage: keepAwake ? "sun.max.fill" : "sun.max") { keepAwake.toggle() }
     }
 
-    /// The stored walk to the leg's station; a new figure recounts LEAVE HOME IN straight away.
+    /// The stored walk to the leg's station; a new figure recounts LEAVE HOME IN straight away, and is
+    /// from then on the user's own, which MapKit no longer overrides.
     private func walkMinutes(_ leg: Leg) -> Binding<Int> {
         Binding {
-            leave?.walkMinutes ?? SharedSettings[walkMinutesFor: leg.from.id]
+            walk ?? SharedSettings[walkMinutesFor: leg.from.id]
         } set: { minutes in
             SharedSettings[walkMinutesFor: leg.from.id] = minutes
-            Task { leave = await data.leaveBy.leaveBy(toCatch: leg, at: frozenNow ?? Date()) }
+            walk = minutes
         }
     }
 
@@ -425,8 +428,9 @@ struct WallModeView: View {
         let countdown = next.map { wallCountdown(to: $0.expectedDeparture, from: liveNow) }
             .map { $0 == "now" ? "leaving now" : "in \($0)" } ?? ""
         // LEAVE HOME IN counts down to the first train you can still walk to; when that is not this one,
-        // this one leaves before you could reach it.
-        let tooTight = next != nil && leave.map { $0.train != next } == true
+        // this one leaves before you could reach it. Only on a journey: the station board's next train is
+        // on another line than the journey LEAVE HOME IN follows.
+        let tooTight = current != nil && next != nil && walk != nil && shownLeave(liveNow: liveNow)?.leave.train != next
         return VStack(alignment: .leading, spacing: 14) {
             Text("NEXT TRAIN").font(.mono(12, weight: .bold)).tracking(2).foregroundStyle(Color.inkSecondary)
             if let next {
@@ -638,16 +642,15 @@ struct WallModeView: View {
         return "none to \(destination) now"
     }
 
-    /// What LEAVE HOME IN counts down to: the provider's train while tonight runs, then the morning's first
-    /// with the same stored walk before it. The provider only looks at tonight, and the morning is already
-    /// on the board, so the night costs no request of its own.
+    /// What LEAVE HOME IN counts down to: the first of tonight's held trains you can still walk to, worked
+    /// out again at every minute so a train missed meanwhile gives way at once; once none is left, the
+    /// morning's first with the same walk. No request: the board and the morning are already held.
     private func shownLeave(liveNow: Date) -> (leave: LeaveBy, tomorrow: Bool)? {
-        if let leave { return (leave, false) }
-        guard let board = journeys.first(where: { $0.leg == leaveLeg }),
-              BoardReading.nextUpcoming(board.state, after: liveNow) == nil,
-              let first = board.tomorrow.first(where: { !$0.isCancelled }) else { return nil }
-        let walk = SharedSettings[walkMinutesFor: board.leg.from.id]
-        return (LeaveBy(train: first, walkMinutes: walk, leaveAt: first.expectedDeparture.addingTimeInterval(-Double(walk) * 60)), true)
+        guard let walk, let board = journeys.first(where: { $0.leg == leaveLeg }) else { return nil }
+        if let tonight = LiveLeaveBy.firstCatchable(in: BoardReading.departures(board.state), walk: walk, now: liveNow) {
+            return (tonight, false)
+        }
+        return LiveLeaveBy.firstCatchable(in: board.tomorrow, walk: walk, now: liveNow).map { ($0, true) }
     }
 
     private func leaveCard(to destination: String?, liveNow: Date) -> some View {
