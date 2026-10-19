@@ -204,6 +204,35 @@ swift test --package-path SNCFCore
 
 The tests make no live API calls — everything is fixtures. They cover direction (fixed, reversed, automatic around 13:00, custom switch time), nearest-station selection, the delay bands and cancellations, journey filtering, the service day (a 00:15 train still counts as tonight, end of service told apart from all-cancelled), response parsing against the fixtures in `SNCFCore/Tests/SNCFCoreTests/Fixtures`, and the refresh plan (the reload budget, entries outliving the stale mark, one reload for the whole night).
 
+## Releasing
+
+Pushing a version tag on `main` builds iOS and macOS and uploads both to TestFlight
+(`.github/workflows/release.yml`):
+
+```bash
+# bump CURRENT_PROJECT_VERSION in project.yml first: App Store Connect refuses a build number twice
+git tag v1.3.0 && git push origin v1.3.0
+```
+
+The tag gives the version (1.3.0); the build number is `CURRENT_PROJECT_VERSION`. The workflow stops
+before building if the tag isn't on `main` or the build number wasn't bumped since the last tag.
+Distributed builds never contain an SNCF token: testers paste their own in Settings.
+
+One-time setup in the repository's **Settings › Secrets and variables › Actions**:
+
+| Name | Kind | Value |
+|---|---|---|
+| `APPLE_TEAM_ID` | secret | your team id (developer.apple.com › Membership) |
+| `BUNDLE_ID_PREFIX` | variable | the bundle id, as in `Config/Local.xcconfig` |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID` | secret | from App Store Connect › Users and Access › Integrations › App Store Connect API |
+| `ASC_KEY_P8` | secret | the contents of the downloaded `AuthKey_….p8` |
+| `DISTRIBUTION_CERT_P12`, `MAC_INSTALLER_CERT_P12`, `CERTS_P12_PASSWORD` | secret, optional | base64 of the *Apple Distribution* and *Mac Installer Distribution* certificates exported from Keychain Access as `.p12`, and their password |
+
+Without the certificate secrets Xcode uses cloud-managed signing, which needs the API key's role to
+be **Admin**. The app record in App Store Connect must list both the iOS and the macOS platform.
+
+To try a release locally without uploading: `sh scripts/release.sh ios export` (or `macos`).
+
 ## Troubleshooting
 
 <details>

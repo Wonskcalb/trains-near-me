@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Releases: a version tag on main builds iOS and macOS and uploads both to TestFlight (`.github/workflows/release.yml`, `scripts/release.sh`); distributed builds carry no SNCF token.
 - **The big screen**: the Tableau look taken to every surface with room to spare, built on frozen data contracts (with a mockup `.fake` behind previews, screenshots and tests), iPad support, an axis-parameterised time track (horizontal or vertical) and a shared app shell with ⌘K / ⌘R / ⌘1–4 / ↑↓ / Space.
 - **Station hall** on iPad and Mac: a sidebar of saved journeys and the nearest station, a journey board with a split-flap next-train hero and the full-width time track, and an inspector that draws the selected train's stopping pattern (your leg solid, the rest dashed), with **Watch train** and **Share ETA**.
 - **Lanes**: every saved journey on one time axis, each train a bar from departure to arrival (delays slide off a dashed ghost at the timetabled slot, cancellations hatched, a whole lane striped when nothing runs), a Watch / Stops popover, the service-day minimap and a NEXT 4 H / TONIGHT / TOMORROW AM range picker.

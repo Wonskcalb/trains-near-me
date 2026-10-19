@@ -12,6 +12,7 @@ swift test --package-path SNCFCore --filter "Parsing/onlyDirectTrainsServingTheJ
 xcodegen generate                             # regenerate the .xcodeproj after editing project.yml
 sh scripts/install.sh                         # Release build + install into /Applications (macOS)
 sh scripts/render-screenshots.sh              # re-render Design/*.png from the real widget views
+sh scripts/release.sh ios|macos [export]      # archive for App Store Connect; `upload` is what the tag workflow runs
 
 # What CI runs, and the only way to compile-check app + widget without a signing team:
 xcodebuild -project TrainsNearMe.xcodeproj -scheme TrainsNearMe -configuration Release \
