@@ -103,9 +103,17 @@ public struct SNCFClient {
             "count": "5",
             "distance": String(Self.searchRadiusKilometres * 1000),
             "disable_geojson": "true",
+            "filter": Self.railStopFilter,
         ])
         return try NavitiaParser.nearbyStations(from: data).first
     }
+
+    /// The SNCF coverage also holds its coach stops (`physical_mode:Coach`, the TER cars), and in a city
+    /// one of those is usually closer than the station: in Grenoble "Victor Hugo" sits 315 m away where
+    /// the station is 576 m. Only stop areas a train calls at count as the nearest station.
+    static let railStopFilter = ["Train", "LongDistanceTrain", "RapidTransit", "RailShuttle"]
+        .map { "physical_mode.id=physical_mode:\($0)" }
+        .joined(separator: " or ")
 
     private func rounded(_ degrees: Double) -> String {
         String(format: "%.3f", degrees)
