@@ -345,3 +345,17 @@ func fixture(_ name: String) throws -> Data {
         #expect(layout.fraction(of: at(18, 20)) == 0)
     }
 }
+
+/// The nearest-station lookup only accepts stop areas a train calls at: the SNCF coverage also holds its
+/// coach stops, which in a city are often closer than the station (Grenoble Victor Hugo, a TER car stop).
+@Suite struct NearestStationFilter {
+    @Test func keepsEveryRailModeAndNoCoach() {
+        let filter = SNCFClient.railStopFilter
+        for mode in ["Train", "LongDistanceTrain", "RapidTransit", "RailShuttle"] {
+            #expect(filter.contains("physical_mode.id=physical_mode:\(mode)"))
+        }
+        for mode in ["Coach", "Bus", "Tramway"] {
+            #expect(!filter.contains("physical_mode:\(mode)"))
+        }
+    }
+}

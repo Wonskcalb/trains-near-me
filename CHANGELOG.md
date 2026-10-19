@@ -38,6 +38,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The menu-bar label follows the first saved journey only, and stops asking after the last train until shortly before the morning's first.
 
 ### Fixed
+- The nearest station is a station a train calls at: coach stops in the SNCF data (e.g. Grenoble Victor Hugo, a TER car stop) no longer win because they are closer.
 - On an iPhone, tapping a train on Lanes or a station's line map opens its card in a bottom drawer instead of a blank full-screen sheet; the drawer lists the train's stops straight away. On iPad, the unfolded Duo and the Mac it stays a popover, with Stops on a button.
 - Every train time and clock reads in Paris time, whatever zone the device is set to (the split-flaps, the time-track hours, the widgets and the menu bar used the device's).
 - The 03:00 service day holds on the two DST mornings.
