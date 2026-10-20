@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-20
+
 ### Added
 - Releases: a version tag on main builds iOS and macOS and uploads both to TestFlight (`.github/workflows/release.yml`, `scripts/release.sh`); distributed builds carry no SNCF token.
 - **The big screen**: the Tableau look taken to every surface with room to spare, built on frozen data contracts (with a mockup `.fake` behind previews, screenshots and tests), iPad support, an axis-parameterised time track (horizontal or vertical) and a shared app shell with ⌘K / ⌘R / ⌘1–4 / ↑↓ / Space.
@@ -134,7 +136,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Host app to store the API token and request location permission.
 - `scripts/install.sh` to build and install with a free Apple account, and a step-by-step install guide.
 
-[Unreleased]: https://github.com/Wonskcalb/trains-near-me/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Wonskcalb/trains-near-me/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Wonskcalb/trains-near-me/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/Wonskcalb/trains-near-me/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Wonskcalb/trains-near-me/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Wonskcalb/trains-near-me/releases/tag/v1.0.0

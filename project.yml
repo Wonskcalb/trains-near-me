@@ -9,8 +9,8 @@ configFiles:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.1"
-    CURRENT_PROJECT_VERSION: "8"
+    MARKETING_VERSION: "2.0.0"
+    CURRENT_PROJECT_VERSION: "9"
     CODE_SIGN_STYLE: Automatic
     # App Group identifiers are shaped differently per platform: macOS requires the team id as a
     # prefix, iOS requires "group.". `$(TeamIdentifierPrefix)` only exists at signing time, so it
