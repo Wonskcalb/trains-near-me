@@ -69,6 +69,35 @@ public enum SharedSettings {
         }
     }
 
+    /// Old station id → the station SNCF now knows it as. Kept in whatever defaults exist, so
+    /// without an App Group each process pays the one lookup per station on its own.
+    static var successors: [String: Station] {
+        get {
+            guard let data = (defaults ?? .standard).data(forKey: "stationSuccessors") else { return [:] }
+            return (try? JSONDecoder().decode([String: Station].self, from: data)) ?? [:]
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            (defaults ?? .standard).set(data, forKey: "stationSuccessors")
+        }
+    }
+
+    public static func current(_ station: Station) -> Station {
+        successors[station.id] ?? station
+    }
+
+    /// Saved journeys can be rewritten, unlike widget configurations, so they move to the new id
+    /// and the widget's station picker stops suggesting the stale one.
+    static func remember(_ successor: Station, replacing stale: Station) {
+        successors[stale.id] = successor
+        favorites = favorites.map { journey in
+            var journey = journey
+            if journey.stationA.id == stale.id { journey.stationA = successor }
+            if journey.stationB.id == stale.id { journey.stationB = successor }
+            return journey
+        }
+    }
+
     public static var token: String? {
         get { stored ?? bundled }
         set { defaults?.set(newValue, forKey: tokenKey) }

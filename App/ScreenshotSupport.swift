@@ -20,9 +20,9 @@ enum ScreenshotSupport {
     /// stop_area ids, so the board actually loads trains from the API.
     static func seedIfNeeded() {
         guard ProcessInfo.processInfo.environment["SCREENSHOT_SEED"] != nil else { return }
-        let grenoble = Station(id: "stop_area:SNCF:87747006", name: "Grenoble",
+        let grenoble = Station(id: "stop_area:SNC:FR::LMO:6ce82120-5c1a-11ec-b0c0-b5d8f52b4a40:", name: "Grenoble",
                                latitude: 45.19149081, longitude: 5.71454823)
-        let voiron = Station(id: "stop_area:SNCF:87747287", name: "Voiron",
+        let voiron = Station(id: "stop_area:SNC:FR::LMU:64afe280-cb0a-11e8-8bfa-f784c1c7c611:", name: "Voiron",
                              latitude: 45.36403405, longitude: 5.59495926)
         SharedSettings.favorites = [JourneyConfiguration(stationA: grenoble, stationB: voiron, direction: .automatic)]
     }

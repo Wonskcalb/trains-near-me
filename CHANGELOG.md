@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
+- SNCF renumbered every station in November 2026, so widgets and saved journeys stopped loading ("Unexpected response from the SNCF API"). A station the API no longer knows is now matched again on its stored name and position, once, and saved journeys are rewritten to the new id; widgets keep working without being reconfigured.
 - On iOS 26 the Near me, journey and Settings titles were drawn in the content under an empty bar and scrolled through its floating buttons; they are now the system's large title, which collapses into the bar.
 - Journey rows showed the timetable arrival next to a delayed departure; they now show the amended arrival SNCF reports (or the departure delay carried over), with the timetable time struck through.
 - The full-trip sheet highlighted every stop whose name started with the boarding station's ("Grenoble" also lit "Grenoble Universités-Gières").

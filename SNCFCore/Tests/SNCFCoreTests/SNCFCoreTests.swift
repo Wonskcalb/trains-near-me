@@ -366,3 +366,41 @@ func fixture(_ name: String) throws -> Data {
         }
     }
 }
+
+/// SNCF renumbered every station in November 2026; testers still have the old ids stored.
+@Suite struct Renumbering {
+    let nearby = { try NavitiaParser.nearbyStations(from: fixture("places_nearby_renumbered")) }
+
+    @Test func unknownIDIsAStaleStation() {
+        #expect(throws: TrainServiceError.unknownStation) {
+            try NavitiaParser.departures(from: fixture("unknown_object"), origin: grenoble, destination: voiron)
+        }
+        #expect(throws: TrainServiceError.unknownStation) { try NavitiaParser.stopDepartures(from: fixture("unknown_object")) }
+    }
+
+    @Test func staleStationFindsItsNewIDByName() throws {
+        let successor = try #require(SNCFClient.successor(of: grenoble, among: nearby()))
+        #expect(successor.id == "stop_area:SNC:FR::LMO:6ce82120-5c1a-11ec-b0c0-b5d8f52b4a40:")
+    }
+
+    @Test func nameMatchIgnoresCaseAndAccents() throws {
+        let stale = Station(id: "old", name: "grenoble cite internationale", latitude: 45.19, longitude: 5.71)
+        #expect(SNCFClient.successor(of: stale, among: try nearby())?.name == "Grenoble Cité Internationale")
+    }
+
+    @Test func aStationStillKnownKeepsItsID() throws {
+        let current = try nearby()[2]
+        let renamed = Station(id: current.id, name: "Grenoble", latitude: current.latitude, longitude: current.longitude)
+        #expect(SNCFClient.successor(of: renamed, among: try nearby())?.id == current.id)
+    }
+
+    @Test func renamedStationFallsBackToWhatStandsThere() throws {
+        let renamed = Station(id: "old", name: "Grenoble Gare", latitude: 45.191463, longitude: 5.714466)
+        #expect(SNCFClient.successor(of: renamed, among: try nearby())?.name == "Grenoble")
+    }
+
+    @Test func nothingCloseEnoughIsNoGuess() throws {
+        let elsewhere = Station(id: "old", name: "Voiron", latitude: 45.3641, longitude: 5.5900)
+        #expect(SNCFClient.successor(of: elsewhere, among: try nearby()) == nil)
+    }
+}

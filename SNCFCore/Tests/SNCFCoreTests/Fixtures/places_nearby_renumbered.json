@@ -1,0 +1,74 @@
+{
+ "places_nearby": [
+  {
+   "id": "stop_area:SNC:FR::LMO:6ce82120-5c1a-11ec-b0c0-b5d8f52b4a40:",
+   "name": "Grenoble (Grenoble)",
+   "distance": "65",
+   "embedded_type": "stop_area",
+   "stop_area": {
+    "id": "stop_area:SNC:FR::LMO:6ce82120-5c1a-11ec-b0c0-b5d8f52b4a40:",
+    "name": "Grenoble",
+    "coord": {
+     "lon": "5.714548",
+     "lat": "45.191491"
+    }
+   }
+  },
+  {
+   "id": "stop_area:SNC:FR::LMO:be47fb20-cb0a-11e8-8bfa-f784c1c7c611:",
+   "name": "Grenoble Europole (Grenoble)",
+   "distance": "157",
+   "embedded_type": "stop_area",
+   "stop_area": {
+    "id": "stop_area:SNC:FR::LMO:be47fb20-cb0a-11e8-8bfa-f784c1c7c611:",
+    "name": "Grenoble Europole",
+    "coord": {
+     "lon": "5.713017",
+     "lat": "45.191241"
+    }
+   }
+  },
+  {
+   "id": "stop_area:SNC:FR::LMO:f20b0630-1b6f-11ea-8a22-e11760fe8ab3:",
+   "name": "Grenoble Cité Internationale (Grenoble)",
+   "distance": "580",
+   "embedded_type": "stop_area",
+   "stop_area": {
+    "id": "stop_area:SNC:FR::LMO:f20b0630-1b6f-11ea-8a22-e11760fe8ab3:",
+    "name": "Grenoble Cité Internationale",
+    "coord": {
+     "lon": "5.710879",
+     "lat": "45.195332"
+    }
+   }
+  },
+  {
+   "id": "stop_area:SNC:FR::LMO:bf829e00-cb0a-11e8-8bfa-f784c1c7c611:",
+   "name": "Grenoble-Victor-Hugo (Grenoble)",
+   "distance": "830",
+   "embedded_type": "stop_area",
+   "stop_area": {
+    "id": "stop_area:SNC:FR::LMO:bf829e00-cb0a-11e8-8bfa-f784c1c7c611:",
+    "name": "Grenoble-Victor-Hugo",
+    "coord": {
+     "lon": "5.724939",
+     "lat": "45.188405"
+    }
+   }
+  },
+  {
+   "id": "stop_area:SNC:FR::LMO:92ab9530-cb0a-11e8-8bfa-f784c1c7c611:",
+   "name": "Grenoble-Champollion (Grenoble)",
+   "distance": "960",
+   "embedded_type": "stop_area",
+   "stop_area": {
+    "id": "stop_area:SNC:FR::LMO:92ab9530-cb0a-11e8-8bfa-f784c1c7c611:",
+    "name": "Grenoble-Champollion",
+    "coord": {
+     "lon": "5.725304",
+     "lat": "45.186336"
+    }
+   }
+  }
+ ]
+}

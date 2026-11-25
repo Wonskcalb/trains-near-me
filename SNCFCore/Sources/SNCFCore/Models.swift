@@ -1,7 +1,8 @@
 import Foundation
 
 public struct Station: Hashable, Codable, Sendable {
-    /// Navitia stop_area id, e.g. "stop_area:SNCF:87747006".
+    /// Navitia stop_area id, e.g. "stop_area:SNC:FR::LMO:6ce82120-5c1a-11ec-b0c0-b5d8f52b4a40:".
+    /// SNCF renumbers its stations now and then, so a stored id can go stale: see `SNCFClient.successor(of:)`.
     public let id: String
     public let name: String
     public let latitude: Double
@@ -204,6 +205,8 @@ public enum TrainServiceError: Error, Equatable, Sendable {
     /// Radar mode only: no usable location, or no station around it.
     case noLocation
     case noStationNearby
+    /// A stored station id SNCF no longer knows, and nothing nearby could stand in for it.
+    case unknownStation
 }
 
 extension TrainServiceError: LocalizedError {
@@ -217,6 +220,7 @@ extension TrainServiceError: LocalizedError {
         case .malformedResponse: String(localized: "Unexpected response from the SNCF API.", bundle: .module)
         case .noLocation: String(localized: "No location: allow it in Trains near me.", bundle: .module)
         case .noStationNearby: String(localized: "No station within \(SNCFClient.searchRadiusKilometres) km.", bundle: .module)
+        case .unknownStation: String(localized: "SNCF no longer knows this station: pick it again.", bundle: .module)
         }
     }
 
@@ -231,6 +235,7 @@ extension TrainServiceError: LocalizedError {
         case .malformedResponse: String(localized: "Data error", bundle: .module)
         case .noLocation: String(localized: "No location", bundle: .module)
         case .noStationNearby: String(localized: "No station near", bundle: .module)
+        case .unknownStation: String(localized: "Pick station", bundle: .module)
         }
     }
 }

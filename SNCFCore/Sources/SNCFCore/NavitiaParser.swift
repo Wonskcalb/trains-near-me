@@ -11,10 +11,7 @@ public enum NavitiaParser {
         } catch {
             throw .malformedResponse
         }
-        if let error = response.error {
-            if noResultErrors.contains(error.id) { return [] }
-            throw .malformedResponse
-        }
+        if let error = response.error { return try noResult(error) }
         guard let journeys = response.journeys else { throw .malformedResponse }
 
         let disruptions = byID(response.disruptions)
@@ -34,10 +31,7 @@ public enum NavitiaParser {
         } catch {
             throw .malformedResponse
         }
-        if let error = response.error {
-            if noResultErrors.contains(error.id) { return [] }
-            throw .malformedResponse
-        }
+        if let error = response.error { return try noResult(error) }
         guard let departures = response.departures else { throw .malformedResponse }
 
         let disruptions = byID(response.disruptions)
@@ -61,6 +55,11 @@ public enum NavitiaParser {
         guard let area = place.stopArea, let coord = area.coord,
               let lat = Double(coord.lat), let lon = Double(coord.lon) else { return nil }
         return Station(id: area.id, name: area.name ?? place.name ?? area.id, latitude: lat, longitude: lon)
+    }
+
+    static func noResult(_ error: APIError) throws(TrainServiceError) -> [TrainDeparture] {
+        if noResultErrors.contains(error.id) { return [] }
+        throw error.id == "unknown_object" ? .unknownStation : .malformedResponse
     }
 
     static let noResultErrors: Set<String> = ["no_solution", "date_out_of_bounds", "no_origin_nor_destination", "no_departure"]

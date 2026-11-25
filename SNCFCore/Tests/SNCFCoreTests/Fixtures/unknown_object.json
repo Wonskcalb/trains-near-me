@@ -1,0 +1,8 @@
+{
+ "error": {
+  "id": "unknown_object",
+  "message": "The entry point: stop_area:SNCF:87747006 is not valid"
+ },
+ "links": [],
+ "disruptions": []
+}

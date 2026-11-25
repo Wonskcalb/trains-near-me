@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 /// api.sncf.com (Navitia). Free tier: 5 000 requests/day, token sent as Basic-auth username.
@@ -20,17 +21,21 @@ public struct SNCFClient {
     }
 
     public func departures(from: Station, to: Station, at date: Date, count: Int = departuresPerRequest) async throws(TrainServiceError) -> [TrainDeparture] {
-        try await journeys(from: from, to: to, at: date, extra: ["min_nb_journeys": String(count)])
+        try await withCurrentIDs([from, to]) { (s) throws(TrainServiceError) in
+            try await journeys(from: s[0], to: s[1], at: date, extra: ["min_nb_journeys": String(count)])
+        }
     }
 
     /// Every direct train in `duration` seconds from `date` — a whole service day in one request for the
     /// big-screen summary, where `min_nb_journeys` alone stops at a dozen. Navitia caps the window at 24 h
     /// and `max_nb_journeys` bounds the answer on a very busy line.
     public func departures(from: Station, to: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
-        try await journeys(from: from, to: to, at: date, extra: [
-            "timeframe_duration": String(Int(min(duration, 24 * 3600))),
-            "max_nb_journeys": "150",
-        ])
+        try await withCurrentIDs([from, to]) { (s) throws(TrainServiceError) in
+            try await journeys(from: s[0], to: s[1], at: date, extra: [
+                "timeframe_duration": String(Int(min(duration, 24 * 3600))),
+                "max_nb_journeys": "150",
+            ])
+        }
     }
 
     private func journeys(from: Station, to: Station, at date: Date, extra: [String: String]) async throws(TrainServiceError) -> [TrainDeparture] {
@@ -48,6 +53,12 @@ public struct SNCFClient {
 
     /// Radar mode: every train leaving one station, whatever its destination.
     public func departures(from station: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
+        try await withCurrentIDs([station]) { (s) throws(TrainServiceError) in
+            try await board(of: s[0], at: date)
+        }
+    }
+
+    private func board(of station: Station, at date: Date) async throws(TrainServiceError) -> [TrainDeparture] {
         let data = try await get("stop_areas/\(station.id)/departures", [
             "from_datetime": NavitiaParser.dateFormatter.string(from: date),
             "data_freshness": "base_schedule",
@@ -62,29 +73,33 @@ public struct SNCFClient {
     /// window is asked for instead, in the same single request; `depth=2` is what puts the stop_area
     /// (id, coordinates) under `route.direction`.
     public func departures(from station: Station, at date: Date, within duration: TimeInterval) async throws(TrainServiceError) -> [TrainDeparture] {
-        let data = try await get("stop_areas/\(station.id)/departures", [
-            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
-            "duration": String(Int(min(duration, 24 * 3600))),
-            "data_freshness": "base_schedule",
-            "count": "300",
-            "depth": "2",
-            "disable_geojson": "true",
-        ])
-        return try NavitiaParser.stopDepartures(from: data)
+        try await withCurrentIDs([station]) { (s) throws(TrainServiceError) in
+            let data = try await get("stop_areas/\(s[0].id)/departures", [
+                "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+                "duration": String(Int(min(duration, 24 * 3600))),
+                "data_freshness": "base_schedule",
+                "count": "300",
+                "depth": "2",
+                "disable_geojson": "true",
+            ])
+            return try NavitiaParser.stopDepartures(from: data)
+        }
     }
 
     /// The first `count` trains leaving one station from `date`, each with its terminus (`depth=2`): a
     /// late big-screen board's next morning, where a count is enough and a window would have to guess
     /// how long the first trains take to come.
     public func departures(from station: Station, at date: Date, count: Int) async throws(TrainServiceError) -> [TrainDeparture] {
-        let data = try await get("stop_areas/\(station.id)/departures", [
-            "from_datetime": NavitiaParser.dateFormatter.string(from: date),
-            "data_freshness": "base_schedule",
-            "count": String(count),
-            "depth": "2",
-            "disable_geojson": "true",
-        ])
-        return try NavitiaParser.stopDepartures(from: data)
+        try await withCurrentIDs([station]) { (s) throws(TrainServiceError) in
+            let data = try await get("stop_areas/\(s[0].id)/departures", [
+                "from_datetime": NavitiaParser.dateFormatter.string(from: date),
+                "data_freshness": "base_schedule",
+                "count": String(count),
+                "depth": "2",
+                "disable_geojson": "true",
+            ])
+            return try NavitiaParser.stopDepartures(from: data)
+        }
     }
 
     /// Every stop of one train's run, for the full-trip sheet. The id comes from a board row's
@@ -114,6 +129,48 @@ public struct SNCFClient {
     static let railStopFilter = ["Train", "LongDistanceTrain", "RapidTransit", "RailShuttle"]
         .map { "physical_mode.id=physical_mode:\($0)" }
         .joined(separator: " or ")
+
+    /// Widget configurations and saved journeys keep the ids they were created with, and only a
+    /// widget's own "Edit" sheet can change its configuration. So when SNCF renumbers its stations
+    /// (it did in November 2026, with no mapping from the old ids), a stale station is matched again
+    /// on its stored name and position, and the answer is remembered so it costs one request, once.
+    private func withCurrentIDs<T>(_ stations: [Station], _ request: ([Station]) async throws(TrainServiceError) -> T) async throws(TrainServiceError) -> T {
+        let stations = stations.map(SharedSettings.current)
+        do {
+            return try await request(stations)
+        } catch .unknownStation {
+            // The error does not say which end is stale, so each one is checked.
+            var resolved: [Station] = []
+            for station in stations { resolved.append(try await successor(of: station)) }
+            guard resolved != stations else { throw .unknownStation }
+            return try await request(resolved)
+        }
+    }
+
+    func successor(of station: Station) async throws(TrainServiceError) -> Station {
+        let data = try await get("coord/\(rounded(station.longitude));\(rounded(station.latitude))/places_nearby", [
+            "type[]": "stop_area",
+            "count": "10",
+            "distance": "1000",
+            "disable_geojson": "true",
+        ])
+        guard let match = Self.successor(of: station, among: try NavitiaParser.nearbyStations(from: data)) else {
+            throw .unknownStation
+        }
+        if match.id != station.id { SharedSettings.remember(match, replacing: station) }
+        return match
+    }
+
+    /// The station itself when its id still shows up nearby; otherwise the same name, otherwise
+    /// whatever stands within a few hundred metres. nil rather than a guess beyond that: showing
+    /// another town's trains would be worse than asking to pick the station again.
+    static func successor(of station: Station, among nearby: [Station]) -> Station? {
+        func key(_ name: String) -> String { name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil) }
+        let position = CLLocation(latitude: station.latitude, longitude: station.longitude)
+        return nearby.first { $0.id == station.id }
+            ?? nearby.first { key($0.name) == key(station.name) }
+            ?? nearby.first { CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: position) < 300 }
+    }
 
     private func rounded(_ degrees: Double) -> String {
         String(format: "%.3f", degrees)
