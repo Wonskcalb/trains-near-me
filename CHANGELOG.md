@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.1.0 - 2026-11-25]
+
 ### Added
 
 - First-launch onboarding on iOS: what the app does, how to request a free SNCF key, a field to paste and check it, and the optional location permission. Shown until a key is saved, on iPhone and iPad.
