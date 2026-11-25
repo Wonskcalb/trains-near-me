@@ -132,9 +132,9 @@ public struct RoutePins: View {
 /// A section divider drawn as a length of track: sleepers crossing, two rails inset from the edges.
 /// An optional mono caps label sits to its left ("THEN").
 public struct TrackRule: View {
-    var label: String?
+    var label: LocalizedStringKey?
 
-    public init(label: String? = nil) {
+    public init(label: LocalizedStringKey? = nil) {
         self.label = label
     }
 
@@ -539,10 +539,10 @@ public struct TimeTrack: View {
 /// The status badge on a row: text in the status colour, on the status fill. The caller passes the
 /// words ("+12", "CANCELLED", "delay ?") because those are already decided where the row is built.
 public struct StatusPill: View {
-    let text: String
+    let text: LocalizedStringKey
     let status: DepartureStatus
 
-    public init(_ text: String, status: DepartureStatus) {
+    public init(_ text: LocalizedStringKey, status: DepartureStatus) {
         self.text = text
         self.status = status
     }
@@ -629,5 +629,62 @@ public struct HazardBackground: View {
             RadialGradient(colors: [.black.opacity(0.34), .black.opacity(0.07)],
                            center: .center, startRadius: 0, endRadius: 180)
         }
+    }
+}
+
+/// A departure's time the way a platform reader needs it: once a train is late, the time it really
+/// leaves takes the big slot and the timetable's time shrinks beside it, struck through. A cancelled
+/// train keeps only its timetable time, struck.
+public struct DepartureTime: View {
+    let train: TrainDeparture
+    let size: CGFloat
+    let weight: Font.Weight
+    let color: Color
+    let stacked: Bool
+
+    public init(_ train: TrainDeparture, size: CGFloat, weight: Font.Weight = .bold, color: Color = .ink, stacked: Bool = false) {
+        self.train = train
+        self.size = size
+        self.weight = weight
+        self.color = color
+        self.stacked = stacked
+    }
+
+    private var late: Bool { !train.isCancelled && (train.delayMinutes ?? 0) > 0 }
+
+    private var mainColor: Color {
+        if train.isCancelled { return .inkSecondary }
+        // Under 11 min SNCF still counts the train on time, so the new time keeps the normal ink
+        // there; only a real delay recolours it.
+        return late && train.status != .onTime ? train.status.tableauInk : color
+    }
+
+    public var body: some View {
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 5))
+        layout {
+            Text(late ? train.expectedDeparture : train.scheduledDeparture, format: SNCFTime.hourMinute)
+                .font(.mono(size, weight: weight))
+                .foregroundStyle(mainColor)
+                .strikethrough(train.isCancelled)
+            if late {
+                Text(train.scheduledDeparture, format: SNCFTime.hourMinute)
+                    .font(.mono(max(10, size * 0.6), weight: .medium))
+                    .foregroundStyle(Color.inkSecondary)
+                    .strikethrough()
+            }
+        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        let scheduled = train.scheduledDeparture.formatted(SNCFTime.shortTime)
+        if train.isCancelled { return String(localized: "\(scheduled), cancelled", bundle: .module) }
+        guard late, let delay = train.delayMinutes else { return scheduled }
+        let expected = train.expectedDeparture.formatted(SNCFTime.shortTime)
+        return String(localized: "Leaves at \(expected), \(delay) min late, scheduled \(scheduled)", bundle: .module)
     }
 }

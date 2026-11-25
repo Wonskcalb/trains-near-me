@@ -1,0 +1,528 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    " at ": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " à "
+          }
+        }
+      }
+    },
+    "%@": {
+      "shouldTranslate": false
+    },
+    "%@ to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ to %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ vers %2$@"
+          }
+        }
+      }
+    },
+    "%lld min": {},
+    "+?": {
+      "shouldTranslate": false
+    },
+    "--:--": {
+      "shouldTranslate": false
+    },
+    "All cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous supprimés"
+          }
+        }
+      }
+    },
+    "All trains cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les trains sont supprimés"
+          }
+        }
+      }
+    },
+    "Arrival": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrivée"
+          }
+        }
+      }
+    },
+    "Arrival → Departure": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrivée → Départ"
+          }
+        }
+      }
+    },
+    "Automatic (reverse after switch time)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatique (inversé après l’heure de bascule)"
+          }
+        }
+      }
+    },
+    "CANC.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SUPPR."
+          }
+        }
+      }
+    },
+    "CANCELLED": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SUPPRIMÉ"
+          }
+        }
+      }
+    },
+    "Choose stations": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez les gares"
+          }
+        }
+      }
+    },
+    "Data out of date": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données périmées"
+          }
+        }
+      }
+    },
+    "Data © SNCF · not affiliated": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données © SNCF · sans lien"
+          }
+        }
+      }
+    },
+    "Delays last checked at %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retards vérifiés à %@"
+          }
+        }
+      }
+    },
+    "Depart from nearest station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partir de la gare la plus proche"
+          }
+        }
+      }
+    },
+    "Departure": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départ"
+          }
+        }
+      }
+    },
+    "Departure → Arrival": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départ → Arrivée"
+          }
+        }
+      }
+    },
+    "Departures from %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départs de %@"
+          }
+        }
+      }
+    },
+    "Departures from the nearest station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départs de la gare la plus proche"
+          }
+        }
+      }
+    },
+    "Direction": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sens"
+          }
+        }
+      }
+    },
+    "Edit the widget to pick departure and arrival.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiez le widget pour choisir le départ et l’arrivée."
+          }
+        }
+      }
+    },
+    "End of service": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin de service"
+          }
+        }
+      }
+    },
+    "First train ": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premier train "
+          }
+        }
+      }
+    },
+    "Journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajet"
+          }
+        }
+      }
+    },
+    "Location not allowed: open Trains near me": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Localisation refusée : ouvrez Trains near me"
+          }
+        }
+      }
+    },
+    "Looking around…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche autour…"
+          }
+        }
+      }
+    },
+    "NO SERVICE": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUCUN TRAIN"
+          }
+        }
+      }
+    },
+    "Nearest station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gare la plus proche"
+          }
+        }
+      }
+    },
+    "Next departures from the station closest to you, in every direction.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les prochains départs de la gare la plus proche, dans toutes les directions."
+          }
+        }
+      }
+    },
+    "Next departures from the station closest to you.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les prochains départs de la gare la plus proche."
+          }
+        }
+      }
+    },
+    "Next direct trains between two stations.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les prochains trains directs entre deux gares."
+          }
+        }
+      }
+    },
+    "Next train at %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prochain train à %@"
+          }
+        }
+      }
+    },
+    "No departure found for now.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun départ trouvé pour l’instant."
+          }
+        }
+      }
+    },
+    "No location: click to refresh": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de position : touchez pour actualiser"
+          }
+        }
+      }
+    },
+    "No more trains": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de trains"
+          }
+        }
+      }
+    },
+    "No trains": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun train"
+          }
+        }
+      }
+    },
+    "Out of date": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Périmé"
+          }
+        }
+      }
+    },
+    "Radar": {},
+    "Refresh": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualiser"
+          }
+        }
+      }
+    },
+    "Refresh the trains": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualiser les trains"
+          }
+        }
+      }
+    },
+    "Refreshing soon.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualisation imminente."
+          }
+        }
+      }
+    },
+    "SNCF data unavailable": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données SNCF indisponibles"
+          }
+        }
+      }
+    },
+    "Station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gare"
+          }
+        }
+      }
+    },
+    "Switch time": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure de bascule"
+          }
+        }
+      }
+    },
+    "Trains near me": {},
+    "Trip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajet"
+          }
+        }
+      }
+    },
+    "Updated at %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis à jour à %@"
+          }
+        }
+      }
+    },
+    "Updating…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour…"
+          }
+        }
+      }
+    },
+    "Waiting for the system to refresh the widget.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente de l’actualisation du widget par le système."
+          }
+        }
+      }
+    },
+    "Widget": {},
+    "Widget kind": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type de widget"
+          }
+        }
+      }
+    },
+    "canc.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "suppr."
+          }
+        }
+      }
+    },
+    "delay ?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "retard ?"
+          }
+        }
+      }
+    },
+    "tomorrow": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "demain"
+          }
+        }
+      }
+    },
+    "…": {
+      "shouldTranslate": false
+    }
+  },
+  "version": "1.0"
+}

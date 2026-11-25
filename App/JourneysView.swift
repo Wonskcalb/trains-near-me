@@ -115,7 +115,7 @@ struct JourneysView: View {
             } else if let fetchedAt = boards.fetchedAt {
                 let stale = RefreshPlanner.isStale(fetchedAt: fetchedAt, at: now)
                 Circle().fill(stale ? Color.caution : Color.soon).frame(width: 7, height: 7)
-                Text("\(stale ? "Delays last checked at" : "Updated at") \(fetchedAt.formatted(SNCFTime.shortTime))")
+                Text(stale ? "Delays last checked at \(fetchedAt.formatted(SNCFTime.shortTime))" : "Updated at \(fetchedAt.formatted(SNCFTime.shortTime))")
                     .font(.mono(12)).foregroundStyle(stale ? Color.caution : Color.inkSecondary)
             }
             Spacer()
@@ -242,11 +242,11 @@ struct JourneyCard: View {
         case .noService:
             note("Every train of the day is cancelled.")
         case .unavailable(let error):
-            note(error.appDescription)
+            note("\(error.appDescription)")
         }
     }
 
-    private func note(_ text: String) -> some View {
+    private func note(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(Color.inkSecondary)
@@ -278,11 +278,11 @@ struct DirectionRule: View {
     }
 
     private var text: String {
-        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        if journey.nearestStationAsDeparture { return String(localized: "FOLLOWS YOU") }
         switch journey.direction {
-        case .forward: return "ALWAYS THIS WAY"
-        case .reverse: return "ALWAYS REVERSED"
-        case .automatic: return "REVERSES \(clock(journey.switchMinute))"
+        case .forward: return String(localized: "ALWAYS THIS WAY")
+        case .reverse: return String(localized: "ALWAYS REVERSED")
+        case .automatic: return String(localized: "REVERSES AT \(clock(journey.switchMinute))")
         }
     }
 }
@@ -295,15 +295,7 @@ struct DepartureTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
-                    .font(.mono(20, weight: .bold))
-                    .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.ink)
-                    .strikethrough(train.isCancelled)
-                if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text("+\(delay)").font(.mono(13, weight: .bold)).foregroundStyle(train.status.tableauInk)
-                }
-            }
+            DepartureTime(train, size: 20)
             Text(caption)
                 .font(.mono(11.5, weight: train.isCancelled ? .bold : .medium))
                 .foregroundStyle(captionColor)
@@ -327,11 +319,11 @@ struct DepartureTile: View {
     /// The headline of the tile's second line: why it is worth looking at, or when it leaves.
     private var caption: String {
         switch train.status {
-        case .cancelled: return "CANCELLED"
-        case .unknown: return "Delay unknown"
+        case .cancelled: return String(localized: "CANCELLED")
+        case .unknown: return String(localized: "Delay unknown")
         default:
             let minutes = Int(train.expectedDeparture.timeIntervalSince(now) / 60)
-            return minutes < 1 ? "Leaving now" : "in \(relativeTime(train.expectedDeparture, from: now))"
+            return minutes < 1 ? String(localized: "Leaving now") : String(localized: "in \(relativeTime(train.expectedDeparture, from: now))")
         }
     }
 
@@ -355,22 +347,22 @@ struct LoadedBoard {
     /// normal evening: trains, on time.
     func trouble(at now: Date) -> Trouble? {
         switch state {
-        case .unavailable: return Trouble(symbol: "exclamationmark.triangle.fill", tint: .orange, label: "SNCF data unavailable")
-        case .noService: return Trouble(symbol: "xmark.octagon.fill", tint: .red, label: "All trains cancelled")
-        case .endOfService: return Trouble(symbol: "moon.zzz.fill", tint: .secondary, label: "End of service")
-        case .noTrains: return Trouble(symbol: "questionmark.circle.fill", tint: .secondary, label: "No trains")
+        case .unavailable: return Trouble(symbol: "exclamationmark.triangle.fill", tint: .orange, label: String(localized: "SNCF data unavailable"))
+        case .noService: return Trouble(symbol: "xmark.octagon.fill", tint: .red, label: String(localized: "All trains cancelled"))
+        case .endOfService: return Trouble(symbol: "moon.zzz.fill", tint: .secondary, label: String(localized: "End of service"))
+        case .noTrains: return Trouble(symbol: "questionmark.circle.fill", tint: .secondary, label: String(localized: "No trains"))
         case .departures(let trains):
             let upcoming = trains.filter { $0.expectedDeparture > now }
             if upcoming.contains(where: \.isCancelled) {
-                return Trouble(symbol: "xmark.octagon.fill", tint: .red, label: "A train is cancelled")
+                return Trouble(symbol: "xmark.octagon.fill", tint: .red, label: String(localized: "A train is cancelled"))
             }
             if upcoming.contains(where: { $0.status == .severelyDelayed }) {
-                return Trouble(symbol: "exclamationmark.triangle.fill", tint: .red, label: "A train is badly delayed")
+                return Trouble(symbol: "exclamationmark.triangle.fill", tint: .red, label: String(localized: "A train is badly delayed"))
             }
             if upcoming.contains(where: { [.delayed, .unknown].contains($0.status) }) {
-                return Trouble(symbol: "exclamationmark.triangle.fill", tint: .orange, label: "A train is delayed")
+                return Trouble(symbol: "exclamationmark.triangle.fill", tint: .orange, label: String(localized: "A train is delayed"))
             }
-            return upcoming.isEmpty ? Trouble(symbol: "questionmark.circle.fill", tint: .secondary, label: "No more trains") : nil
+            return upcoming.isEmpty ? Trouble(symbol: "questionmark.circle.fill", tint: .secondary, label: String(localized: "No more trains")) : nil
         }
     }
 

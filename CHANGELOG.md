@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- First-launch onboarding on iOS: what the app does, how to request a free SNCF key, a field to paste and check it, and the optional location permission. Shown until a key is saved.
+- French localization of the app, the widgets and the location prompt, following the device language; English stays the default.
+- `PRIVACY.md`, the privacy policy for the App Store listing; the privacy manifests now declare the coarse location sent to SNCF.
+
+### Changed
+
+- A late train now shows the time it actually leaves in the big slot, in the delay's colour, with the timetable time struck through beside it — in the app's rows and tiles, the Near me hero, and every widget size. Delays under 11 min, which used to be invisible on a journey row, now show the same way.
+
+### Fixed
+
+- On iOS 26 the Near me, journey and Settings titles were drawn in the content under an empty bar and scrolled through its floating buttons; they are now the system's large title, which collapses into the bar.
+- Journey rows showed the timetable arrival next to a delayed departure; they now show the amended arrival SNCF reports (or the departure delay carried over), with the timetable time struck through.
+- The full-trip sheet highlighted every stop whose name started with the boarding station's ("Grenoble" also lit "Grenoble Universités-Gières").
+- Settings showed developer wording (build settings, raw coordinates); it now speaks to users, and links to iOS Settings when location is refused.
+- The Near me hero gave no sign that its train was cancelled or late; it now carries the status pill instead of repeating the time.
+
 ## [2.0.0] - 2026-10-20
 
 ### Added

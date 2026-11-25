@@ -120,14 +120,15 @@ struct DeparturesView: View {
                           originDiameter: 7, destinationDiameter: 9, lineWidth: 1.5,
                           lineLength: compact ? 9 : 10)
                     .padding(.top, 3)
-                titles(leg.from.name, leg.to.name, label: "\(leg.from.name) to \(leg.to.name)")
+                titles(leg.from.name, leg.to.name, label: String(localized: "\(leg.from.name) to \(leg.to.name)"))
             case .radar(let station):
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .font(.system(size: compact ? 13 : 15))
                     .foregroundStyle(secondaryColor)
                     .padding(.top, 2)
                     .accessibilityHidden(true)
-                titles("Nearest station", station?.name ?? "Looking around…", label: "Departures from \(station?.name ?? "the nearest station")")
+                titles(String(localized: "Nearest station"), station?.name ?? String(localized: "Looking around…"),
+                       label: station.map { String(localized: "Departures from \($0.name)") } ?? String(localized: "Departures from the nearest station"))
             }
             Spacer(minLength: 4)
             if entry.isRefreshing {
@@ -145,7 +146,9 @@ struct DeparturesView: View {
                 .font(.mono(10, weight: .medium))
                 .foregroundStyle(entry.isStale ? AnyShapeStyle(Color.caution) : AnyShapeStyle(secondaryColor))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(entry.isStale ? "Delays last checked at" : "Updated at") \(entry.fetchedAt.formatted(SNCFTime.shortTime))")
+                .accessibilityLabel(entry.isStale
+                    ? String(localized: "Delays last checked at \(entry.fetchedAt.formatted(SNCFTime.shortTime))")
+                    : String(localized: "Updated at \(entry.fetchedAt.formatted(SNCFTime.shortTime))"))
             }
             RefreshButton(compact: compact, kind: entry.kind, signature: entry.signature)
         }
@@ -207,11 +210,11 @@ struct DeparturesView: View {
             .frame(maxWidth: .infinity)
             Spacer(minLength: 0)
         case .unavailable(let error):
-            message("SNCF data unavailable", detail: error.localizedDescription)
+            message("SNCF data unavailable", detail: "\(error.localizedDescription)")
         }
     }
 
-    private func message(_ title: String, detail: String) -> some View {
+    private func message(_ title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Spacer(minLength: 0)
             Text(title).font(.system(size: 13, weight: .semibold))
@@ -262,8 +265,8 @@ struct AccessoryBoard: View {
     private var title: String {
         switch entry.board {
         case .trip(let leg): leg.to.name
-        case .radar(let station): station?.name ?? "Radar"
-        case nil: "Trains near me"
+        case .radar(let station): station?.name ?? String(localized: "Radar")
+        case nil: String(localized: "Trains near me")
         }
     }
 
@@ -281,7 +284,7 @@ struct AccessoryBoard: View {
                 }
                 .font(.mono(13, weight: .semibold))
             }
-            .accessibilityLabel(entry.upcoming.first.map { "Next train at \($0.expectedDeparture.formatted(SNCFTime.shortTime))" } ?? entry.shortStatus)
+            .accessibilityLabel(entry.upcoming.first.map { String(localized: "Next train at \($0.expectedDeparture.formatted(SNCFTime.shortTime))") } ?? entry.shortStatus)
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.caption).fontWeight(.semibold).lineLimit(1).widgetAccentable()
@@ -301,14 +304,11 @@ struct AccessoryRow: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
-                .font(.mono(12, weight: .semibold))
-                .strikethrough(train.isCancelled)
+            DepartureTime(train, size: 12, weight: .semibold, color: .primary)
             switch train.status {
             case .cancelled: Text("canc.").font(.caption2)
             case .unknown: Text("+?").font(.mono(11))
-            case .delayed, .severelyDelayed: Text("+\(train.delayMinutes ?? 0)").font(.mono(11))
-            case .onTime: EmptyView()
+            default: EmptyView()
             }
             if let direction = train.direction {
                 Text(direction).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
@@ -357,11 +357,7 @@ struct DepartureRow: View {
         // On the small widget a delay badge leaves little room, and "25 min" used to wrap
         // onto a second line, so the middle column shrinks rather than wraps.
         HStack(spacing: compact ? 4 : 6) {
-            Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
-                .font(.mono(compact ? 14 : 15, weight: .semibold))
-                .foregroundStyle(train.isCancelled ? Color.inkSecondary : .ink)
-                .strikethrough(train.isCancelled)
-                .fixedSize()
+            DepartureTime(train, size: compact ? 14 : 15, weight: .semibold)
             // Which service runs it: the same journey can be a TER one hour and a TGV the next.
             // Only where there is room for it; the small widget needs its width for the times.
             if !compact, let mode = train.mode {
@@ -398,13 +394,14 @@ struct DepartureRow: View {
     @ViewBuilder private var badge: some View {
         switch train.status {
         case .onTime:
-            if let delay = train.delayMinutes, delay > 0 { label("+\(delay)", .inkSecondary) }
+            EmptyView()
         case .delayed, .severelyDelayed:
-            label("+\(train.delayMinutes ?? 0)", train.status.tableauInk)
+            // The struck timetable time already says it on the small widget, which needs the width.
+            if !compact { label("+\(train.delayMinutes ?? 0)", train.status.tableauInk) }
         case .cancelled:
-            label(compact ? "CANC." : "CANCELLED", train.status.tableauInk)
+            label(compact ? String(localized: "CANC.") : String(localized: "CANCELLED"), train.status.tableauInk)
         case .unknown:
-            label("delay ?", train.status.tableauInk)
+            label(String(localized: "delay ?"), train.status.tableauInk)
         }
     }
 

@@ -104,9 +104,15 @@ struct BigScreenRoot: View {
     @AppStorage("bigscreen.pendingRoute") private var pendingRoute = ""
     #endif
     @State private var model = BigScreenModel()
+    #if os(iOS)
+    /// Without a token every screen is an error card, so onboarding comes first. Only where a typed
+    /// token can be stored at all: a developer build without an App Group gets its token compiled in.
+    @State private var needsOnboarding = SharedSettings.isShared && SharedSettings.token == nil
+        && ProcessInfo.processInfo.environment["SCREENSHOT_TAB"] == nil
+    #endif
 
     var body: some View {
-        content
+        gated
             .environment(model)
             // The menu commands (⌘1–4, ⌘K, ⌘R) reach this window's model through the focused scene.
             .focusedSceneValue(\.bigScreenModel, model)
@@ -132,6 +138,18 @@ struct BigScreenRoot: View {
         pendingRoute = ""
     }
     #endif
+
+    @ViewBuilder private var gated: some View {
+        #if os(iOS)
+        if needsOnboarding {
+            OnboardingView { needsOnboarding = false }
+        } else {
+            content
+        }
+        #else
+        content
+        #endif
+    }
 
     @ViewBuilder private var content: some View {
         #if os(iOS)

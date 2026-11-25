@@ -121,7 +121,9 @@ struct SettingsView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
+                #if os(macOS)
                 Text("Settings").font(.largeTitle.bold()).padding(.horizontal, 4).padding(.bottom, 2)
+                #endif
 
                 SettingsSection("SNCF API TOKEN") { tokenCard }
                 SettingsSection("JOURNEYS") { SettingsCard { SavedJourneysCard() } }
@@ -140,50 +142,62 @@ struct SettingsView: View {
         }
         .background(Color.ground.ignoresSafeArea())
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        // The large title is drawn in the content, so the bar stays empty rather than stacking a
-        // second "Settings" on top of it.
-        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+        // A title drawn in the content scrolled through the bar's floating buttons on iOS 26.
+        .navigationTitle("Settings")
         #endif
     }
 
-    private var summary: String {
+    /// Only a developer build signed without a team gets here: an App Store build always has its group.
+    private var noSharedStorage: LocalizedStringKey {
+        SharedSettings.bundled == nil
+            ? "This build cannot store a token. Install the app from the App Store."
+            : "This build comes with its own token."
+    }
+
+    private var summary: LocalizedStringKey {
         switch location.status {
         case .authorizedAlways: "Allowed"
         #if !os(macOS)
         case .authorizedWhenInUse: "Allowed"
         #endif
-        case .denied, .restricted: "Denied — enable Location Services for Trains near me in Settings"
+        case .denied, .restricted: "Not allowed. Radar and “Depart from nearest station” need it."
         default: "Not requested"
         }
     }
 
     /// Shows what the system really hands over, so a silent failure stays visible.
     private func probe() async {
-        fix = "Looking for your position…"
+        fix = String(localized: "Looking for your position…")
         guard let location = await LocationFix.shared.current() else {
-            fix = "No position: the system returned none. Check that Location Services is on."
+            fix = String(localized: "Position unavailable. Check that Location Services is on.")
             return
         }
         let minutes = Int(-location.timestamp.timeIntervalSinceNow / 60)
-        fix = String(format: "Found: %.3f, %.3f (%@) — that is what Radar sends to SNCF.",
-                     location.coordinate.latitude, location.coordinate.longitude,
-                     minutes < 1 ? "just now" : "\(minutes) min ago")
+        fix = minutes < 1 ? String(localized: "Position found just now.") : String(localized: "Position found \(minutes) min ago.")
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func save() async {
-        SharedSettings.token = token
-        tokenStatus = "Testing…"
-        do {
-            _ = try await SNCFClient(token: token).searchStations("Grenoble")
-            tokenStatus = "Token works."
-        } catch {
-            tokenStatus = error == .unauthorized ? "Token rejected." : "Saved, but the SNCF API could not be reached."
-        }
+        tokenStatus = String(localized: "Testing…")
+        tokenStatus = await Self.saveAndTest(token).message
         // The providers read the token per request; the memoised boards were fetched without it.
         await data.journeyBoards.invalidate()
-        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Shared with onboarding: stores the token even when the API cannot be reached, since that
+    /// says nothing about the token itself.
+    static func saveAndTest(_ token: String) async -> (works: Bool, message: String) {
+        let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        SharedSettings.token = token
+        defer { WidgetCenter.shared.reloadAllTimelines() }
+        do {
+            _ = try await SNCFClient(token: token).searchStations("Grenoble")
+            return (true, String(localized: "Token works."))
+        } catch {
+            return (false, error == .unauthorized
+                    ? String(localized: "Token rejected. Check that you pasted all of it.")
+                    : String(localized: "Saved, but the SNCF API could not be reached."))
+        }
     }
 }
 
@@ -216,9 +230,7 @@ private extension SettingsView {
                 Divider().overlay(Color.ink.opacity(0.07))
                 ExternalLinkRow("Get a free token", url: "https://numerique.sncf.com/startup/api/token-developpeur/")
             } else {
-                Text(SharedSettings.bundled == nil
-                     ? "No token in this build. Put SNCF_TOKEN in Config/Local.xcconfig and build again."
-                     : "Token taken from the build settings (SNCF_TOKEN). Sign with a real team to type it here instead.")
+                Text(noSharedStorage)
                     .font(.footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -239,6 +251,12 @@ private extension SettingsView {
             if let fix {
                 Text(fix).font(.footnote).foregroundStyle(Color.inkSecondary)
             }
+            #if os(iOS)
+            if location.status == .denied {
+                Divider().overlay(Color.ink.opacity(0.07))
+                ExternalLinkRow("Open iOS Settings", url: UIApplication.openSettingsURLString)
+            }
+            #endif
         }
     }
 
@@ -282,10 +300,10 @@ private extension SettingsView {
 
 /// A mono-caps section header over a Tableau card.
 private struct SettingsSection<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
     }
@@ -319,10 +337,10 @@ private struct SettingsCard<Content: View>: View {
 
 /// A row that opens an external URL, drawn as a card on its own with the trailing "open" glyph.
 private struct ExternalLinkRow: View {
-    let title: String
+    let title: LocalizedStringKey
     let url: String
 
-    init(_ title: String, url: String) {
+    init(_ title: LocalizedStringKey, url: String) {
         self.title = title
         self.url = url
     }

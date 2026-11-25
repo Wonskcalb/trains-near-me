@@ -1,0 +1,1259 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "": {
+      "shouldTranslate": false
+    },
+    "%@": {
+      "shouldTranslate": false
+    },
+    "%@, passed without stopping, %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, sans arrêt, %2$@"
+          }
+        }
+      }
+    },
+    "%lld min": {},
+    "+%lld": {
+      "shouldTranslate": false
+    },
+    "A train is badly delayed": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un train a un gros retard"
+          }
+        }
+      }
+    },
+    "A train is cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un train est supprimé"
+          }
+        }
+      }
+    },
+    "A train is delayed": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un train est en retard"
+          }
+        }
+      }
+    },
+    "ABOUT": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À PROPOS"
+          }
+        }
+      }
+    },
+    "ALWAYS REVERSED": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TOUJOURS INVERSÉ"
+          }
+        }
+      }
+    },
+    "ALWAYS THIS WAY": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TOUJOURS DANS CE SENS"
+          }
+        }
+      }
+    },
+    "APPEARANCE": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APPARENCE"
+          }
+        }
+      }
+    },
+    "Add a journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un trajet"
+          }
+        }
+      }
+    },
+    "Add your SNCF API token in the Settings tab.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez votre clé SNCF dans l’onglet Réglages."
+          }
+        }
+      }
+    },
+    "All trains cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les trains sont supprimés"
+          }
+        }
+      }
+    },
+    "Allow": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoriser"
+          }
+        }
+      }
+    },
+    "Allow location": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoriser la localisation"
+          }
+        }
+      }
+    },
+    "Allow your location": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez la localisation"
+          }
+        }
+      }
+    },
+    "Allowed": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisée"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence"
+          }
+        }
+      }
+    },
+    "Arrival": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrivée"
+          }
+        }
+      }
+    },
+    "Arrival → Departure": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrivée → Départ"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatique"
+          }
+        }
+      }
+    },
+    "Automatic shows the trains back after the switch time. Nearest station compares the two on the device and overrides the direction.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatique affiche les trains du retour après l’heure de bascule. Gare la plus proche compare les deux gares sur l’appareil et prend le pas sur le sens."
+          }
+        }
+      }
+    },
+    "CANCELLED": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SUPPRIMÉ"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        }
+      }
+    },
+    "Check the key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifier la clé"
+          }
+        }
+      }
+    },
+    "Choose": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir"
+          }
+        }
+      }
+    },
+    "Could not load the stops. Close this and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de charger les arrêts. Fermez et réessayez."
+          }
+        }
+      }
+    },
+    "DIRECT ONLY": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIRECTS SEULEMENT"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sombre"
+          }
+        }
+      }
+    },
+    "Delay unknown": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retard inconnu"
+          }
+        }
+      }
+    },
+    "Delays last checked at %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retards vérifiés à %@"
+          }
+        }
+      }
+    },
+    "Delays last checked at %@ — out of date": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retards vérifiés à %@ — plus à jour"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        }
+      }
+    },
+    "Depart from nearest station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partir de la gare la plus proche"
+          }
+        }
+      }
+    },
+    "Departure": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départ"
+          }
+        }
+      }
+    },
+    "Departure → Arrival": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Départ → Arrivée"
+          }
+        }
+      }
+    },
+    "Direction": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sens"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
+          }
+        }
+      }
+    },
+    "Edit journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier le trajet"
+          }
+        }
+      }
+    },
+    "End of service": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin de service"
+          }
+        }
+      }
+    },
+    "Every departure of the day is cancelled.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les départs du jour sont supprimés."
+          }
+        }
+      }
+    },
+    "Every train of the day is cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les trains du jour sont supprimés"
+          }
+        }
+      }
+    },
+    "Every train of the day is cancelled.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les trains du jour sont supprimés."
+          }
+        }
+      }
+    },
+    "FOLLOWS YOU": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VOUS SUIT"
+          }
+        }
+      }
+    },
+    "FROM": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DEPUIS"
+          }
+        }
+      }
+    },
+    "Find another way in SNCF Connect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trouver une alternative dans SNCF Connect"
+          }
+        }
+      }
+    },
+    "Find me": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me localiser"
+          }
+        }
+      }
+    },
+    "Find me!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me localiser"
+          }
+        }
+      }
+    },
+    "First train %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premier train %@"
+          }
+        }
+      }
+    },
+    "First train at ": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premier train à "
+          }
+        }
+      }
+    },
+    "Full trip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajet complet"
+          }
+        }
+      }
+    },
+    "Get a free token": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir une clé gratuite"
+          }
+        }
+      }
+    },
+    "Get your free SNCF key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenez votre clé SNCF gratuite"
+          }
+        }
+      }
+    },
+    "It stays on this iPhone and is only sent to SNCF.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle reste sur cet iPhone et n’est envoyée qu’à la SNCF."
+          }
+        }
+      }
+    },
+    "Journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajet"
+          }
+        }
+      }
+    },
+    "Journeys": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajets"
+          }
+        }
+      }
+    },
+    "Key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé"
+          }
+        }
+      }
+    },
+    "LOCATION": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LOCALISATION"
+          }
+        }
+      }
+    },
+    "Later": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus tard"
+          }
+        }
+      }
+    },
+    "Leaving now": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part maintenant"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clair"
+          }
+        }
+      }
+    },
+    "Loading the trip…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chargement du trajet…"
+          }
+        }
+      }
+    },
+    "Looking for trains…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche des trains…"
+          }
+        }
+      }
+    },
+    "Looking for your position…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche de votre position…"
+          }
+        }
+      }
+    },
+    "MIT · v%@": {},
+    "NEAREST STATION": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GARE LA PLUS PROCHE"
+          }
+        }
+      }
+    },
+    "NEXT": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PROCHAIN"
+          }
+        }
+      }
+    },
+    "NO SERVICE": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUCUN TRAIN"
+          }
+        }
+      }
+    },
+    "Near me": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autour de moi"
+          }
+        }
+      }
+    },
+    "New journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau trajet"
+          }
+        }
+      }
+    },
+    "No departure found for now.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun départ trouvé pour l’instant."
+          }
+        }
+      }
+    },
+    "No more trains": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de trains"
+          }
+        }
+      }
+    },
+    "No more trains in what was fetched. Pull down to look again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de trains dans ce qui a été chargé. Tirez vers le bas pour actualiser."
+          }
+        }
+      }
+    },
+    "No saved journey": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun trajet enregistré"
+          }
+        }
+      }
+    },
+    "No trains": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun train"
+          }
+        }
+      }
+    },
+    "Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans lien avec la SNCF. Données © SNCF, via l’API open data SNCF."
+          }
+        }
+      }
+    },
+    "Not affiliated with SNCF. Train data © SNCF, via the SNCF open data API. Check the station boards before you run.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans lien avec la SNCF. Données © SNCF, via l’API open data SNCF. Vérifiez les panneaux en gare avant de courir."
+          }
+        }
+      }
+    },
+    "Not allowed — change it later in iOS Settings": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refusée — modifiable plus tard dans les Réglages iOS"
+          }
+        }
+      }
+    },
+    "Not allowed. Radar and “Depart from nearest station” need it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refusée. Le radar et « Partir de la gare la plus proche » en ont besoin."
+          }
+        }
+      }
+    },
+    "Not requested": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore demandée"
+          }
+        }
+      }
+    },
+    "Nothing left of the last fetch. Pull down to look again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus rien dans le dernier chargement. Tirez vers le bas pour actualiser."
+          }
+        }
+      }
+    },
+    "N° %@": {},
+    "ON TIME": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À L’HEURE"
+          }
+        }
+      }
+    },
+    "Open SNCF Connect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir SNCF Connect"
+          }
+        }
+      }
+    },
+    "Open iOS Settings": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les Réglages iOS"
+          }
+        }
+      }
+    },
+    "Optional. Used only to find the station closest to you.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facultatif. Sert uniquement à trouver la gare la plus proche."
+          }
+        }
+      }
+    },
+    "Paste it here": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez-la ici"
+          }
+        }
+      }
+    },
+    "Position found %lld min ago.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position trouvée il y a %lld min."
+          }
+        }
+      }
+    },
+    "Position found just now.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position trouvée à l’instant."
+          }
+        }
+      }
+    },
+    "Position unavailable. Check that Location Services is on.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position indisponible. Vérifiez que le service de localisation est activé."
+          }
+        }
+      }
+    },
+    "REVERSES AT %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’INVERSE À %@"
+          }
+        }
+      }
+    },
+    "Request a key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demander une clé"
+          }
+        }
+      }
+    },
+    "SNCF API TOKEN": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLÉ API SNCF"
+          }
+        }
+      }
+    },
+    "SNCF data unavailable": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données SNCF indisponibles"
+          }
+        }
+      }
+    },
+    "SNCF hands out free personal keys for its train data. Fill in the form: the key arrives by email within minutes.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La SNCF fournit gratuitement des clés personnelles pour ses données. Remplissez le formulaire : la clé arrive par e-mail en quelques minutes."
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        }
+      }
+    },
+    "Save and test": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer et tester"
+          }
+        }
+      }
+    },
+    "Save one to see its next direct trains here, and to have its stations offered when you configure a Trip widget.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrez-en un pour voir ici ses prochains trains directs, et retrouver ses gares en configurant un widget Trajet."
+          }
+        }
+      }
+    },
+    "Saved, but the SNCF API could not be reached.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrée, mais l’API SNCF est injoignable."
+          }
+        }
+      }
+    },
+    "Search unavailable": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche indisponible"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages"
+          }
+        }
+      }
+    },
+    "Source code": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code source"
+          }
+        }
+      }
+    },
+    "Start": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commencer"
+          }
+        }
+      }
+    },
+    "Station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gare"
+          }
+        }
+      }
+    },
+    "Station name": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom de la gare"
+          }
+        }
+      }
+    },
+    "Switch time": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure de bascule"
+          }
+        }
+      }
+    },
+    "System": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Système"
+          }
+        }
+      }
+    },
+    "THEN": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ENSUITE"
+          }
+        }
+      }
+    },
+    "TICKETS & FULL TIMETABLES": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BILLETS ET HORAIRES COMPLETS"
+          }
+        }
+      }
+    },
+    "Testing…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test en cours…"
+          }
+        }
+      }
+    },
+    "The next direct trains of your journeys, and everything leaving the station closest to you — in the app and in widgets.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les prochains trains directs de vos trajets, et tous les départs de la gare la plus proche — dans l’app et en widgets."
+          }
+        }
+      }
+    },
+    "This build cannot store a token. Install the app from the App Store.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette version ne peut pas enregistrer de clé. Installez l’app depuis l’App Store."
+          }
+        }
+      }
+    },
+    "This build comes with its own token.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette version contient sa propre clé."
+          }
+        }
+      }
+    },
+    "Tickets & details in SNCF Connect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Billets et détails dans SNCF Connect"
+          }
+        }
+      }
+    },
+    "Token": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé"
+          }
+        }
+      }
+    },
+    "Token rejected. Check that you pasted all of it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé refusée. Vérifiez qu’elle est complète."
+          }
+        }
+      }
+    },
+    "Token works.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La clé fonctionne."
+          }
+        }
+      }
+    },
+    "Trains near me": {},
+    "Trains near me is an independent project, not affiliated with or endorsed by SNCF. Train data © SNCF, via the SNCF open data API, shown as received: times can change. When in doubt, trust the station boards.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trains near me est un projet indépendant, sans lien avec la SNCF ni approuvé par elle. Données © SNCF, via l’API open data SNCF, affichées telles que reçues : les horaires peuvent changer. En cas de doute, fiez-vous aux panneaux en gare."
+          }
+        }
+      }
+    },
+    "Trip unavailable": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trajet indisponible"
+          }
+        }
+      }
+    },
+    "Updated at %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis à jour à %@"
+          }
+        }
+      }
+    },
+    "Updated at %@ · pull to refresh": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis à jour à %@ · tirez pour actualiser"
+          }
+        }
+      }
+    },
+    "Updating…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour…"
+          }
+        }
+      }
+    },
+    "delay ?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "retard ?"
+          }
+        }
+      }
+    },
+    "in %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dans %@"
+          }
+        }
+      }
+    },
+    "leaving now": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "part maintenant"
+          }
+        }
+      }
+    },
+    "now": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "maintenant"
+          }
+        }
+      }
+    },
+    "scheduled %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "prévu %@"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

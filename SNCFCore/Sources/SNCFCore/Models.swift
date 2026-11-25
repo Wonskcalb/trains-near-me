@@ -45,6 +45,9 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     public let mode: String?
     /// nil when SNCF signals a disruption without an amended time.
     public let delayMinutes: Int?
+    /// The delay at the destination, which SNCF amends on its own: a late train can make up time.
+    /// nil when not reported, and on boards cached by an older build.
+    public let arrivalDelayMinutes: Int?
     public let isCancelled: Bool
     public let trainNumber: String?
     /// The train's Navitia vehicle_journey id, carried by station-board and journey rows alike so its
@@ -54,12 +57,13 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
     /// terminus is opened with. Optional so boards cached by an older build, which never had it, decode.
     public let terminus: Station?
 
-    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, isCancelled: Bool, trainNumber: String?, vehicleJourneyID: String? = nil, terminus: Station? = nil) {
+    public init(scheduledDeparture: Date, scheduledArrival: Date? = nil, direction: String? = nil, mode: String? = nil, delayMinutes: Int?, arrivalDelayMinutes: Int? = nil, isCancelled: Bool, trainNumber: String?, vehicleJourneyID: String? = nil, terminus: Station? = nil) {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
         self.direction = direction
         self.mode = mode
         self.delayMinutes = delayMinutes
+        self.arrivalDelayMinutes = arrivalDelayMinutes
         self.isCancelled = isCancelled
         self.trainNumber = trainNumber
         self.vehicleJourneyID = vehicleJourneyID
@@ -68,6 +72,11 @@ public struct TrainDeparture: Hashable, Codable, Sendable {
 
     public var expectedDeparture: Date {
         scheduledDeparture.addingTimeInterval(TimeInterval((delayMinutes ?? 0) * 60))
+    }
+
+    /// Without an amended arrival, a train is assumed to arrive as late as it left.
+    public var expectedArrival: Date? {
+        scheduledArrival?.addingTimeInterval(TimeInterval((arrivalDelayMinutes ?? delayMinutes ?? 0) * 60))
     }
 
     public var duration: TimeInterval? { scheduledArrival?.timeIntervalSince(scheduledDeparture) }
@@ -200,28 +209,28 @@ public enum TrainServiceError: Error, Equatable, Sendable {
 extension TrainServiceError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .missingToken: "Add your SNCF API token in the Trains near me app."
-        case .unauthorized: "The SNCF API token was rejected."
-        case .quotaExceeded: "SNCF API daily quota reached."
-        case .offline: "No internet connection."
-        case .serverUnavailable: "The SNCF API is not responding."
-        case .malformedResponse: "Unexpected response from the SNCF API."
-        case .noLocation: "No location: allow it in Trains near me."
-        case .noStationNearby: "No station within \(SNCFClient.searchRadiusKilometres) km."
+        case .missingToken: String(localized: "Add your SNCF API token in the Trains near me app.", bundle: .module)
+        case .unauthorized: String(localized: "The SNCF API token was rejected.", bundle: .module)
+        case .quotaExceeded: String(localized: "SNCF API daily quota reached.", bundle: .module)
+        case .offline: String(localized: "No internet connection.", bundle: .module)
+        case .serverUnavailable: String(localized: "The SNCF API is not responding.", bundle: .module)
+        case .malformedResponse: String(localized: "Unexpected response from the SNCF API.", bundle: .module)
+        case .noLocation: String(localized: "No location: allow it in Trains near me.", bundle: .module)
+        case .noStationNearby: String(localized: "No station within \(SNCFClient.searchRadiusKilometres) km.", bundle: .module)
         }
     }
 
     /// A couple of words, for a Lock Screen complication where `errorDescription` never fits.
     public var terse: String {
         switch self {
-        case .missingToken: "No token"
-        case .unauthorized: "Token refused"
-        case .quotaExceeded: "Quota reached"
-        case .offline: "Offline"
-        case .serverUnavailable: "SNCF down"
-        case .malformedResponse: "Data error"
-        case .noLocation: "No location"
-        case .noStationNearby: "No station near"
+        case .missingToken: String(localized: "No token", bundle: .module)
+        case .unauthorized: String(localized: "Token refused", bundle: .module)
+        case .quotaExceeded: String(localized: "Quota reached", bundle: .module)
+        case .offline: String(localized: "Offline", bundle: .module)
+        case .serverUnavailable: String(localized: "SNCF down", bundle: .module)
+        case .malformedResponse: String(localized: "Data error", bundle: .module)
+        case .noLocation: String(localized: "No location", bundle: .module)
+        case .noStationNearby: String(localized: "No station near", bundle: .module)
         }
     }
 }

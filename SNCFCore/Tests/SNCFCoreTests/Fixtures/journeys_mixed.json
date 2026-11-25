@@ -881,7 +881,7 @@
        "base_departure_time": "183600",
        "amended_departure_time": "184800",
        "base_arrival_time": "183600",
-       "amended_arrival_time": "184800",
+       "amended_arrival_time": "184500",
        "departure_status": "delayed",
        "arrival_status": "delayed",
        "stop_time_effect": "delayed",

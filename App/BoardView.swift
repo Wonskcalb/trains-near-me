@@ -54,11 +54,10 @@ struct BoardView: View {
             // Also on coming back to a screen whose delays have gone stale; pull down for the rest.
             if state == nil || RefreshPlanner.isStale(fetchedAt: fetchedAt, at: .now) { await load() }
         }
-        // A journey's header is drawn in the content (its route glyph), so its bar carries only the back
-        // button a pushed board gets for free. The radar takes the bar's large title, as every tab does,
-        // so its List | Lines switch sits under the title the way Journeys' does.
-        .navigationTitle(journey == nil ? "Near me" : "")
-        .navigationBarTitleDisplayMode(journey == nil ? .large : .inline)
+        // A journey's header used to be drawn in the content under an empty bar and scrolled through the
+        // bar's floating buttons; both boards now take the system's large title, which collapses into it.
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.large)
         // Every icon item is a titled Label so the Duo can stand it up in its strip; "Find me!" stays
         // text, which the system keeps horizontal at the top, as on a plain iPhone.
         .toolbar {
@@ -112,8 +111,7 @@ struct BoardView: View {
         trip = TripRequest(train: train, boarding: origin?.name)
     }
 
-    // No service gets a full-bleed hazard band that has to run under the navigation bar, so it is its
-    // own layout rather than a card inside the padded column.
+    // No service leads with the hazard band, so it is its own layout rather than a card in the column.
     @ViewBuilder private func scroll(now: Date) -> some View {
         if case .noService = state {
             noServiceScroll(now: now)
@@ -133,37 +131,30 @@ struct BoardView: View {
 
     // MARK: Headers
 
+    /// What goes in the navigation bar. A drawn title used to sit in the content under an empty bar,
+    /// and scrolled straight through the bar's floating buttons; the system's large title collapses
+    /// into the bar instead.
+    private var title: String {
+        journey == nil ? String(localized: "Near me") : (destination?.name ?? String(localized: "Journey"))
+    }
+
+    /// The radar's title is the bar's; a journey keeps where it leaves from and how it is read.
     @ViewBuilder private var header: some View {
         if journey != nil {
-            VStack(alignment: .leading, spacing: 14) {
-                routeHeader
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("FROM").font(.mono(11, weight: .semibold)).tracking(1.3).foregroundStyle(Color.inkSecondary)
+                    Text(origin?.name ?? " ").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink.opacity(0.8))
+                }
+                .accessibilityElement(children: .combine)
                 chips
             }
         }
     }
 
-    private var routeHeader: some View {
-        HStack(alignment: .center, spacing: 14) {
-            RoutePins(destination: .solid(.amber), originDiameter: 10, destinationDiameter: 14)
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(origin?.name ?? " ")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Color.ink.opacity(0.7))
-                Text(destination?.name ?? "Journey")
-                    .font(.largeTitle.bold())
-                    .foregroundStyle(Color.ink)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
     private var chips: some View {
         HStack(spacing: 8) {
-            chip("DIRECT ONLY")
+            chip(String(localized: "DIRECT ONLY"))
             if let journey { chip(directionCaps(journey)) }
         }
     }
@@ -180,11 +171,11 @@ struct BoardView: View {
 
     /// The journey's direction as a mono-caps chip, the counterpart of the Journeys tab's rule.
     private func directionCaps(_ journey: JourneyConfiguration) -> String {
-        if journey.nearestStationAsDeparture { return "FOLLOWS YOU" }
+        if journey.nearestStationAsDeparture { return String(localized: "FOLLOWS YOU") }
         switch journey.direction {
-        case .forward: return "ALWAYS THIS WAY"
-        case .reverse: return "ALWAYS REVERSED"
-        case .automatic: return "REVERSES AT \(clock(journey.switchMinute))"
+        case .forward: return String(localized: "ALWAYS THIS WAY")
+        case .reverse: return String(localized: "ALWAYS REVERSED")
+        case .automatic: return String(localized: "REVERSES AT \(clock(journey.switchMinute))")
         }
     }
 
@@ -203,7 +194,7 @@ struct BoardView: View {
         case .noService:
             EmptyView() // Handled by `noServiceScroll`.
         case .unavailable(let error):
-            messageCard("SNCF data unavailable", error.appDescription)
+            messageCard("SNCF data unavailable", "\(error.appDescription)")
         }
     }
 
@@ -265,11 +256,7 @@ struct BoardView: View {
                         .font(.system(size: 26, weight: .bold)).foregroundStyle(Color.ink)
                 }
                 Spacer(minLength: 8)
-                HStack(spacing: 6) {
-                    Circle().fill(Color.soon).frame(width: 7, height: 7)
-                    Text(next.expectedDeparture.formatted(SNCFTime.hourMinute))
-                        .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
-                }
+                heroStatus(next)
             }
             if isColumn {
                 // Half a portrait Duo is 334 pt: the flaps shrink before the destination breaks mid-word.
@@ -288,8 +275,16 @@ struct BoardView: View {
 
     private func heroRow(next: TrainDeparture, now: Date, tile: CGFloat) -> some View {
         HStack(alignment: .center, spacing: 16) {
-            FlapTime(date: next.expectedDeparture, tileWidth: tile, tileHeight: tile * 52 / 36)
+            FlapTime(date: next.isCancelled ? next.scheduledDeparture : next.expectedDeparture,
+                     digitColor: next.isCancelled ? .inkSecondary : (next.status == .onTime ? .amber : next.status.tableauInk),
+                     tileWidth: tile, tileHeight: tile * 52 / 36)
             VStack(alignment: .leading, spacing: 4) {
+                if !next.isCancelled, let delay = next.delayMinutes, delay > 0 {
+                    Text(next.scheduledDeparture.formatted(SNCFTime.hourMinute))
+                        .font(.mono(13, weight: .medium)).foregroundStyle(Color.inkSecondary)
+                        .strikethrough()
+                        .accessibilityLabel(String(localized: "scheduled \(next.scheduledDeparture.formatted(SNCFTime.shortTime))"))
+                }
                 if let direction = next.direction {
                     Text(direction).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink)
                         .lineLimit(2).minimumScaleFactor(0.85)
@@ -301,8 +296,10 @@ struct BoardView: View {
                             .lineLimit(1)
                     }
                 }
-                Text(leavesIn(next, now: now))
-                    .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+                if !next.isCancelled {
+                    Text(leavesIn(next, now: now))
+                        .font(.mono(13, weight: .semibold)).foregroundStyle(Color.soon)
+                }
             }
             // At 362 pt (an iPhone 17 Pro, the folded Duo) the flaps took their share first and the
             // destination truncated to "Grenob…"; the words are what the card is read for.
@@ -316,6 +313,24 @@ struct BoardView: View {
         }
     }
 
+    /// The hero's corner says what is wrong with the next train; it used to repeat the flap's time.
+    @ViewBuilder private func heroStatus(_ train: TrainDeparture) -> some View {
+        switch train.status {
+        case .onTime:
+            if let delay = train.delayMinutes, delay > 0 {
+                StatusPill("+\(delay)", status: .onTime)
+            } else {
+                HStack(spacing: 6) {
+                    Circle().fill(Color.soon).frame(width: 7, height: 7)
+                    Text("ON TIME").font(.mono(11, weight: .semibold)).tracking(1.1).foregroundStyle(Color.inkSecondary)
+                }
+            }
+        case .delayed, .severelyDelayed: StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
+        case .cancelled: StatusPill("CANCELLED", status: .cancelled)
+        case .unknown: StatusPill("delay ?", status: .unknown)
+        }
+    }
+
     private var loadingCard: some View {
         HStack(spacing: 10) {
             ProgressView()
@@ -326,7 +341,7 @@ struct BoardView: View {
         .cardSurface()
     }
 
-    private func messageCard(_ title: String, _ detail: String) -> some View {
+    private func messageCard(_ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title).font(.headline).foregroundStyle(Color.ink)
             Text(detail).font(.subheadline).foregroundStyle(Color.inkSecondary)
@@ -361,9 +376,10 @@ struct BoardView: View {
         ScrollView {
             VStack(spacing: 0) {
                 HazardBackground(variant: .band)
-                    .frame(height: 240)
-                    .overlay(alignment: .bottom) { noServicePlate.padding(.bottom, 30) }
-                    .ignoresSafeArea(edges: .top)
+                    .frame(height: 200)
+                    .overlay { noServicePlate }
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .padding(.horizontal, 20)
                 VStack(alignment: .leading, spacing: 16) {
                     header
                     messageCard("All trains cancelled", "Every departure of the day is cancelled.")
@@ -411,7 +427,7 @@ struct BoardView: View {
         .padding(.leading, 4)
     }
 
-    private func sncfConnect(_ title: String, amber: Bool) -> some View {
+    private func sncfConnect(_ title: LocalizedStringKey, amber: Bool) -> some View {
         Link(destination: URL(string: "https://www.sncf-connect.com")!) {
             HStack(spacing: 8) {
                 Text(title).font(.system(size: 16, weight: amber ? .bold : .semibold))
@@ -525,18 +541,8 @@ struct RadarRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
-                    .font(.mono(19, weight: .semibold))
-                    .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
-                    .strikethrough(train.isCancelled)
-                if !train.isCancelled, let delay = train.delayMinutes, delay > 0 {
-                    Text(train.expectedDeparture.formatted(SNCFTime.hourMinute))
-                        .font(.mono(12, weight: .semibold))
-                        .foregroundStyle(train.status.tableauInk)
-                }
-            }
-            .frame(width: 60, alignment: .leading)
+            DepartureTime(train, size: 19, weight: .semibold, color: .amber, stacked: true)
+                .frame(width: 60, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 if let direction = train.direction {
@@ -588,17 +594,24 @@ struct JourneyRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 10) {
-                    Text(train.scheduledDeparture.formatted(SNCFTime.hourMinute))
-                        .font(.mono(24, weight: .bold))
-                        .foregroundStyle(train.isCancelled ? Color.inkSecondary : Color.amber)
-                        .strikethrough(train.isCancelled)
-                    if train.scheduledArrival != nil {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    DepartureTime(train, size: 24, color: .amber, stacked: true)
+                    if let scheduled = train.scheduledArrival, let expected = train.expectedArrival {
                         DashConnector()
-                        Text(train.scheduledArrival!.formatted(SNCFTime.hourMinute))
-                            .font(.mono(16, weight: .medium))
-                            .foregroundStyle(Color.ink.opacity(0.85))
-                            .strikethrough(train.isCancelled)
+                            // A Canvas has no baseline of its own; this lifts the dash to mid-digit.
+                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 6 }
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text((train.isCancelled ? scheduled : expected).formatted(SNCFTime.hourMinute))
+                                .font(.mono(16, weight: .medium))
+                                .foregroundStyle(Color.ink.opacity(0.85))
+                                .strikethrough(train.isCancelled)
+                            if !train.isCancelled, expected != scheduled {
+                                Text(scheduled.formatted(SNCFTime.hourMinute))
+                                    .font(.mono(10, weight: .medium))
+                                    .foregroundStyle(Color.inkSecondary)
+                                    .strikethrough()
+                            }
+                        }
                     }
                 }
                 HStack(spacing: 7) {
@@ -633,14 +646,12 @@ struct JourneyRow: View {
     @ViewBuilder private var trailing: some View {
         switch train.status {
         case .onTime:
-            Text(isFirst ? "in \(relativeTime(train.expectedDeparture, from: now))" : relativeTime(train.expectedDeparture, from: now))
+            Text(isFirst ? String(localized: "in \(relativeTime(train.expectedDeparture, from: now))") : relativeTime(train.expectedDeparture, from: now))
                 .font(.mono(isFirst ? 14 : 13, weight: isFirst ? .semibold : .regular))
                 .foregroundStyle(isFirst ? Color.soon : Color.inkSecondary)
                 .fixedSize()
         case .delayed, .severelyDelayed:
             StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
-            Text("leaves \(train.expectedDeparture.formatted(SNCFTime.shortTime))")
-                .font(.mono(12)).foregroundStyle(train.status.tableauInk)
         case .cancelled:
             StatusPill("CANCELLED", status: .cancelled)
         case .unknown:
@@ -680,7 +691,7 @@ private extension View {
 /// Minutes-from-now as "2 min" / "1 h 18", the words shared by the radar and the journey rows.
 func relativeTime(_ date: Date, from now: Date) -> String {
     let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-    if minutes < 1 { return "now" }
+    if minutes < 1 { return String(localized: "now") }
     if minutes < 60 { return "\(minutes) min" }
     return "\(minutes / 60) h \(String(format: "%02d", minutes % 60))"
 }
@@ -688,7 +699,7 @@ func relativeTime(_ date: Date, from now: Date) -> String {
 /// "in 2 min" / "leaving now" for the flap card's single next train.
 func leavesIn(_ train: TrainDeparture, now: Date) -> String {
     let minutes = max(0, Int(train.expectedDeparture.timeIntervalSince(now) / 60))
-    return minutes < 1 ? "leaving now" : "in \(relativeTime(train.expectedDeparture, from: now))"
+    return minutes < 1 ? String(localized: "leaving now") : String(localized: "in \(relativeTime(train.expectedDeparture, from: now))")
 }
 
 /// A minute-count as "HH:MM", for the automatic switch time.
@@ -768,7 +779,8 @@ struct TripSheet: View {
     }
 
     private func stopRow(_ stop: TripStop, first: Bool, last: Bool) -> some View {
-        let here = boarding.map { stop.name.localizedCaseInsensitiveContains($0) } ?? false
+        // Equality, not containment: "Grenoble" is also the start of "Grenoble Universités-Gières".
+        let here = boarding.map { stop.name.compare($0, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame } ?? false
         return HStack(alignment: .center, spacing: 14) {
             Text(stop.time)
                 .font(.mono(15, weight: here ? .bold : .medium))
@@ -785,7 +797,9 @@ struct TripSheet: View {
         }
         .frame(minHeight: 42)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(stop.name), \(stop.isSkipped ? "passed without stopping, " : "")\(stop.time)")
+        .accessibilityLabel(stop.isSkipped
+                            ? String(localized: "\(stop.name), passed without stopping, \(stop.time)")
+                            : "\(stop.name), \(stop.time)")
     }
 
     /// The vertical line with this stop's dot: no line above the first stop, none below the last,

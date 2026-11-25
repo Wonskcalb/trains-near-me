@@ -104,6 +104,13 @@ func fixture(_ name: String) throws -> Data {
         #expect(train.delayMinutes == 12)
         #expect(train.status == .delayed)
         #expect(train.expectedDeparture == at(18, 24))
+        // The fixture has it make up 3 of its 12 minutes before Voiron.
+        #expect(train.expectedArrival == at(18, 45))
+    }
+
+    @Test func arrivalFollowsDepartureDelayWhenNotAmended() {
+        let train = TrainDeparture(scheduledDeparture: at(18, 0), scheduledArrival: at(18, 25), delayMinutes: 12, isCancelled: false, trainNumber: nil)
+        #expect(train.expectedArrival == at(18, 37))
     }
 
     @Test func severelyDelayed() throws { #expect(try mixed()[2].delayMinutes == 23) }

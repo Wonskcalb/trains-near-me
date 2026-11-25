@@ -1,0 +1,215 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@, cancelled": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, supprimé"
+          }
+        }
+      }
+    },
+    ":": {
+      "shouldTranslate": false
+    },
+    "Add your SNCF API token in the Trains near me app.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez votre clé SNCF dans l’app Trains near me."
+          }
+        }
+      }
+    },
+    "Data error": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur de données"
+          }
+        }
+      }
+    },
+    "Leaves at %@, %lld min late, scheduled %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Leaves at %1$@, %2$lld min late, scheduled %3$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part à %1$@, %2$lld min de retard, prévu %3$@"
+          }
+        }
+      }
+    },
+    "No internet connection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de connexion Internet."
+          }
+        }
+      }
+    },
+    "No location": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de position"
+          }
+        }
+      }
+    },
+    "No location: allow it in Trains near me.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de position : autorisez-la dans Trains near me."
+          }
+        }
+      }
+    },
+    "No station near": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune gare proche"
+          }
+        }
+      }
+    },
+    "No station within %lld km.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune gare à moins de %lld km."
+          }
+        }
+      }
+    },
+    "No token": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de clé"
+          }
+        }
+      }
+    },
+    "Offline": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors ligne"
+          }
+        }
+      }
+    },
+    "Pick station": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir la gare"
+          }
+        }
+      }
+    },
+    "Quota reached": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota atteint"
+          }
+        }
+      }
+    },
+    "SNCF API daily quota reached.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota quotidien de l’API SNCF atteint."
+          }
+        }
+      }
+    },
+    "SNCF down": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SNCF indisponible"
+          }
+        }
+      }
+    },
+    "SNCF no longer knows this station: pick it again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La SNCF ne reconnaît plus cette gare : choisissez-la à nouveau."
+          }
+        }
+      }
+    },
+    "The SNCF API is not responding.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’API SNCF ne répond pas."
+          }
+        }
+      }
+    },
+    "The SNCF API token was rejected.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La clé API SNCF a été refusée."
+          }
+        }
+      }
+    },
+    "Token refused": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé refusée"
+          }
+        }
+      }
+    },
+    "Unexpected response from the SNCF API.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse inattendue de l’API SNCF."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

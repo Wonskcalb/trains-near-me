@@ -89,6 +89,7 @@ public enum NavitiaParser {
             scheduledArrival: arrival,
             mode: mode(commercial: info?.commercialMode, physical: info?.physicalMode),
             delayMinutes: delay(at: originStop, significantDelays: journey.status == "SIGNIFICANT_DELAYS"),
+            arrivalDelayMinutes: minutesLate(base: destinationStop?.baseArrivalTime, amended: destinationStop?.amendedArrivalTime),
             isCancelled: cancelled,
             trainNumber: info?.tripShortName ?? info?.headsign,
             vehicleJourneyID: section.links?.first { $0.type == "vehicle_journey" }?.id
@@ -193,10 +194,11 @@ public enum NavitiaParser {
 
     /// nil means "delayed by an unknown amount": SNCF announced the delay without an amended time.
     static func delay(at stop: ImpactedStop?, significantDelays: Bool) -> Int? {
-        guard let base = stop?.baseDepartureTime.flatMap(secondsOfDay),
-              let amended = stop?.amendedDepartureTime.flatMap(secondsOfDay) else {
-            return significantDelays ? nil : 0
-        }
+        minutesLate(base: stop?.baseDepartureTime, amended: stop?.amendedDepartureTime) ?? (significantDelays ? nil : 0)
+    }
+
+    static func minutesLate(base: String?, amended: String?) -> Int? {
+        guard let base = base.flatMap(secondsOfDay), let amended = amended.flatMap(secondsOfDay) else { return nil }
         var diff = amended - base
         if diff < -12 * 3600 { diff += 24 * 3600 }
         return max(0, diff / 60)
@@ -320,6 +322,8 @@ struct ImpactedStop: Decodable {
     let stopPoint: StopPoint?
     let baseDepartureTime: String?
     let amendedDepartureTime: String?
+    let baseArrivalTime: String?
+    let amendedArrivalTime: String?
     let departureStatus: String?
     let arrivalStatus: String?
 }

@@ -145,12 +145,6 @@ public enum TrainIdentity: Hashable, Codable, Sendable {
 }
 
 public extension TrainDeparture {
-    /// The amended arrival: the scheduled one pushed by the delay. nil on a station board, which has no
-    /// arrival. Mirrors `expectedDeparture` for the arrival side; used by the round-trip pairing.
-    var expectedArrival: Date? {
-        scheduledArrival?.addingTimeInterval(TimeInterval((delayMinutes ?? 0) * 60))
-    }
-
     /// Running but late (delayed or severely delayed) — the "N DISRUPTED TONIGHT" chip counts these, and
     /// leaves cancellations to their own CANCELLED rows.
     var isRunningLate: Bool { status == .delayed || status == .severelyDelayed }

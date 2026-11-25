@@ -36,10 +36,10 @@ struct DeparturesEntry: TimelineEntry {
     /// One short line for the Lock Screen, where there is no room for a title and a detail.
     var shortStatus: String {
         switch state {
-        case .departures: return isStale ? "Out of date" : "No more trains"
-        case .noTrains: return "No trains"
-        case .endOfService: return "End of service"
-        case .noService: return "All cancelled"
+        case .departures: return isStale ? String(localized: "Out of date") : String(localized: "No more trains")
+        case .noTrains: return String(localized: "No trains")
+        case .endOfService: return String(localized: "End of service")
+        case .noService: return String(localized: "All cancelled")
         case .unavailable(let error): return error.terse
         }
     }

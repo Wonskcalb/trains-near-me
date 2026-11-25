@@ -15,7 +15,7 @@ extension TrainServiceError {
     /// `missingToken`'s own wording tells you to open the app, which is where a reader of this
     /// screen already is; everything else reads the same here as in a widget.
     var appDescription: String {
-        self == .missingToken ? "Add your SNCF API token in Settings." : localizedDescription
+        self == .missingToken ? String(localized: "Add your SNCF API token in Settings.") : localizedDescription
     }
 }
 
@@ -93,12 +93,12 @@ struct EditJourneyView: View {
         #endif
     }
 
-    private func stationField(_ title: String, selection: Binding<Station?>) -> some View {
+    private func stationField(_ title: LocalizedStringKey, selection: Binding<Station?>) -> some View {
         NavigationLink {
             StationSearch(selection: selection)
         } label: {
             LabeledContent(title) {
-                Text(selection.wrappedValue?.name ?? "Choose").foregroundStyle(selection.wrappedValue == nil ? .secondary : .primary)
+                Text(selection.wrappedValue?.name ?? String(localized: "Choose")).foregroundStyle(selection.wrappedValue == nil ? .secondary : .primary)
             }
         }
     }
