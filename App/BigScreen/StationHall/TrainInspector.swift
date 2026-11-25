@@ -81,7 +81,7 @@ struct TrainInspector: View {
                 if !actionsInToolbar { closeButton }
             }
             HStack(spacing: 10) {
-                Text(train.trainNumber.map { "N° \($0)" } ?? "Train").font(.mono(28, weight: .bold)).foregroundStyle(Color.ink)
+                Text(train.trainNumber.map { String(localized: "N° \($0)") } ?? String(localized: "Train")).font(.mono(28, weight: .bold)).foregroundStyle(Color.ink)
                 if let mode = train.mode { ModeChip(mode) }
             }
             Text("to \(headsign)").font(.system(size: 15)).foregroundStyle(Color.ink.opacity(0.7))

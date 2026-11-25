@@ -435,7 +435,7 @@ private struct BigScreenSidebar: View {
                 HStack(spacing: 11) {
                     Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(Color.amberText).frame(width: 22)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(nearStation?.name ?? "Nearest station").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
+                        Text(nearStation?.name ?? String(localized: "Nearest station")).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink)
                             .lineLimit(1)
                         Text(nearDetail).font(.mono(11.5)).foregroundStyle(Color.inkSecondary).lineLimit(2)
                     }
@@ -459,7 +459,7 @@ private struct BigScreenSidebar: View {
     /// The second line: how far the station is, or — without one — why, so an empty row never just sits there.
     private var nearDetail: String {
         switch near {
-        case nil: return "looking around…"
+        case nil: return String(localized: "looking around…")
         case .success(let found): return ["every direction", found.distance.map(Self.distance)].compactMap { $0 }.joined(separator: " · ")
         case .failure(let error):
             let reason: String
@@ -468,12 +468,12 @@ private struct BigScreenSidebar: View {
                 switch location.status {
                 case .notDetermined: reason = "location not allowed yet"
                 case .denied, .restricted: reason = "location is off for this app"
-                default: reason = "no position yet"
+                default: reason = String(localized: "no position yet")
                 }
             case .noStationNearby: reason = "no station within \(SNCFClient.searchRadiusKilometres) km"
             default: reason = error.terse.lowercased()
             }
-            return pinned == nil ? reason : "pinned · \(reason)"
+            return pinned == nil ? reason : String(localized: "pinned · \(reason)")
         }
     }
 

@@ -358,7 +358,7 @@ private struct RoundTripBoard: View {
         switch train.status {
         case .onTime:
             // The picked / next train gets the green "in 6 min"; the rest show plain time-from-now.
-            Text(picked ? "in \(relative(train.expectedDeparture))" : relative(train.expectedDeparture))
+            Text(picked ? String(localized: "in \(relative(train.expectedDeparture))") : relative(train.expectedDeparture))
                 .font(.mono(picked ? 12.5 : 13, weight: picked ? .semibold : .regular))
                 .foregroundStyle(picked ? Color.soon : Color.inkSecondary)
                 .fixedSize()
@@ -435,7 +435,7 @@ private struct RoundTripBoard: View {
                 returnList(plan, duo: duo)
                 if duo {
                     stayStepper
-                    watchFootnote(plan, prefix: "Watch both trains (the bell): if")
+                    watchFootnote(plan, bell: true)
                 } else {
                     watchBoth(plan)
                 }
@@ -585,15 +585,17 @@ private struct RoundTripBoard: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(watchedBoth ? "On" : "Off")
-            watchFootnote(plan, prefix: "If").multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            watchFootnote(plan, bell: false).multilineTextAlignment(.center).frame(maxWidth: .infinity)
         }
     }
 
     /// `pairedReturn` is already the first return that fits, so if the earliest one is lost the view simply
     /// proposes the next; the copy promises that.
-    @ViewBuilder private func watchFootnote(_ plan: RoundTripPlan, prefix: String) -> some View {
+    @ViewBuilder private func watchFootnote(_ plan: RoundTripPlan, bell: Bool) -> some View {
         if let back = plan.pairedReturn {
-            Text("\(prefix) the \(hhmm(back.scheduledDeparture)) is cancelled or late, you get the next one that fits.")
+            let time = hhmm(back.scheduledDeparture)
+            Text(bell ? "Watch both trains (the bell): if the \(time) is cancelled or late, you get the next one that fits."
+                      : "If the \(time) is cancelled or late, you get the next one that fits.")
                 .font(.system(size: 11.5)).foregroundStyle(Color.inkSecondary)
         }
     }
@@ -716,7 +718,7 @@ private struct RoundTripBoard: View {
 
     private func relative(_ date: Date) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-        return minutes < 1 ? "now" : durationWords(minutes)
+        return minutes < 1 ? String(localized: "now") : durationWords(minutes)
     }
 
     /// Minutes as "45 min" / "2 h 30" / "1 h", the house wording. The hour form drops ":00" to match the

@@ -161,7 +161,7 @@ private struct StationLinesBoard: View {
         }
     }
 
-    private static let tapHint = "Tap a time for its train, a terminus for its journey"
+    private static let tapHint = String(localized: "Tap a time for its train, a terminus for its journey")
 
     private var tallHeader: some View {
         ViewThatFits(in: .horizontal) {
@@ -216,7 +216,7 @@ private struct StationLinesBoard: View {
         HStack(spacing: 7) {
             // Amber-free freshness: green while the last answer is recent, caution once it is old.
             Circle().fill(isStale ? Color.caution : Color.soon).frame(width: 7, height: 7)
-            Text(fetchedAt.map { "Updated \(HallFormat.hm($0))" } ?? "Updating…")
+            Text(fetchedAt.map { String(localized: "Updated \(HallFormat.hm($0))") } ?? String(localized: "Updating…"))
                 .font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
         }
         .accessibilityElement(children: .combine)
@@ -623,9 +623,9 @@ private struct MapGeometry {
         var parts: [String] = []
         let delayed = shown.filter { $0.status == .delayed || $0.status == .severelyDelayed || $0.status == .unknown }
         let cancelled = shown.filter(\.isCancelled)
-        if !delayed.isEmpty { parts.append("\(delayed.count) DELAYED") }
-        if !cancelled.isEmpty { parts.append("\(cancelled.count) CANCELLED") }
-        if shown.isEmpty, let next = lane.next { parts.append("NEXT \(HallFormat.hm(next.expectedDeparture))") }
+        if !delayed.isEmpty { parts.append(String(localized: "\(delayed.count) DELAYED")) }
+        if !cancelled.isEmpty { parts.append(String(localized: "\(cancelled.count) CANCELLED")) }
+        if shown.isEmpty, let next = lane.next { parts.append(String(localized: "NEXT \(HallFormat.hm(next.expectedDeparture))")) }
         if let every = StationLines.frequency(of: shown.map(\.scheduledDeparture)) { parts.append(every) }
         guard !parts.isEmpty else { return nil }
         let color: Color = !cancelled.isEmpty || delayed.contains { $0.status == .severelyDelayed } ? .stop
@@ -1315,7 +1315,7 @@ private enum LineSpeech {
     static func stop(_ departure: TrainDeparture, to destination: String) -> String {
         var parts = departure.trainNumber.map { ["Train \($0)"] } ?? []
         parts.append(train(departure))
-        parts.append("to \(destination)")
+        parts.append(String(localized: "to \(destination)"))
         return parts.joined(separator: ", ")
     }
 

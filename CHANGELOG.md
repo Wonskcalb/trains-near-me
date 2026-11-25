@@ -6,8 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- First-launch onboarding on iOS: what the app does, how to request a free SNCF key, a field to paste and check it, and the optional location permission. Shown until a key is saved.
-- French localization of the app, the widgets and the location prompt, following the device language; English stays the default.
+- First-launch onboarding on iOS: what the app does, how to request a free SNCF key, a field to paste and check it, and the optional location permission. Shown until a key is saved, on iPhone and iPad.
+- French localization of the app (Wall, Lanes, Station hall, Round trip and the menu bar included), the widgets and the location prompt, following the device language; English stays the default.
 - `PRIVACY.md`, the privacy policy for the App Store listing; the privacy manifests now declare the coarse location sent to SNCF.
 
 ### Changed

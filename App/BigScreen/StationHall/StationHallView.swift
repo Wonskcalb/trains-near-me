@@ -261,7 +261,7 @@ private struct StationHallBoard: View {
                     .frame(width: 14, height: 46)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(board?.leg.from.name ?? " ").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink.opacity(0.7))
-                    Text(board?.leg.to.name ?? "Journey").font(.system(size: isColumn ? 28 : 38, weight: .bold)).foregroundStyle(Color.ink)
+                    Text(board?.leg.to.name ?? String(localized: "Journey")).font(.system(size: isColumn ? 28 : 38, weight: .bold)).foregroundStyle(Color.ink)
                         .lineLimit(1).minimumScaleFactor(0.6)
                 }
             }
@@ -412,11 +412,12 @@ private struct StationHallBoard: View {
     }
 
     private func heroRow(_ next: TrainDeparture, isTomorrow: Bool, tile: CGFloat) -> some View {
-        HStack(spacing: isColumn ? 14 : 22) {
+        let arrives = next.expectedArrival.map(HallFormat.hm) ?? "—"
+        return HStack(spacing: isColumn ? 14 : 22) {
             FlapTime(date: next.expectedDeparture, tileWidth: tile, tileHeight: tile * 66 / 46,
                      cornerRadius: tile / 5, colonColor: .amberText)
             VStack(alignment: .leading, spacing: 5) {
-                Text("\(isTomorrow ? "FIRST TRAIN TOMORROW" : "NEXT TRAIN") · ARRIVES \(next.expectedArrival.map(HallFormat.hm) ?? "—")")
+                Text(isTomorrow ? "FIRST TRAIN TOMORROW · ARRIVES \(arrives)" : "NEXT TRAIN · ARRIVES \(arrives)")
                     .font(.mono(11, weight: .semibold)).tracking(1.4).foregroundStyle(Color.inkSecondary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 HStack(spacing: 8) {
@@ -424,7 +425,7 @@ private struct StationHallBoard: View {
                     Text(HallFormat.numberAndDuration(next)).font(.mono(13)).foregroundStyle(Color.inkSecondary)
                         .lineLimit(1).minimumScaleFactor(0.7)
                 }
-                Text(isTomorrow ? "tomorrow · \(HallFormat.inWords(next.expectedDeparture, from: now))"
+                Text(isTomorrow ? String(localized: "tomorrow · \(HallFormat.inWords(next.expectedDeparture, from: now))")
                                 : HallFormat.inWords(next.expectedDeparture, from: now))
                     .font(.mono(15, weight: .semibold)).foregroundStyle(isTomorrow ? Color.inkSecondary : Color.soon)
                     .lineLimit(1).minimumScaleFactor(0.7)
@@ -715,14 +716,17 @@ private struct BoardRow: View {
 
     /// The row as one sentence: "17:42 to 18:07, TER 17653, next, in 2 min" / "18:12 to 18:36, plus 12, leaves 18:24".
     private var spoken: String {
-        var parts = [HallFormat.hm(train.scheduledDeparture) + (train.scheduledArrival.map { " to \(HallFormat.hm($0))" } ?? "")]
+        var parts = [train.scheduledArrival.map { String(localized: "\(HallFormat.hm(train.scheduledDeparture)) to \(HallFormat.hm($0))") }
+                     ?? HallFormat.hm(train.scheduledDeparture)]
         parts.append([train.mode, train.trainNumber].compactMap { $0 }.joined(separator: " "))
-        if isPinned { parts.append("pinned") }
+        if isPinned { parts.append(String(localized: "pinned")) }
         switch train.status {
-        case .onTime: parts.append((isNext ? "next, " : "") + (isTomorrow ? "tomorrow" : "in \(HallFormat.relative(train.expectedDeparture, from: now))"))
-        case .delayed, .severelyDelayed: parts.append("plus \(train.delayMinutes ?? 0), leaves \(HallFormat.hm(train.expectedDeparture))")
-        case .cancelled: parts.append("cancelled")
-        case .unknown: parts.append("delay unknown")
+        case .onTime:
+            if isNext { parts.append(String(localized: "next")) }
+            parts.append(isTomorrow ? String(localized: "tomorrow") : String(localized: "in \(HallFormat.relative(train.expectedDeparture, from: now))"))
+        case .delayed, .severelyDelayed: parts.append(String(localized: "plus \(train.delayMinutes ?? 0), leaves \(HallFormat.hm(train.expectedDeparture))"))
+        case .cancelled: parts.append(String(localized: "cancelled"))
+        case .unknown: parts.append(String(localized: "delay unknown"))
         }
         return parts.filter { !$0.isEmpty }.joined(separator: ", ")
     }
@@ -778,7 +782,7 @@ private struct BoardRow: View {
     @ViewBuilder private var status: some View {
         switch train.status {
         case .onTime:
-            let relative = isTomorrow ? "tomorrow" : HallFormat.relative(train.expectedDeparture, from: now)
+            let relative = isTomorrow ? String(localized: "tomorrow") : HallFormat.relative(train.expectedDeparture, from: now)
             if isNext {
                 HStack(spacing: 8) {
                     Text("NEXT").font(.mono(10, weight: .bold)).tracking(1.2).foregroundStyle(Color.onAmber)
@@ -894,20 +898,20 @@ enum HallFormat {
     /// "now" / "2 min" / "1 h 32".
     static func relative(_ date: Date, from now: Date) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-        return minutes < 1 ? "now" : SNCFTime.duration(minutes: minutes)
+        return minutes < 1 ? String(localized: "now") : SNCFTime.duration(minutes: minutes)
     }
 
     /// The hero's "in 2 min · run" / "leaving now".
     static func inWords(_ date: Date, from now: Date) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
-        if minutes < 1 { return "leaving now" }
-        return "in \(relative(date, from: now))" + (minutes <= 5 ? " · run" : "")
+        if minutes < 1 { return String(localized: "leaving now") }
+        return minutes <= 5 ? String(localized: "in \(relative(date, from: now)) · run") : String(localized: "in \(relative(date, from: now))")
     }
 
     static func numberAndDuration(_ train: TrainDeparture) -> String {
         var parts: [String] = []
-        if let number = train.trainNumber { parts.append("N° \(number)") }
-        if let duration = train.duration { parts.append("\(Int(duration / 60)) min") }
+        if let number = train.trainNumber { parts.append(String(localized: "N° \(number)")) }
+        if let duration = train.duration { parts.append(String(localized: "\(Int(duration / 60)) min")) }
         return parts.joined(separator: " · ")
     }
 

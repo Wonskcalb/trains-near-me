@@ -337,7 +337,7 @@ struct WallModeView: View {
                 ForEach(journeys, id: \.journey) { journey in
                     Text("\(journey.leg.from.name) → \(journey.leg.to.name)").tag(Self.key(for: journey.journey))
                 }
-                Text(station?.name ?? "Nearest station").tag(Self.stationKey)
+                Text(station?.name ?? String(localized: "Nearest station")).tag(Self.stationKey)
             }
         } label: {
             Label(headerTitle, systemImage: "point.topleft.down.to.point.bottomright.curvepath")
@@ -378,7 +378,7 @@ struct WallModeView: View {
 
     private var headerTitle: String {
         if let current { return "\(current.leg.from.name) → \(current.leg.to.name)" }
-        return station?.name ?? "Nearest station"
+        return station?.name ?? String(localized: "Nearest station")
     }
 
     /// The title and the clock on one line, or the clock under the title on a phone held upright.
@@ -438,7 +438,7 @@ struct WallModeView: View {
     private func nextTrainCard(liveNow: Date) -> some View {
         let next = nextTrain(liveNow: liveNow)
         let countdown = next.map { wallCountdown(to: $0.expectedDeparture, from: liveNow) }
-            .map { $0 == "now" ? "leaving now" : "in \($0)" } ?? ""
+            .map { $0 == "now" ? String(localized: "leaving now") : String(localized: "in \($0)") } ?? ""
         // LEAVE HOME IN counts down to the first train you can still walk to; when that is not this one,
         // this one leaves before you could reach it. Only on a journey: the station board's next train is
         // on another line than the journey LEAVE HOME IN follows.
@@ -662,12 +662,12 @@ struct WallModeView: View {
 
     /// The small line under the train time: where it goes, or why there is nothing to catch.
     private func leaveDetail(_ leave: LeaveBy?, tomorrow: Bool, to destination: String?) -> String {
-        guard let destination else { return "no journey saved" }
-        if leave != nil { return tomorrow ? "tomorrow · \(destination)" : destination }
+        guard let destination else { return String(localized: "no journey saved") }
+        if leave != nil { return tomorrow ? String(localized: "tomorrow · \(destination)") : destination }
         if case .endOfService(let first)? = journeys.first(where: { $0.leg == leaveLeg })?.state {
-            return "first tomorrow \(WallFormat.time.string(from: first))"
+            return String(localized: "first tomorrow \(WallFormat.time.string(from: first))")
         }
-        return "none to \(destination) now"
+        return String(localized: "none to \(destination) now")
     }
 
     /// What LEAVE HOME IN counts down to: the first of tonight's held trains you can still walk to, worked
@@ -738,8 +738,8 @@ struct WallModeView: View {
         .padding(.horizontal, 24).padding(.vertical, 22)
         .background(Color.amber, in: RoundedRectangle(cornerRadius: 26))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(leave.map { "Leave home in \(inHours ? (minutes ?? 0) / 60 : (minutes ?? 0)) \(inHours ? "hours" : "minutes") for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk" }
-                            ?? "No train to leave for: \(detail)")
+        .accessibilityLabel(leave.map { inHours ? String(localized: "Leave home in \((minutes ?? 0) / 60) hours for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk") : String(localized: "Leave home in \(minutes ?? 0) minutes for the \(trainTime) to \(destination ?? ""), \($0.walkMinutes) minute walk") }
+                            ?? String(localized: "No train to leave for: \(detail)"))
     }
 
     // MARK: Footer
@@ -794,20 +794,20 @@ struct WallModeView: View {
         var parts: [String] = []
         let dead = current.map { [$0] } ?? journeys
         for journey in dead where journey.state == .noService {
-            parts.append("\(journey.leg.from.name) → \(journey.leg.to.name): no service tonight, every remaining train cancelled")
+            parts.append(String(localized: "\(journey.leg.from.name) → \(journey.leg.to.name): no service tonight, every remaining train cancelled"))
         }
         if case .departures(let trains) = shownState {
             for train in trains {
-                let name = train.direction ?? current?.leg.to.name ?? station?.name ?? "Train"
+                let name = train.direction ?? current?.leg.to.name ?? station?.name ?? String(localized: "Train")
                 let at = WallFormat.time.string(from: train.scheduledDeparture)
                 if train.isCancelled {
-                    parts.append("\(name) \(at) cancelled")
+                    parts.append(String(localized: "\(name) \(at) cancelled"))
                 } else if let delay = train.delayMinutes, delay >= 11 {
-                    parts.append("\(name) \(at) running \(delay) min late")
+                    parts.append(String(localized: "\(name) \(at) running \(delay) min late"))
                 }
             }
         }
-        return parts.isEmpty ? "No disruptions reported tonight." : parts.joined(separator: "   ·   ")
+        return parts.isEmpty ? String(localized: "No disruptions reported tonight.") : parts.joined(separator: "   ·   ")
     }
 }
 
@@ -869,10 +869,10 @@ private struct WallBoardRow: View {
         var parts: [String] = []
         if showsArrival {
             if let arrival = train.expectedArrival {
-                parts.append("arrives \(WallFormat.time.string(from: arrival)) · \(wallCountdown(to: arrival, from: train.expectedDeparture))")
+                parts.append(String(localized: "arrives \(WallFormat.time.string(from: arrival)) · \(wallCountdown(to: arrival, from: train.expectedDeparture))"))
             }
         } else {
-            parts.append(via.isEmpty ? "direct" : "via " + via.joined(separator: " · "))
+            parts.append(via.isEmpty ? String(localized: "direct") : String(localized: "via \(via.joined(separator: " · "))"))
         }
         // Without its own column, the train goes under the destination, as the desk-clock mockup draws it.
         let name = [train.mode, train.trainNumber].compactMap(\.self).joined(separator: " ")
@@ -909,7 +909,7 @@ private struct WallBoardRow: View {
     @ViewBuilder private var status: some View {
         switch train.status {
         case .onTime:
-            Text(isTomorrow ? "tomorrow" : wallCountdown(to: train.expectedDeparture, from: liveNow))
+            Text(isTomorrow ? String(localized: "tomorrow") : wallCountdown(to: train.expectedDeparture, from: liveNow))
                 .font(.mono(isNext ? 20 : 18, weight: isNext ? .bold : .medium))
                 .foregroundStyle(isNext && !isTomorrow ? Color.soon : Color.inkSecondary)
         case .delayed, .severelyDelayed:
@@ -1022,7 +1022,7 @@ private struct WallStationCard: View {
                 .frame(width: 12, height: 38)
             VStack(alignment: .leading, spacing: 2) {
                 Text(pinned ? "Pinned station" : "Nearest station").font(.system(size: 13)).foregroundStyle(Color.ink.opacity(0.7))
-                Text(name ?? "Station").font(.system(size: 20, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
+                Text(name ?? String(localized: "Station")).font(.system(size: 20, weight: .bold)).foregroundStyle(Color.ink).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text("every departure").font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)

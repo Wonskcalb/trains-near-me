@@ -164,7 +164,7 @@ struct MenuBarExtraView: View {
             HStack(spacing: 9) {
                 RoutePins(lineColor: .inkSecondary, destination: .solid(.amber),
                           originDiameter: 7, destinationDiameter: 9, lineWidth: 1.8, lineLength: 10)
-                Text(board.map { "\($0.leg.from.name) → \($0.leg.to.name)" } ?? "Trains near me")
+                Text(board.map { "\($0.leg.from.name) → \($0.leg.to.name)" } ?? String(localized: "Trains near me"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ink)
                 Image(systemName: "chevron.down")
@@ -246,7 +246,7 @@ struct MenuBarExtraView: View {
         case .delayed, .severelyDelayed: StatusPill("+\(train.delayMinutes ?? 0)", status: train.status)
         case .unknown: StatusPill("delay ?", status: .unknown)
         case .onTime:
-            Text(BoardReading.isTomorrow(train, after: now) ? "tomorrow" : MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
+            Text(BoardReading.isTomorrow(train, after: now) ? String(localized: "tomorrow") : MenuBarFormat.duration(train.expectedDeparture.timeIntervalSince(now)))
                 .font(.mono(12)).foregroundStyle(Color.inkSecondary)
         }
     }
@@ -278,11 +278,11 @@ struct MenuBarExtraView: View {
 
     private var noDeparturesText: String {
         switch board?.state {
-        case .noService: "No service tonight"
-        case .endOfService(let first): "Service over · first " + MenuBarFormat.hm.string(from: first)
-        case .noTrains: "No trains"
+        case .noService: String(localized: "No service tonight")
+        case .endOfService(let first): String(localized: "Service over · first \(MenuBarFormat.hm.string(from: first))")
+        case .noTrains: String(localized: "No trains")
         case .unavailable(let error): error.terse
-        default: "No departures"
+        default: String(localized: "No departures")
         }
     }
 

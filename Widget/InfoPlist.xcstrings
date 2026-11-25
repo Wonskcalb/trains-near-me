@@ -1,42 +1,66 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "NSLocationUsageDescription": {
-      "comment": "Location permission prompt",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sert uniquement à trouver la gare la plus proche. Seule une position arrondie à environ 100 m est envoyée à l’API SNCF, et uniquement pour trouver cette gare."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trains near me"
           }
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription": {
-      "comment": "Location permission prompt",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station."
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "TrainsNearMeWidget"
+          }
+        }
+      }
+    },
+    "NSLocationUsageDescription" : {
+      "comment" : "Location permission prompt",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sert uniquement à trouver la gare la plus proche. Seule une position arrondie à environ 100 m est envoyée à l’API SNCF, et uniquement pour trouver cette gare."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sert uniquement à trouver la gare la plus proche. Seule une position arrondie à environ 100 m est envoyée à l’API SNCF, et uniquement pour trouver cette gare."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Location permission prompt",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used only to pick the station closest to you. Only a position rounded to about 100 m is sent to the SNCF API, and only to find that station."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sert uniquement à trouver la gare la plus proche. Seule une position arrondie à environ 100 m est envoyée à l’API SNCF, et uniquement pour trouver cette gare."
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

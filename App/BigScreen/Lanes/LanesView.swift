@@ -555,9 +555,9 @@ private struct LaneRow: View {
     @ViewBuilder private var emptyNote: some View {
         let note: String = {
             switch board.state {
-            case .endOfService(let first): return "Service over · first \(LanesFormat.hm.string(from: first))"
+            case .endOfService(let first): return String(localized: "Service over · first \(LanesFormat.hm.string(from: first))")
             case .unavailable(let error): return error.terse
-            default: return "No trains in this window"
+            default: return String(localized: "No trains in this window")
             }
         }()
         Text(note).font(.mono(12, weight: .medium)).foregroundStyle(Color.inkSecondary)
@@ -740,15 +740,15 @@ private struct LaneRow: View {
 
     private func accessibilityLabel(_ train: TrainDeparture, status: DepartureStatus) -> String {
         var parts: [String] = []
-        if let number = train.trainNumber { parts.append("Train \(number)") }
+        if let number = train.trainNumber { parts.append(String(localized: "Train \(number)")) }
         switch status {
-        case .cancelled: parts.append("cancelled, timetabled \(LanesFormat.hm.string(from: train.scheduledDeparture))")
+        case .cancelled: parts.append(String(localized: "cancelled, timetabled \(LanesFormat.hm.string(from: train.scheduledDeparture))"))
         case .delayed, .severelyDelayed:
-            parts.append("departs \(LanesFormat.hm.string(from: train.expectedDeparture))")
-            if let delay = train.delayMinutes { parts.append("\(delay) minutes late") }
-        default: parts.append("departs \(LanesFormat.hm.string(from: train.expectedDeparture))")
+            parts.append(String(localized: "departs \(LanesFormat.hm.string(from: train.expectedDeparture))"))
+            if let delay = train.delayMinutes { parts.append(String(localized: "\(delay) minutes late")) }
+        default: parts.append(String(localized: "departs \(LanesFormat.hm.string(from: train.expectedDeparture))"))
         }
-        parts.append("to \(board.leg.to.name)")
+        parts.append(String(localized: "to \(board.leg.to.name)"))
         return parts.joined(separator: ", ")
     }
 }
@@ -922,10 +922,10 @@ struct LaneTrainPopover: View {
     private var detailLine: String {
         var parts: [String] = []
         if train.isCancelled || (train.delayMinutes ?? 0) > 0 {
-            parts.append("was \(LanesFormat.hm.string(from: train.scheduledDeparture))")
+            parts.append(String(localized: "was \(LanesFormat.hm.string(from: train.scheduledDeparture))"))
         }
-        if !stops.isEmpty { parts.append("\(stops.count) stops") }
-        parts.append("to \(stops.last?.name ?? leg.to.name)")
+        if !stops.isEmpty { parts.append(String(localized: "\(stops.count) stops")) }
+        parts.append(String(localized: "to \(stops.last?.name ?? leg.to.name)"))
         return parts.joined(separator: " · ")
     }
 
@@ -945,7 +945,7 @@ struct LaneTrainPopover: View {
         }
     }
 
-    private func popoverButton(_ title: String, _ action: @escaping () -> Void) -> some View {
+    private func popoverButton(_ title: LocalizedStringKey, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity).frame(minHeight: 36)
