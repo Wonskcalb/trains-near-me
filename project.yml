@@ -9,8 +9,8 @@ configFiles:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "2.0.0"
-    CURRENT_PROJECT_VERSION: "9"
+    MARKETING_VERSION: "2.1.0"
+    CURRENT_PROJECT_VERSION: "10"
     CODE_SIGN_STYLE: Automatic
     # App Group identifiers are shaped differently per platform: macOS requires the team id as a
     # prefix, iOS requires "group.". `$(TeamIdentifierPrefix)` only exists at signing time, so it
@@ -55,7 +55,13 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         # iPhone stays portrait-only; iPad must offer all four (App Store Connect requires them for
         # multitasking), and the big-screen split view is happy in every orientation there.
-        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationPortraitUpsideDown,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+          ]
         NSLocationUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
         NSLocationWhenInUseUsageDescription: Used to pick the station closest to you and to estimate your walk to it. Only a position rounded to about 100 m is sent, to the SNCF API to find that station and to Apple Maps for the walking time.
         SNCFAppGroup: $(SNCF_APP_GROUP)
