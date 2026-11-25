@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - A late train now shows the time it actually leaves in the big slot, in the delay's colour, with the timetable time struck through beside it — in the app's rows and tiles, the Near me hero, and every widget size. Delays under 11 min, which used to be invisible on a journey row, now show the same way.
+- Station search opens with the keyboard up, and checking an API key puts the keyboard away so the result shows.
 
 ### Fixed
 

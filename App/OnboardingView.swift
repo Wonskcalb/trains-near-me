@@ -9,6 +9,7 @@ struct OnboardingView: View {
     let done: () -> Void
 
     @State private var token = ""
+    @FocusState private var keyFocused: Bool
     @State private var testing = false
     @State private var result: (works: Bool, message: String)?
     @State private var location = LocationFix.shared
@@ -37,6 +38,9 @@ struct OnboardingView: View {
                 step(2, "Paste it here", "It stays on this iPhone and is only sent to SNCF.") {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("Key", text: $token)
+                            .focused($keyFocused)
+                            .submitLabel(.done)
+                            .onSubmit { Task { await check() } }
                             .font(.mono(14, weight: .medium))
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
@@ -93,6 +97,7 @@ struct OnboardingView: View {
     }
 
     private func check() async {
+        keyFocused = false
         testing = true
         result = await SettingsView.saveAndTest(token)
         testing = false

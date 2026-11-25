@@ -123,9 +123,12 @@ struct StationSearch: View {
     @State private var query = ""
     @State private var results: [Station] = []
     @State private var failure: String?
+    @FocusState private var searching: Bool
 
     var body: some View {
         list
+            // Opening this screen is already asking to type a station; one tap fewer.
+            .onAppear { searching = true }
             .overlay {
                 if let failure {
                     ContentUnavailableView("Search unavailable", systemImage: "wifi.exclamationmark", description: Text(failure))
@@ -141,11 +144,13 @@ struct StationSearch: View {
 
     @ViewBuilder private var list: some View {
         #if os(iOS)
-        rows.searchable(text: $query, prompt: "Station name")
+        rows.searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Station name")
+            .searchFocused($searching)
         #else
         // A pushed view inside a Mac sheet has no toolbar to host `.searchable`, so the field is inline.
         VStack(spacing: 0) {
             TextField("Station name", text: $query).textFieldStyle(.roundedBorder).padding(10)
+                .focused($searching)
             rows
         }
         #endif

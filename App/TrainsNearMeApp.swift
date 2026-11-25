@@ -94,6 +94,7 @@ struct SettingsView: View {
     @Environment(\.bigScreenData) private var data
     @State private var token = SharedSettings.token ?? ""
     @State private var tokenStatus = ""
+    @FocusState private var tokenFocused: Bool
     @State private var location = LocationFix.shared
     @State private var fix: String?
     @AppStorage("appearance", store: AppGroupStore.defaults) private var appearance: SharedSettings.Appearance = .system
@@ -178,6 +179,7 @@ struct SettingsView: View {
     }
 
     private func save() async {
+        tokenFocused = false
         tokenStatus = String(localized: "Testing…")
         tokenStatus = await Self.saveAndTest(token).message
         // The providers read the token per request; the memoised boards were fetched without it.
@@ -211,6 +213,7 @@ private extension SettingsView {
                     HStack(spacing: 10) {
                         Text("Token")
                         SecureField("", text: $token)
+                            .focused($tokenFocused)
                             .textContentType(.password)
                             .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
